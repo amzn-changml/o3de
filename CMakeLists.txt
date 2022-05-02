@@ -119,4 +119,3 @@ if(LY_INSTALL_ENABLED)
     # 9. CPack information (to be included after install)
     include(cmake/Packaging.cmake)
 endif()
-

@@ -13,6 +13,7 @@ EBS_SNAPSHOT_SCRIPT_PATH = 'scripts/build/tools/ebs_snapshot.py'
 PIPELINE_RETRY_ATTEMPTS = 3
 
 // Number of minutes of inactivity in all stages of the pipeline to reach the timeout
+// Test
 PIPELINE_TIMEOUT = 60
 
 EMPTY_JSON = readJSON text: '{}'

@@ -51,3 +51,5 @@ RUN $(cmake --version) || apt-get -y install cmake=${CMAKE_VER} cmake-data=${CMA
 RUN find /usr/bin/ -name clang*  | sed -E 's/^(\/usr\/bin\/.*)(\-[0-9]*)$/ln -s -v \1\2 \1/' | xargs -d '\n' -n 1 bash -c && \
     update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100 && \
     update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
+
+

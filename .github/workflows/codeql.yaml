@@ -68,7 +68,7 @@ jobs:
       run: |
        echo "Installing dependancies"
        pushd ./scripts/build/build_node/Platform/Linux
-       sudo ./scripts/build/build_node/Platform/Linux/install-ubuntu.sh
+       sudo ./install-ubuntu.sh
        popd
        echo "Getting python..."
        ./python/get_python.sh

@@ -64,9 +64,15 @@ jobs:
     #   If the Autobuild fails above, remove it and uncomment the following three lines. 
     #   modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
 
-    - run: |
+    - name: Configure environment
+      run: |
+       echo "Installing dependancies"
+       sudo ./scripts/build/build_node/Platform/Linux/install-ubuntu.sh
        echo "Getting python..."
        ./python/get_python.sh
+       
+    - name: Build
+      run: | 
        echo "Building source..."
        ./python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile
 

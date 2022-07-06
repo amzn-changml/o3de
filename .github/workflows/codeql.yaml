@@ -76,7 +76,7 @@ jobs:
     - name: Build
       run: | 
        echo "Building source..."
-       ./python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile
+       ./python/python.sh -u scripts/build/ci_build.py --platform Linux --type monolithic_release
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2

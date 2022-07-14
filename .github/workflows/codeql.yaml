@@ -42,6 +42,7 @@ jobs:
         with:
             root-reserve-mb: 1024
             swap-size-mb: 1024
+            build-mount-path: '/home/runner'
             remove-dotnet: 'true'
             remove-haskell: 'true'
             remove-android: 'true'

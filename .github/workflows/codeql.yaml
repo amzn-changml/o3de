@@ -32,25 +32,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'cpp', 'java', 'javascript', 'python' ]
+        language: [ 'cpp', 'javascript', 'python' ]
         # CodeQL supports [ $supported-codeql-languages ]
         # Learn more about CodeQL language support at https://aka.ms/codeql-docs/language-support
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+            root-reserve-mb: 512
+            swap-size-mb: 1024
+            remove-dotnet: 'true'
+            remove-haskell: 'true'
+            remove-android: 'true'
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Initializes the CodeQL tools for scanning.
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
-      with:
-        languages: ${{ matrix.language }}
-        # If you wish to specify custom queries, you can do so here or in a config file.
-        # By default, queries listed here will override any specified in a config file.
-        # Prefix the list here with "+" to use these queries and those in the config file.
+     # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+          # If you wish to specify custom queries, you can do so here or in a config file.
+          # By default, queries listed here will override any specified in a config file.
+          # Prefix the list here with "+" to use these queries and those in the config file.
         
-        # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
-        # queries: security-extended,security-and-quality
+          # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+          # queries: security-extended,security-and-quality
 
         
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
@@ -64,19 +72,19 @@ jobs:
     #   If the Autobuild fails above, remove it and uncomment the following three lines. 
     #   modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
 
-    - name: Configure environment
-      run: |
-       echo "Installing dependancies"
-       pushd ./scripts/build/build_node/Platform/Linux
-       sudo ./install-ubuntu.sh
-       popd
-       echo "Getting python..."
-       ./python/get_python.sh
+      - name: Configure environment
+        run: |
+         echo "Installing dependancies"
+         pushd ./scripts/build/build_node/Platform/Linux
+         sudo ./install-ubuntu.sh
+         popd
+         echo "Getting python..."
+         ./python/get_python.sh
        
-    - name: Build
-      run: | 
-       echo "Building source..."
-       ./python/python.sh -u scripts/build/ci_build.py --platform Linux --type monolithic_release
+      - name: Build
+        run: | 
+         echo "Building source..."
+         ./python/python.sh -u scripts/build/ci_build.py --platform Linux --type monolithic_release
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2

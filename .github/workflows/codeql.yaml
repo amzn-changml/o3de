@@ -87,7 +87,7 @@ jobs:
       - name: Build
         run: | 
          echo "Building source..."
-         cmake --build build/linux --target Editor --config profile -j2
+         cmake --build build/linux --target Editor --config profile -j 8
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2

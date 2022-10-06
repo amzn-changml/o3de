@@ -4,7 +4,7 @@ on:
   # Allows you to run this workflow manually from the Actions tag
   workflow_dispatch:
     inputs:
-      repo:
+      repository:
         description: 'The repo to target for release'
         required: true
         type: choice

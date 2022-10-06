@@ -44,8 +44,10 @@ jobs:
           tag_name: ${{ inputs.release_tag }}
           release_name: ${{ inputs.release_tag }}
           body: |
+            |
             ## Release Notes
             ${{ inputs.release_notes_url }}
+            
             **Full Changelog**:  https://github.com/${{ github.repository }}/compare/${{ github.ref_name }}...${{ inputs.release_tag }}
           draft: false
           prerelease: false

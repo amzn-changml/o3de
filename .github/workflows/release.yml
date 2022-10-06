@@ -8,6 +8,10 @@ on:
         description: 'The release tag'
         required: true 
         type: string
+      release_notes_url:
+        description: 'The release notes url'
+        required: false
+        type: string
 
 jobs:
   Publish:
@@ -40,7 +44,7 @@ jobs:
           tag_name: ${{ inputs.release_tag }}
           release_name: ${{ inputs.release_tag }}
           body: |
-            Changes in this Release
+            Full Changelog: ${{ inputs.release_notes_url }}
           draft: false
           prerelease: false
           

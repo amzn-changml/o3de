@@ -23,14 +23,12 @@ jobs:
           fetch-depth: 0 # needed for git restore-mtime to get head
       
       - name: Git LFS pull
-        run: |
-          git lfs install
-          git lfs fetch
+      - run: git lfs install
+      - run: git lfs fetch
           
       - name: Archive repo as compressed files
-        run: |
-          git archive -o ${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.zip HEAD
-          git archive -o ${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.tar.gz HEAD
+      - run: git archive -o ${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.zip HEAD
+      - run: git archive -o ${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.tar.gz HEAD
           
       # Creates a release tag based on imputs
       - name: Create Release
@@ -53,7 +51,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`.
           asset_path: ./${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.zip
           asset_name: ${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.zip
           asset_content_type: application/zip
@@ -65,8 +63,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.tar.gz
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_name: ${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.tar.gz
           asset_content_type: application/x-gzip
        

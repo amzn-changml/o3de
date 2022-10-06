@@ -12,6 +12,10 @@ on:
         description: 'The release notes url'
         required: false
         type: string
+      draft_release:
+        description: 'Stage release as draft or publish immediately'
+        required: true
+        type: boolean
 
 jobs:
   Publish:
@@ -20,6 +24,12 @@ jobs:
     environment: ${{ github.ref_name }} # Check environment against branch
 
     steps:
+      - name: Get repo vars
+        id: vars
+        run: |
+          echo ::set-output name=latest_tag::$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo ::set-output name=latest_main_sha::$(git log -n 1 origin/main)
+      
       # Checks-out the repository under $GITHUB_WORKSPACE, so the job can access it
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -45,13 +55,13 @@ jobs:
         with:
           tag_name: ${{ inputs.release_tag }}
           release_name: ${{ inputs.release_tag }}
+          commitish: ${{ steps.vars.outputs.latest_main_sha }}
           body: |
-            |
             ## Release Notes
             ${{ inputs.release_notes_url }}
             
-            **Full Changelog**:  https://github.com/${{ github.repository }}/compare/${{ github.ref_name }}...${{ inputs.release_tag }}
-          draft: false
+            **Full Changelog**:  https://github.com/${{ github.repository }}/compare/${{ steps.vars.outputs.latest_tag }}...${{ inputs.release_tag }}
+          draft: ${{ inputs.draft_release }
           prerelease: false
           
       # Uploads zip archive to release

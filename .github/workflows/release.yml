@@ -1,8 +1,5 @@
 name: Publish new release
 
-permissions:
-  contents: write
-
 on:
   # Allows you to run this workflow manually from the Actions tag
   workflow_dispatch:
@@ -30,6 +27,8 @@ on:
         default: true
         required: true
         type: boolean
+        
+permissions: write-all
 
 run-name: Releasing ${{ inputs.repository }} for ${{ inputs.release_tag }}
 

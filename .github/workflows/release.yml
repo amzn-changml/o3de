@@ -13,7 +13,7 @@ on:
         required: false
         type: string
       draft_release:
-        description: 'Stage release as draft or publish immediately'
+        description: 'Stage release as draft. If unchecked, publish immediately'
         required: true
         type: boolean
 
@@ -61,7 +61,7 @@ jobs:
             ${{ inputs.release_notes_url }}
             
             **Full Changelog**:  https://github.com/${{ github.repository }}/compare/${{ steps.vars.outputs.latest_tag }}...${{ inputs.release_tag }}
-          draft: ${{ inputs.draft_release }
+          draft: ${{ inputs.draft_release }}
           prerelease: false
           
       # Uploads zip archive to release

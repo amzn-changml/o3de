@@ -39,7 +39,7 @@ jobs:
     steps:
       # Checks-out the repository under $GITHUB_WORKSPACE, so the job can access it
       - name: Checkout repo
-        uses: actions/checkout@latest
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0 # needed for git restore-mtime to get head
       

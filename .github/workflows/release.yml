@@ -1,0 +1,68 @@
+name: Publish new release
+
+on:
+  # Allows you to run this workflow manually from the Actions tag
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'The release tag'
+        required: true 
+        type: string
+
+jobs:
+  Publish:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }} # Check environment against branch
+
+    steps:
+      # Checks-out the repository under $GITHUB_WORKSPACE, so the job can access it
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # needed for git restore-mtime to get head
+          lfs: true
+          
+      - name: Archive repo as compressed files
+        run: |
+          git archive -o ${{ github.repository }}-${{ inputs.release_tag }}-lfs.zip HEAD
+          git archive -o ${{ github.repository }}-${{ inputs.release_tag }}-lfs.tar.gz HEAD
+          
+      # Creates a release tag based on imputs
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          release_name: ${{ inputs.release_tag }}
+          body: |
+            Changes in this Release
+          draft: false
+          prerelease: false
+          
+      # Uploads zip archive to release
+      - name: Upload Release Asset Zip
+        id: upload-release-asset-zip
+        uses: actions/upload-release-asset@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./${{ github.repository }}-${{ inputs.release_tag }}-lfs.zip
+          asset_name: ${{ github.repository }}-${{ inputs.release_tag }}-lfs.zip
+          asset_content_type: application/zip
+      
+      # Uploads Gzip archive to release
+      - name: Upload Release Asset Gzip
+        id: upload-release-asset-gzip
+        uses: actions/upload-release-asset@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./${{ github.repository }}-${{ inputs.release_tag }}-lfs.tar.gz
+          asset_name: ${{ github.repository }}-${{ inputs.release_tag }}-lfs.tar.gz
+          asset_content_type: application/x-gzip
+       

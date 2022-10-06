@@ -41,7 +41,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # needed for git restore-mtime to get head
+          repository: ${{ github.repository_owner }}/${{ inputs.repository }}
+          ref: origin/main
+          fetch-depth: 0
       
       - name: Git LFS pull
         run: |

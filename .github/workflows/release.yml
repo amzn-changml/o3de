@@ -39,7 +39,7 @@ jobs:
         id: vars
         run: |
           echo ::set-output name=latest_tag::$(git describe --tags `git rev-list --tags --max-count=1`)
-          echo ::set-output name=latest_main_sha::$(git log -n 1 origin/main)
+          echo ::set-output name=latest_main_sha::$(git log -n 1 --pretty=format:"%H" origin/main)
           
       - name: Archive repo as compressed files
         run: |

@@ -1,5 +1,8 @@
 name: Publish new release
 
+permissions:
+  contents: write
+
 on:
   # Allows you to run this workflow manually from the Actions tag
   workflow_dispatch:

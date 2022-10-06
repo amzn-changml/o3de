@@ -27,12 +27,14 @@ jobs:
           fetch-depth: 0 # needed for git restore-mtime to get head
       
       - name: Git LFS pull
-      - run: git lfs install
-      - run: git lfs fetch
+        run: |
+          git lfs install
+          git lfs fetch
           
       - name: Archive repo as compressed files
-      - run: git archive -o ${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.zip HEAD
-      - run: git archive -o ${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.tar.gz HEAD
+        run: |
+          git archive -o ${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.zip HEAD
+          git archive -o ${{ github.event.repository.name }}-${{ inputs.release_tag }}-lfs.tar.gz HEAD
           
       # Creates a release tag based on imputs
       - name: Create Release

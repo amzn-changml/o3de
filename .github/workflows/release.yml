@@ -21,7 +21,11 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0 # needed for git restore-mtime to get head
-          lfs: true
+      
+      - name: Git LFS pull
+        run: |
+          git lfs install
+          git lfs pull
           
       - name: Archive repo as compressed files
         run: |

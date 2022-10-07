@@ -30,15 +30,13 @@ on:
         
 run-name: Releasing ${{ inputs.repository }} for ${{ inputs.release_tag }}
 
-permissions: read-all
+permissions: write-all
 
 jobs:
   Publish:
     name: Deploy
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }} # Check environment against branch
-    permissions:
-      contents: write
 
     steps:
       # Checks-out the repository under $GITHUB_WORKSPACE, so the job can access it

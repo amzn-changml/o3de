@@ -28,9 +28,10 @@ on:
         required: true
         type: boolean
         
-permissions: write-all
-
 run-name: Releasing ${{ inputs.repository }} for ${{ inputs.release_tag }}
+
+permissions:
+  contents: write
 
 jobs:
   Publish:

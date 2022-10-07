@@ -30,6 +30,8 @@ on:
         
 run-name: Releasing ${{ inputs.repository }} for ${{ inputs.release_tag }}
 
+permissions: read-all
+
 jobs:
   Publish:
     name: Deploy

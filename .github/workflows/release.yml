@@ -11,7 +11,7 @@ on:
         default: o3de
         options:
           - o3de
-          - o3de-atom-sampleviewer
+          - o3de-atom-sampleviewer-changml
           - o3de-multiplayersample
           - o3de-netsoaktest
       release_tag:

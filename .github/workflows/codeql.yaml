@@ -88,15 +88,16 @@ jobs:
          echo "Getting python..."
          ./python/get_python.sh
          
-      - name: Generate
-        run: |
-         echo "Generating project..."
-         cmake -B build/linux -S . -G 'Ninja Multi-Config'
+      #- name: Generate
+      #  run: |
+      #   echo "Generating project..."
+      #   cmake -B build/linux -S . -G 'Ninja Multi-Config'
          
       - name: Build
         run: | 
          echo "Building source..."
-         cmake --build build/linux --target Editor --config profile -j 2
+         # cmake --build build/linux --target Editor --config profile -j 2
+         ./python/python.sh -u scripts/build/ci_build.py --platform Linux --type monolithic_release
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2

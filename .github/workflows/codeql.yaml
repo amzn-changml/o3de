@@ -46,11 +46,6 @@ jobs:
             remove-dotnet: 'true'
             remove-haskell: 'true'
             remove-android: 'true'     
-
-      - name: Check disk
-        run: |
-          echo "Free space:"
-          df -h
           
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -88,16 +83,21 @@ jobs:
          echo "Getting python..."
          ./python/get_python.sh
          
-      #- name: Generate
-      #  run: |
-      #   echo "Generating project..."
-      #   cmake -B build/linux -S . -G 'Ninja Multi-Config'
+      - name: Generate
+        run: |
+         echo "Generating project..."
+         cmake -B build/linux -S . -G 'Ninja Multi-Config'
+         
+      - name: Check disk
+        run: |
+          echo "Free space:"
+          df -h
          
       - name: Build
         run: | 
          echo "Building source..."
-         # cmake --build build/linux --target Editor --config profile -j 2
-         ./python/python.sh -u scripts/build/ci_build.py --platform Linux --type monolithic_release
+         cmake --build build/linux --target Editor --config profile -j3
+         # ./python/python.sh -u scripts/build/ci_build.py --platform Linux --type monolithic_release
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2

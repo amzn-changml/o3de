@@ -1,7 +1,7 @@
 name: Linux
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
 
 jobs:
   build:
@@ -9,7 +9,7 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [gcc, clang]
-        config: [Release]
+        config: [Release, Profile]
         image: [ubuntu-20.04, ubuntu-22.04]
 
     runs-on: ${{ matrix.image }}

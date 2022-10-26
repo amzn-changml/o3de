@@ -15,6 +15,7 @@
 #include <AzFramework/Viewport/ViewportScreen.h>
 #include <AzToolsFramework/Viewport/ViewportTypes.h>
 #include <AzCore/Math/MathUtils.h>
+#include <AzCore/Console/IConsole.h>
 #include <Atom/RHI/RHISystemInterface.h>
 #include <Atom/Bootstrap/BootstrapRequestBus.h>
 
@@ -410,7 +411,7 @@ namespace AtomToolsFramework
         return AzFramework::WindowSize{aznumeric_cast<uint32_t>(width()), aznumeric_cast<uint32_t>(height())};
     }
 
-    void RenderViewportWidget::ResizeClientArea(AzFramework::WindowSize clientAreaSize)
+    void RenderViewportWidget::ResizeClientArea(AzFramework::WindowSize clientAreaSize, [[maybe_unused]] const AzFramework::WindowPosOptions& options)
     {
         const QSize targetSize = QSize{aznumeric_cast<int>(clientAreaSize.m_width), aznumeric_cast<int>(clientAreaSize.m_height)};
         resize(targetSize);
@@ -455,7 +456,12 @@ namespace AtomToolsFramework
 
     uint32_t RenderViewportWidget::GetSyncInterval() const
     {
-        return 1;
+        uint32_t vsyncInterval = 1;
+        if (auto* console = AZ::Interface<AZ::IConsole>::Get(); console != nullptr)
+        {
+            console->GetCvarValue("vsync_interval", vsyncInterval);
+        }
+        return vsyncInterval;
     }
 
     // Editor ignores requests to change the sync interval

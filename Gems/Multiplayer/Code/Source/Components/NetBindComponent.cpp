@@ -161,6 +161,9 @@ namespace Multiplayer
 
     NetBindComponent::NetBindComponent()
         : m_handleLocalServerRpcMessageEventHandle([this](NetworkEntityRpcMessage& message) { HandleLocalServerRpcMessage(message); })
+        , m_handleLocalAutonomousToAuthorityRpcMessageEventHandle([this](NetworkEntityRpcMessage& message) { HandleLocalAutonomousToAuthorityRpcMessage(message); })
+        , m_handleLocalAuthorityToAutonomousRpcMessageEventHandle([this](NetworkEntityRpcMessage& message) { HandleLocalAuthorityToAutonomousRpcMessage(message); })
+        , m_handleLocalAuthorityToClientRpcMessageEventHandle([this](NetworkEntityRpcMessage& message) { HandleLocalAuthorityToClientRpcMessage(message); })
         , m_handleMarkedDirty([this]() { HandleMarkedDirty(); })
         , m_handleNotifyChanges([this]() { NotifyLocalChanges(); })
         , m_handleEntityStateEvent([this](AZ::Entity::State oldState, AZ::Entity::State newState) { OnEntityStateEvent(oldState, newState); })
@@ -177,7 +180,8 @@ namespace Multiplayer
             // The component hasn't been pre-setup with NetworkEntityManager yet. Setup now.
             const AZ::Name netSpawnableName = AZ::Interface<INetworkSpawnableLibrary>::Get()->GetSpawnableNameFromAssetId(m_prefabAssetId);
 
-            AZ_Assert(!netSpawnableName.IsEmpty(),
+            // In client-server the level asset is a temporary Root.network.spawnable and is not expected to be registered in time.
+            AZ_Assert(GetMultiplayer()->GetAgentType() == MultiplayerAgentType::ClientServer || !netSpawnableName.IsEmpty(),
                 "Could not locate net spawnable on Init for Prefab AssetId: %s",
                 m_prefabAssetId.ToFixedString().c_str());
 
@@ -193,14 +197,18 @@ namespace Multiplayer
         m_needsToBeStopped = true;
         if (m_netEntityRole == NetEntityRole::Authority)
         {
-            m_handleLocalServerRpcMessageEventHandle.Connect(m_sendServertoAuthorityRpcEvent);
-        }
-        if (NetworkRoleHasController(m_netEntityRole))
-        {
-            DetermineInputOrdering();
+            m_handleLocalServerRpcMessageEventHandle.Connect(m_sendServerToAuthorityRpcEvent);
+            if (Multiplayer::GetMultiplayer()->GetAgentType() == MultiplayerAgentType::ClientServer)
+            {
+                m_handleLocalAutonomousToAuthorityRpcMessageEventHandle.Connect(m_sendAutonomousToAuthorityRpcEvent);
+                m_handleLocalAuthorityToAutonomousRpcMessageEventHandle.Connect(m_sendAuthorityToAutonomousRpcEvent);
+                m_handleLocalAuthorityToClientRpcMessageEventHandle.Connect(m_sendAuthorityToClientRpcEvent);
+            }
         }
         if (HasController())
         {
+            DetermineInputOrdering();
+
             // Listen for the entity to completely activate so that we can notify that all controllers have been activated
             GetEntity()->AddStateEventHandler(m_handleEntityStateEvent);
         }
@@ -216,7 +224,9 @@ namespace Multiplayer
                 GetEntity() ? GetEntity()->GetName().c_str() : "null");
         }
         m_handleLocalServerRpcMessageEventHandle.Disconnect();
-        if (NetworkRoleHasController(m_netEntityRole))
+        m_handleLocalAutonomousToAuthorityRpcMessageEventHandle.Disconnect();
+        m_handleLocalAuthorityToClientRpcMessageEventHandle.Disconnect();
+        if (HasController())
         {
             GetNetworkEntityManager()->NotifyControllersDeactivated(m_netEntityHandle, EntityIsMigrating::False);
         }
@@ -435,7 +445,7 @@ namespace Multiplayer
     {
         m_isProcessingInput = true;
         // Only autonomous and authority runs this logic
-        AZ_Assert((NetworkRoleHasController(m_netEntityRole)), "Incorrect network role for input processing");
+        AZ_Assert((HasController()), "Incorrect network role for input processing");
         for (MultiplayerComponent* multiplayerComponent : m_multiplayerInputComponentVector)
         {
             multiplayerComponent->GetController()->ProcessInputFromScript(networkInput, deltaTime);
@@ -505,7 +515,7 @@ namespace Multiplayer
 
     RpcSendEvent& NetBindComponent::GetSendServerToAuthorityRpcEvent()
     {
-        return m_sendServertoAuthorityRpcEvent;
+        return m_sendServerToAuthorityRpcEvent;
     }
 
     RpcSendEvent& NetBindComponent::GetSendAutonomousToAuthorityRpcEvent()
@@ -741,7 +751,7 @@ namespace Multiplayer
         DetermineInputOrdering();
         if (GetNetEntityRole() == NetEntityRole::Authority)
         {
-            m_handleLocalServerRpcMessageEventHandle.Connect(m_sendServertoAuthorityRpcEvent);
+            m_handleLocalServerRpcMessageEventHandle.Connect(m_sendServerToAuthorityRpcEvent);
         }
         GetNetworkEntityManager()->NotifyControllersActivated(m_netEntityHandle, entityIsMigrating);
     }
@@ -784,7 +794,7 @@ namespace Multiplayer
     void NetBindComponent::HandleMarkedDirty()
     {
         m_dirtiedEvent.Signal();
-        if (NetworkRoleHasController(GetNetEntityRole()))
+        if (HasController())
         {
             m_localNotificationRecord.Append(m_currentRecord);
             if (!m_handleNotifyChanges.IsConnected())
@@ -802,9 +812,27 @@ namespace Multiplayer
         GetNetworkEntityManager()->HandleLocalRpcMessage(message);
     }
 
+    void NetBindComponent::HandleLocalAutonomousToAuthorityRpcMessage(NetworkEntityRpcMessage& message)
+    {
+        message.SetRpcDeliveryType(RpcDeliveryType::AutonomousToAuthority);
+        GetNetworkEntityManager()->HandleLocalRpcMessage(message);
+    }
+
+    void NetBindComponent::HandleLocalAuthorityToAutonomousRpcMessage(NetworkEntityRpcMessage& message)
+    {
+        message.SetRpcDeliveryType(RpcDeliveryType::AuthorityToAutonomous);
+        GetNetworkEntityManager()->HandleLocalRpcMessage(message);
+    }
+
+    void NetBindComponent::HandleLocalAuthorityToClientRpcMessage(NetworkEntityRpcMessage& message)
+    {
+        message.SetRpcDeliveryType(RpcDeliveryType::AuthorityToClient);
+        GetNetworkEntityManager()->HandleLocalRpcMessage(message);
+    }
+
     void NetBindComponent::DetermineInputOrdering()
     {
-        AZ_Assert(NetworkRoleHasController(m_netEntityRole), "Incorrect network role for input processing");
+        AZ_Assert(HasController(), "Incorrect network role for input processing");
 
         m_multiplayerInputComponentVector.clear();
         // walk the components in the activation order so that our default ordering for input matches our dependency sort

@@ -20,6 +20,10 @@ jobs:
       CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      BUILDCACHE_MAX_CACHE_SIZE: 10737418240
+      BUILDCACHE_REMOTE: $(( secrets.TEST_BUILDCACHE_REMOTE }}
+      BUILDCACHE_S3_ACCESS: $(( secrets.TEST_BUILDCACHE_KEY }}
+      BUILDCACHE_S3_SECRET: $(( secrets.TEST_BUILDCACHE_SECRET }}
 
     steps:
       - name: Maximize build space
@@ -36,11 +40,18 @@ jobs:
           fetch-depth: 1
           submodules: recursive
 
-      - uses: hendrikmuhs/ccache-action@v1.2.3
+      #- uses: hendrikmuhs/ccache-action@v1.2.3
+      #  with:
+      #    key: O3DE-linux-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
+      #    max-size: 2048M
+      
+      - name: buildcache-action
+        uses: mikehardy/buildcache-action@v2.1.0
         with:
-          key: O3DE-linux-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
-          max-size: 2048M
-
+          cache_key: O3DE-linux-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
+          upload_buildcache_log: 'true' # optional: 100% cache misses? Find out why
+          zero_buildcache_stats: 'false' # optional: lifetime vs per-run stats?
+        
       - name: Configure environment
         run: |
           echo "Installing dependancies"

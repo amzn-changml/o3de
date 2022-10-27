@@ -54,9 +54,9 @@ jobs:
           echo "Generating project..."
           cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DCMAKE_LINK_WHAT_YOU_USE=TRUE -DLY_3RDPARTY_PATH=./3rdParty
           
-      - name: Compile Dependencies
+      - name: Build
         run: |
-          cmake --build build --parallel --config ${{ matrix.config }}
+          cmake --build build -j1 --config ${{ matrix.config }}
 
       - uses: actions/upload-artifact@v2
         with:

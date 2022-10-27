@@ -9,9 +9,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [gcc, clang]
-        config: [Release, Profile]
-        image: [ubuntu-20.04, ubuntu-22.04]
+        compiler: [clang]
+        config: [Profile]
+        image: [ubuntu-20.04]
 
     runs-on: ${{ matrix.image }}
 

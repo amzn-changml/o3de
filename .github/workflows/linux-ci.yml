@@ -61,5 +61,5 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: OSP-linux-${{ matrix.image}}-${{ matrix.config }}-${{ matrix.compiler }}
-          path: build/${{ matrix.config }}
+          name: O3DE-linux-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
+          path: build/linux

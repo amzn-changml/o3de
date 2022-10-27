@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [clang]
-        config: [Profile]
+        config: [profile]
         image: [ubuntu-20.04]
 
     runs-on: ${{ matrix.image }}
@@ -25,41 +25,40 @@ jobs:
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
         with:
-            root-reserve-mb: 10240
-            swap-size-mb: 512
-            remove-dotnet: 'true'
-            remove-haskell: 'true'
-            remove-android: 'true'     
+          root-reserve-mb: 10240
+          swap-size-mb: 512
+          remove-dotnet: 'true'
+          remove-haskell: 'true'
+          remove-android: 'true'     
             
       - uses: actions/checkout@v3
         with:
-         fetch-depth: 1
-         submodules: recursive
+          fetch-depth: 1
+          submodules: recursive
 
       - uses: hendrikmuhs/ccache-action@v1
         with:
-          key: linux-${{ matrix.image }}-${{ matrix.compiler }}-${{ matrix.config }}
+          key: O3DE-linux-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
 
       - name: Configure environment
         run: |
-         echo "Installing dependancies"
-         pushd ./scripts/build/build_node/Platform/Linux
-         sudo ./install-ubuntu.sh
-         popd
-         echo "Getting python..."
-         ./python/get_python.sh
+          echo "Installing dependancies"
+          pushd ./scripts/build/build_node/Platform/Linux
+          sudo ./install-ubuntu.sh
+          popd
+          echo "Getting python..."
+          ./python/get_python.sh
          
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B build/linux -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DCMAKE_LINK_WHAT_YOU_USE=TRUE -DLY_3RDPARTY_PATH=./3rdParty
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }} -G 'Ninja Multi-Config' -DLY_3RDPARTY_PATH=./3rdParty
           
       - name: Build
         run: |
-          #cmake --build build -j1 --config ${{ matrix.config }}
-          cmake --build build/linux --target Editor --config profile
+          cmake --build build --target Editor --config ${{ matrix.config }}
 
       - uses: actions/upload-artifact@v2
         with:
           name: O3DE-linux-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
-          path: build/linux
+          path: build/${{ matrix.config }}

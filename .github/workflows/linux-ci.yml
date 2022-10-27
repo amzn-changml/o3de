@@ -52,11 +52,12 @@ jobs:
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DCMAKE_LINK_WHAT_YOU_USE=TRUE -DLY_3RDPARTY_PATH=./3rdParty
+          cmake -B build/linux -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DCMAKE_LINK_WHAT_YOU_USE=TRUE -DLY_3RDPARTY_PATH=./3rdParty
           
       - name: Build
         run: |
-          cmake --build build -j1 --config ${{ matrix.config }}
+          #cmake --build build -j1 --config ${{ matrix.config }}
+          cmake --build build/linux --target Editor --config profile
 
       - uses: actions/upload-artifact@v2
         with:

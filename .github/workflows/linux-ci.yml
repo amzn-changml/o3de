@@ -75,4 +75,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: O3DE-linux-3p-${{ matrix.image }}
-          path: ./3rdParty/downloaded_packages
+          path: |
+            ./3rdParty/downloaded_packages
+            ./python

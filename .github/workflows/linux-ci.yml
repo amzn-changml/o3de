@@ -65,7 +65,7 @@ jobs:
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           cmake --build build --target Editor --config ${{ matrix.config }}
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: O3DE-linux-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
-          path: build/**/bin/${{ matrix.config }}
+     # - uses: actions/upload-artifact@v3
+      # with:
+      # name: O3DE-linux-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
+      # path: build/**/bin/${{ matrix.config }}

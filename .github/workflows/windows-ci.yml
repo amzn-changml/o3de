@@ -27,7 +27,7 @@ jobs:
       
       - name: Create binary folders
         run: |
-          "build","3rdParty" | % {New-Item -Name "c:\o3de\$_" -ItemType 'Directory' -Force}
+          "build","3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
           "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
                      
       - name: Cache 3p

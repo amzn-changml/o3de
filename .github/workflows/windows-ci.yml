@@ -49,7 +49,7 @@ jobs:
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B build -DLY_3RDPARTY_PATH=3rdParty
+          cmake -B build -G "Visual Studio 17 2022" -DLY_3RDPARTY_PATH=3rdParty
           
       - name: Build
         run: |

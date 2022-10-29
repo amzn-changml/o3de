@@ -11,7 +11,7 @@ jobs:
       matrix:
         compiler: [msvc]
         config: [profile]
-        image: [windows-2019]
+        image: [windows-2022]
 
     runs-on: ${{ matrix.image }}
 

@@ -44,7 +44,7 @@ jobs:
         run: |
           echo "Installing dependancies"
           echo "Getting python..."
-          ..\python\get_python.cmd
+          ..\python\get_python.bat
          
       - name: Configure
         run: |

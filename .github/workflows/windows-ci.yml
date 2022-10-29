@@ -16,8 +16,8 @@ jobs:
     runs-on: ${{ matrix.image }}
 
     env:
-      CMAKE_C_COMPILER_LAUNCHER: ccache
-      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CMAKE_C_COMPILER_LAUNCHER: sccache
+      CMAKE_CXX_COMPILER_LAUNCHER: sccache
 
     steps:               
       - uses: actions/checkout@v3
@@ -43,7 +43,7 @@ jobs:
         with:
           key: O3DE-windows-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
           max-size: 2048M
-          variant: ccache
+          variant: sccache
         
       - name: Configure environment
         run: |

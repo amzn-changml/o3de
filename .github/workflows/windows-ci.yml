@@ -24,7 +24,12 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
-          
+      
+      - name: Create binary folders
+        run: |
+          "build","3rdParty" | % {New-Item -Name "c:\o3de\$_" -ItemType 'Directory' -Force}
+          "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
+                     
       - name: Cache 3p
         uses: actions/cache@v3.0.11
         continue-on-error: true

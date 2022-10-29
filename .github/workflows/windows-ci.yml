@@ -2,7 +2,7 @@ name: Windows
 
 on:
   push:
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
   build:
@@ -30,8 +30,8 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            .\3rdParty\downloaded_packages
-            .\python
+            ..\3rdParty\downloaded_packages
+            ..\python
           key: O3DE-windows-3p-${{ matrix.image }}
 
       - uses: hendrikmuhs/ccache-action@v1.2.3
@@ -44,12 +44,12 @@ jobs:
         run: |
           echo "Installing dependancies"
           echo "Getting python..."
-          .\python\get_python.sh
+          ..\python\get_python.cmd
          
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B build -DLY_3RDPARTY_PATH=.\3rdParty
+          cmake -B build -DLY_3RDPARTY_PATH=..\3rdParty
           
       - name: Build
         run: |

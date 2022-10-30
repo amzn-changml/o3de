@@ -57,7 +57,7 @@ jobs:
           python\get_python.bat
           
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.1.3
+        uses: ilammy/msvc-dev-cmd@v1.12.0
         
       - name: Configure
         run: |

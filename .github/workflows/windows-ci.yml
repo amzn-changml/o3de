@@ -55,7 +55,10 @@ jobs:
           echo "Installing dependancies"
           echo "Getting python..."
           python\get_python.bat
-         
+          
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1.3
+        
       - name: Configure
         run: |
           echo "Generating project..."

@@ -1,6 +1,7 @@
 name: Linux
 
 on:
+  push:
   workflow_dispatch: {}
 
 jobs:

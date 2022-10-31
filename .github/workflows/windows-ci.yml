@@ -24,12 +24,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-      
-      - name: Git LFS install
-        run: git lfs install
-          
-      - name: Git LFS fetch
-        run: git lfs fetch
+          lfs: true
       
       - name: Create binary folders
         run: |

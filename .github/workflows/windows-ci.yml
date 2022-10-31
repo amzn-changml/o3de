@@ -23,8 +23,11 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          submodules: recursive
-          lfs: true
+      
+      - name: Git LFS fetch
+        run: |
+          git lfs install
+          git lfs fetch
       
       - name: Create binary folders
         run: |
@@ -36,8 +39,8 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            3rdParty\\downloaded_packages
-            python
+            ${{ github.workspace }}\3rdParty\downloaded_packages
+            ${{ github.workspace }}\python
           key: O3DE-windows-3p-${{ matrix.image }}
 
       - uses: hendrikmuhs/ccache-action@v1.2.3
@@ -62,4 +65,4 @@ jobs:
           
       - name: Build
         run: |
-          cmake --build build --target Editor --config ${{ matrix.config }} -j1
+          cmake --build build --target Editor --config ${{ matrix.config }} --parallel

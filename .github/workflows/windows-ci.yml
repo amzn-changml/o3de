@@ -25,10 +25,11 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       
-      - name: Git LFS pull
-        run: |
-          git lfs install
-          git lfs fetch
+      - name: Git LFS install
+        run: git lfs install
+          
+      - name: Git LFS fetch
+        run: git lfs fetch
       
       - name: Create binary folders
         run: |

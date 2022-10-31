@@ -42,10 +42,6 @@ jobs:
         
       - name: Configure environment
         run: |
-          echo "Installing dependancies"
-          pushd ./scripts/build/build_node/Platform/Mac
-          sudo ./install-ubuntu.sh
-          popd
           echo "Getting python..."
           ./python/get_python.sh
          

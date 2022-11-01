@@ -64,5 +64,5 @@ jobs:
           cmake -B build -G "Ninja" -DLY_3RDPARTY_PATH=3rdParty -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           
       - name: Build
-        run: |
-          cmake --build build --target Editor --config ${{ matrix.config }} --parallel /FS
+        run: 
+          cmake --build build --target Editor --config ${{ matrix.config }} -j1

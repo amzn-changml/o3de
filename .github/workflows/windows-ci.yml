@@ -65,4 +65,4 @@ jobs:
           
       - name: Build
         run: |
-          cmake --build build --target Editor --config ${{ matrix.config }} --parallel
+          cmake --build build --target Editor --config ${{ matrix.config }} --parallel /FS

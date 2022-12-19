@@ -39,6 +39,8 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+          repository: aws-lumberyard-dev/o3de
+          ref: devops/linux-ros2-package
           
       - name: Cache 3p
         uses: actions/cache@v3.0.11

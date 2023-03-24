@@ -92,12 +92,6 @@ jobs:
         run: |
           echo "Free space:"
           df -h
-         
-      - name: Build
-        run: | 
-         echo "Building source..."
-         cmake --build build/linux --target Editor --config profile -j1
-         # ./python/python.sh -u scripts/build/ci_build.py --platform Linux --type monolithic_release
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2

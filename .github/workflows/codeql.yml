@@ -91,7 +91,7 @@ jobs:
       - name: Build
         run: |
          echo "Building..."
-         cmake --build . --target all --config release -j 2 --
+         cmake --build build/linux --target all --config release -j2
       
       - name: Check disk
         run: |

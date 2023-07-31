@@ -17,9 +17,15 @@ AzAssetBrowserWindow #previewWidgetWrapper
     border: 0 none;
 }
 
-AzAssetBrowserWindow QSplitter
+AzAssetBrowserWindow #searchButtonContainer
 {
-    margin-top: 2px;
+    background-color: #141414;
+    border: 0 none;
+}
+
+AzAssetBrowserWindow #m_separator
+{
+    background-color: #222222;
 }
 
 /* Component Palette Widget */

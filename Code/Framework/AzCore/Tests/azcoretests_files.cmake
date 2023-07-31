@@ -102,6 +102,7 @@ set(FILES
     Geometry2DUtils.cpp
     Interface.cpp
     IO/FileReaderTests.cpp
+    IO/Path/PathReflectTests.cpp
     IO/Path/PathTests.cpp
     IPC.cpp
     Jobs.cpp
@@ -116,6 +117,7 @@ set(FILES
     Math/CrcTestsCompileTimeLiterals.h
     Math/FrustumTests.cpp
     Math/FrustumPerformanceTests.cpp
+    Math/Geometry3DUtilsTests.cpp
     Math/HemisphereTests.cpp
     Math/IntersectionPerformanceTests.cpp
     Math/IntersectionTestHelpers.cpp
@@ -131,6 +133,7 @@ set(FILES
     Math/Matrix3x4Tests.cpp
     Math/Matrix4x4PerformanceTests.cpp
     Math/Matrix4x4Tests.cpp
+    Math/MatrixMxNTests.cpp
     Math/MatrixUtilsTests.cpp
     Math/MathTest.h
     Math/MathTestData.h
@@ -157,14 +160,14 @@ set(FILES
     Math/Vector3Tests.cpp
     Math/Vector4PerformanceTests.cpp
     Math/Vector4Tests.cpp
+    Math/VectorNTests.cpp
     Memory/AllocatorBenchmarks.cpp
-    Memory/AllocatorManager.cpp
-    Memory/HphaSchema.cpp
-    Memory/HphaSchemaErrorDetection.cpp
+    Memory/HphaAllocator.cpp
+    Memory/HphaAllocatorErrorDetection.cpp
     Memory/LeakDetection.cpp
-    Memory/MallocSchema.cpp
     Memory.cpp
     Metrics/EventLoggerFactoryTests.cpp
+    Metrics/EventLoggerReflectUtilsTests.cpp
     Metrics/EventLoggerUtilsTests.cpp
     Metrics/JsonTraceEventLoggerTests.cpp
     Module.cpp
@@ -174,9 +177,10 @@ set(FILES
     Name/NameTests.cpp
     OrderedEventBenchmarks.cpp
     OrderedEventTests.cpp
-    Outcome.cpp
+    OutcomeTests.cpp
     Patching.cpp
     RemappableId.cpp
+    RTTI/IsTypeofBenchmarks.cpp
     RTTI/TypeSafeIntegralTests.cpp
     Rtti.cpp
     Script.cpp
@@ -225,6 +229,7 @@ set(FILES
     Serialization.cpp
     SerializeContextFixture.h
     Settings/CommandLineTests.cpp
+    Settings/ConfigParserTests.cpp
     Settings/ConfigurableStackTests.cpp
     Settings/SettingsRegistryTests.cpp
     Settings/SettingsRegistryConsoleUtilsTests.cpp
@@ -232,6 +237,7 @@ set(FILES
     Settings/SettingsRegistryOriginTrackerTests.cpp
     Settings/SettingsRegistryScriptUtilsTests.cpp
     Settings/SettingsRegistryVisitorUtilsTests.cpp
+    Settings/TextParserTests.cpp
     Slice.cpp
     State.cpp
     Statistics.cpp
@@ -262,6 +268,6 @@ set(FILES
 # Prevent the following files from being grouped in UNITY builds
 set(SKIP_UNITY_BUILD_INCLUSION_FILES
     EnumTests.cpp
-    Memory/HphaSchema.cpp
-    Memory/HphaSchemaErrorDetection.cpp
+    Memory/HphaAllocator.cpp
+    Memory/HphaAllocatorErrorDetection.cpp
 )

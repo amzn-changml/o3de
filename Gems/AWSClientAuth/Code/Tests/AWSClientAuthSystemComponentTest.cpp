@@ -21,6 +21,7 @@ namespace AWSClientAuthUnitTest
         : public AWSClientAuth::AWSClientAuthSystemComponent
     {
     public:
+        AZ_CLASS_ALLOCATOR(AWSClientAuthSystemComponentMock, AZ::SystemAllocator)
         using AWSClientAuth::AWSClientAuthSystemComponent::GetCognitoIDPClient;
         using AWSClientAuth::AWSClientAuthSystemComponent::GetCognitoIdentityClient;
 
@@ -72,7 +73,6 @@ namespace AWSClientAuthUnitTest
                 {
                     ec->Class<AWSCoreSystemComponentMock>("AWSCoreMock", "Adds core support for working with AWS")
                         ->ClassElement(AZ::Edit::ClassElements::EditorData, "")
-                        ->Attribute(AZ::Edit::Attributes::AppearsInAddComponentMenu, AZ_CRC("System"))
                         ->Attribute(AZ::Edit::Attributes::AutoExpand, true)
                         ;
                 }
@@ -216,13 +216,13 @@ TEST_F(AWSClientAuthSystemComponentTest, GetCognitoClients_Success)
 
 TEST_F(AWSClientAuthSystemComponentTest, SkipCognitoControllers_Success)
 {
-    EXPECT_CALL(m_awsResourceMappingRequestBusMock, GetResourceNameId(AZStd::string(CognitoUserPoolIdResourceMappingKey)))
+    EXPECT_CALL(m_awsResourceMappingRequestBusMock, HasResource(AZStd::string(CognitoUserPoolIdResourceMappingKey)))
         .Times(1)
-        .WillOnce(testing::Return(""));
+        .WillOnce(testing::Return(false));
 
-    EXPECT_CALL(m_awsResourceMappingRequestBusMock, GetResourceNameId(AZStd::string(CognitoIdentityPoolIdResourceMappingKey)))
+    EXPECT_CALL(m_awsResourceMappingRequestBusMock, HasResource(AZStd::string(CognitoIdentityPoolIdResourceMappingKey)))
         .Times(1)
-        .WillOnce(testing::Return(""));
+        .WillOnce(testing::Return(false));
 
     // activate component
     m_entity->Init();

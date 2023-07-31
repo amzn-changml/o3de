@@ -4,14 +4,15 @@
         "preprocessor": [],
         "azslc": ["--min-descriptors=64,4,-1,-1,-1" //Sets,Spaces,Samplers,Textures,Buffers
                 , "--unique-idx"
-                , "--namespace=mt,vk"
+                , "--namespace=mt"
+                , "--namespace=vk"
                 , "--pad-root-const"
         ],
         "dxc": ["-spirv"
               , "-enable-16bit-types"
         ],
         "spirv-cross": [],
-        "metalair": ["-sdk", "iphoneos", "metal" // For xcrun
+        "metalair": ["-sdk", "iphoneos", "metal", "-std=ios-metal2.2", "-target air64-apple-ios14.0" // For xcrun
                    , "-gline-tables-only", "-MO" //Debug symbols are always enabled at the moment. Need to turn them off for optimized shader assets.
                    , "-fpreserve-invariance"
                    , "-c"

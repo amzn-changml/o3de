@@ -30,7 +30,6 @@
 #include "EditorPreferencesPageViewportManipulator.h"
 #include "EditorPreferencesPageViewportCamera.h"
 #include "EditorPreferencesPageViewportDebug.h"
-#include "EditorPreferencesPageExperimentalLighting.h"
 #include "EditorPreferencesPageAWS.h"
 #include "LyViewPaneNames.h"
 
@@ -51,7 +50,7 @@ EditorPreferencesDialog::EditorPreferencesDialog(QWidget* pParent)
     connect(ui->filter, &FilteredSearchWidget::TextFilterChanged, this, &EditorPreferencesDialog::SetFilter);
 
     AZ::SerializeContext* serializeContext = nullptr;
-    EBUS_EVENT_RESULT(serializeContext, AZ::ComponentApplicationBus, GetSerializeContext);
+    AZ::ComponentApplicationBus::BroadcastResult(serializeContext, &AZ::ComponentApplicationBus::Events::GetSerializeContext);
     AZ_Assert(serializeContext, "Serialization context not available");
 
     static bool bAlreadyRegistered = false;
@@ -68,7 +67,6 @@ EditorPreferencesDialog::EditorPreferencesDialog(QWidget* pParent)
             CEditorPreferencesPage_ViewportManipulator::Reflect(*serializeContext);
             CEditorPreferencesPage_ViewportCamera::Reflect(*serializeContext);
             CEditorPreferencesPage_ViewportDebug::Reflect(*serializeContext);
-            CEditorPreferencesPage_ExperimentalLighting::Reflect(*serializeContext);
             CEditorPreferencesPage_AWS::Reflect(*serializeContext);
         }
     }
@@ -190,7 +188,8 @@ void EditorPreferencesDialog::OnAccept()
             origAutoBackup.nTime != gSettings.autoBackupTime ||
             origAutoBackup.nRemindTime != gSettings.autoRemindTime))
     {
-        MainWindow::instance()->ResetAutoSaveTimers(true);
+        // Ensure timers restart with the correct interval.
+        MainWindow::instance()->ResetAutoSaveTimers();
     }
 
     AzToolsFramework::EditorPreferencesNotificationBus::Broadcast(&AzToolsFramework::EditorPreferencesNotifications::OnEditorPreferencesChanged);

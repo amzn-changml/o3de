@@ -9,6 +9,7 @@
 #include <AzCore/Utils/Utils.h>
 #include <AzCore/IO/ByteContainerStream.h>
 #include <AzCore/IO/FileIO.h>
+#include <AzCore/IO/FileReader.h>
 #include <AzCore/IO/GenericStreams.h>
 #include <AzCore/IO/SystemFile.h>
 #include <AzCore/IO/Path/Path.h>
@@ -94,7 +95,7 @@ namespace AZ::Utils
             }
         }
 
-        // If the O3DEManifest key isn't set in teh settings registry
+        // If the O3DEManifest key isn't set in the settings registry
         // fallback to use the user's home directory with the .o3de folder appended to it
         AZ::IO::FixedMaxPath path = GetHomeDirectory(settingsRegistry);
         path /= ".o3de";
@@ -229,11 +230,46 @@ namespace AZ::Utils
             settingsRegistry = AZ::SettingsRegistry::Get();
         }
 
-
         if (settingsRegistry != nullptr)
         {
             if (AZ::IO::FixedMaxPathString settingsValue;
                 settingsRegistry->Get(settingsValue, AZ::SettingsRegistryMergeUtils::FilePathKey_ProjectUserPath))
+            {
+                return settingsValue;
+            }
+        }
+        return {};
+    }
+
+    AZ::IO::FixedMaxPathString GetProjectLogPath(AZ::SettingsRegistryInterface* settingsRegistry)
+    {
+        if (settingsRegistry == nullptr)
+        {
+            settingsRegistry = AZ::SettingsRegistry::Get();
+        }
+
+        if (settingsRegistry != nullptr)
+        {
+            if (AZ::IO::FixedMaxPathString settingsValue;
+                settingsRegistry->Get(settingsValue, AZ::SettingsRegistryMergeUtils::FilePathKey_ProjectLogPath))
+            {
+                return settingsValue;
+            }
+        }
+        return {};
+    }
+
+    AZ::IO::FixedMaxPathString GetProjectProductPathForPlatform(AZ::SettingsRegistryInterface* settingsRegistry)
+    {
+        if (settingsRegistry == nullptr)
+        {
+            settingsRegistry = AZ::SettingsRegistry::Get();
+        }
+
+        if (settingsRegistry != nullptr)
+        {
+            if (AZ::IO::FixedMaxPathString settingsValue;
+                settingsRegistry->Get(settingsValue, AZ::SettingsRegistryMergeUtils::FilePathKey_CacheRootFolder))
             {
                 return settingsValue;
             }
@@ -276,13 +312,13 @@ namespace AZ::Utils
     template<typename Container>
     AZ::Outcome<Container, AZStd::string> ReadFile(AZStd::string_view filePath, size_t maxFileSize)
     {
-        IO::FileIOStream file;
-        if (!file.Open(filePath.data(), IO::OpenMode::ModeRead))
+        IO::FileReader file;
+        if (!file.Open(AZ::IO::FileIOBase::GetInstance(), filePath.data()))
         {
             return AZ::Failure(AZStd::string::format("Failed to open '%.*s'.", AZ_STRING_ARG(filePath)));
         }
 
-        AZ::IO::SizeType length = file.GetLength();
+        AZ::IO::SizeType length = file.Length();
 
         if (length > maxFileSize)
         {

@@ -100,6 +100,11 @@ namespace ScriptCanvas
             return Type(eType::Matrix4x4);
         }
 
+        Type Type::MatrixMxN()
+        {
+            return Type(eType::MatrixMxN);
+        }
+
         Type Type::Number()
         {
             return Type(eType::Number);
@@ -143,6 +148,11 @@ namespace ScriptCanvas
         Type Type::Vector4()
         {
             return Type(eType::Vector4);
+        }
+
+        Type Type::VectorN()
+        {
+            return Type(eType::VectorN);
         }
 
         AZ::Uuid Type::GetAZType() const
@@ -189,10 +199,7 @@ namespace ScriptCanvas
                 return IsVectorType(target) || (target.GetType() == eType::BehaviorContextObject && IsVectorType(target.GetAZType()));
             };
 
-            AZ_Assert(
-                !IS_A(target),
-                "Don't mix concepts, it is too dangerous. "
-                "Check IS-A separately from conversion at all times. "
+            AZ_Assert(!IS_A(target), "Don't mix concepts, it is too dangerous. Check IS-A separately from conversion at all times. "
                 "Use IS_A || IsConvertibleTo in an expression");
 
             const auto targetEType = target.GetType();

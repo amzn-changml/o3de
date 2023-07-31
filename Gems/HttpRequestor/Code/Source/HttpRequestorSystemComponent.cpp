@@ -60,7 +60,17 @@ namespace HttpRequestor
             m_httpManager->AddTextRequest(TextParameters(URI, method, headers, body, callback));
         }
     }
-    
+
+    AZStd::chrono::milliseconds HttpRequestorSystemComponent::GetLastRoundTripTime() const
+    {
+        if (m_httpManager != nullptr)
+        {
+            return m_httpManager->GetLastRoundTripTime();
+        }
+
+        return {};
+    }
+
     void HttpRequestorSystemComponent::Reflect(AZ::ReflectContext* context)
     {
         if (auto serialize = azrtti_cast<AZ::SerializeContext*>(context))
@@ -72,7 +82,6 @@ namespace HttpRequestor
                 ec->Class<HttpRequestorSystemComponent>("HttpRequestor", "Will make HTTP Rest calls")
                     ->ClassElement(AZ::Edit::ClassElements::EditorData, "")
                     // ->Attribute(AZ::Edit::Attributes::Category, "") Set a category
-                    ->Attribute(AZ::Edit::Attributes::AppearsInAddComponentMenu, AZ_CRC("System"))
                     ->Attribute(AZ::Edit::Attributes::AutoExpand, true);
             }
         }

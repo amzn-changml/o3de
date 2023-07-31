@@ -9,10 +9,13 @@
 #pragma once
 
 #if !defined(Q_MOC_RUN)
+#include <AzCore/Instance/InstancePool.h>
 #include <AzFramework/DocumentPropertyEditor/DocumentAdapter.h>
+#include <AzFramework/DocumentPropertyEditor/ExpanderSettings.h>
+#include <AzQtComponents/Components/Widgets/ElidingLabel.h>
 #include <AzToolsFramework/UI/DocumentPropertyEditor/IPropertyEditor.h>
+#include <AzToolsFramework/UI/DocumentPropertyEditor/PropertyEditorToolsSystemInterface.h>
 #include <AzToolsFramework/UI/DocumentPropertyEditor/PropertyHandlerWidget.h>
-#include <AzToolsFramework/UI/DocumentPropertyEditor/DocumentPropertyEditorSettings.h>
 
 #include <QHBoxLayout>
 #include <QScrollArea>
@@ -20,7 +23,11 @@
 #endif // Q_MOC_RUN
 
 class QCheckBox;
-class QTimer;
+
+namespace AzQtComponents
+{
+    class ElidingLabel;
+};
 
 namespace AzToolsFramework
 {
@@ -37,7 +44,9 @@ namespace AzToolsFramework
 
         // todo: look into caching and QLayoutItem::invalidate()
     public:
-        DPELayout(int depth, QWidget* parentWidget = nullptr);
+        DPELayout(QWidget* parent);
+        void Init(int depth, QWidget* parentWidget = nullptr);
+        void Clear();
         virtual ~DPELayout();
 
         void SetExpanderShown(bool shouldShow);
@@ -59,7 +68,6 @@ namespace AzToolsFramework
         void onCheckstateChanged(int expanderState);
 
     protected:
-        DocumentPropertyEditor* GetDPE() const;
         DPERowWidget* GetRow() const;
         void CreateExpanderWidget();
 
@@ -86,31 +94,36 @@ namespace AzToolsFramework
 
         friend class DocumentPropertyEditor;
         friend class DPELayout;
+
     public:
-        explicit DPERowWidget(int depth, DPERowWidget* parentRow);
+        explicit DPERowWidget();
+        void Init(int depth, DPERowWidget* parentRow);
+        void Clear(); //!< destroy all layout contents and clear DOM children
         ~DPERowWidget();
 
-        void Clear(); //!< destroy all layout contents and clear DOM children
+        DPERowWidget* GetPriorRowInLayout(size_t domIndex);
+        int GetDomIndexOfChild(const QWidget* childWidget) const; // returns domIndex of the given widget, -1 for not found
+        QWidget* GetChild(size_t domIndex);
         void AddChildFromDomValue(const AZ::Dom::Value& childValue, size_t domIndex);
+        void RemoveChildAt(size_t childIndex, QWidget** newOwner = nullptr);
 
         //! clears and repopulates all children from a given DOM array
         void SetValueFromDom(const AZ::Dom::Value& domArray);
         void SetAttributesFromDom(const AZ::Dom::Value& domArray);
 
         void SetPropertyEditorAttributes(size_t domIndex, const AZ::Dom::Value& domArray, QWidget* childWidget);
-        void RemoveAttributes(size_t domIndex);
-        void ClearAttributes();
+        void RemoveCachedAttributes(size_t domIndex);
+        void ClearCachedAttributes();
 
         //! handles a patch operation at the given path, or delegates to a child that will
         void HandleOperationAtPath(const AZ::Dom::PatchOperation& domOperation, size_t pathIndex = 0);
 
-        //! returns the last descendent of this row in its own layout
+        //! returns the last descendant of this row in its own layout
         DPERowWidget* GetLastDescendantInLayout();
 
         void SetExpanded(bool expanded, bool recurseToChildRows = false);
         bool IsExpanded() const;
-
-        const AZ::Dom::Path GetPath() const;
+        void ApplyExpansionState(const AZ::Dom::Path& rowPath, DocumentPropertyEditor* rowDPE);
 
         bool HasChildRows() const;
         int GetLevel() const;
@@ -122,18 +135,17 @@ namespace AzToolsFramework
         DocumentPropertyEditor* GetDPE() const;
         void AddDomChildWidget(size_t domIndex, QWidget* childWidget);
         void AddColumnWidget(QWidget* columnWidget, size_t domIndex, const AZ::Dom::Value& domValue);
+        void AddRowChild(DPERowWidget* rowWidget, size_t domIndex);
+        void PlaceRowChild(DPERowWidget* rowWidget, size_t domIndex);
 
-        AZ::Dom::Path BuildDomPath();
+        AZ::Dom::Path BuildDomPath() const;
         void SaveExpanderStatesForChildRows(bool isExpanded);
 
-        QWidget* CreateWidgetForHandler(PropertyEditorToolsSystemInterface::PropertyHandlerId handlerId, const AZ::Dom::Value& domValue);
+        static bool ValueHasChildRows(const AZ::Dom::Value& rowValue);
 
         DPERowWidget* m_parentRow = nullptr;
         int m_depth = 0; //!< number of levels deep in the tree. Used for indentation
         DPELayout* m_columnLayout = nullptr;
-
-        // This widget's indexed path from the root
-        AZ::Dom::Path m_domPath;
 
         //! widget children in DOM specified order; mix of row and column widgets
         AZStd::deque<QWidget*> m_domOrderedChildren;
@@ -143,23 +155,20 @@ namespace AzToolsFramework
             AZ::Dpe::Nodes::PropertyEditor::Align m_alignment = AZ::Dpe::Nodes::PropertyEditor::Align::UseDefaultAlignment;
             bool m_sharePriorColumn = false;
             bool m_minimumWidth = false;
-            AZStd::string_view m_descriptionString = "";
-            bool m_shouldDisable = false;
+
+            bool IsDefault() const
+            {
+                return m_alignment == AZ::Dpe::Nodes::PropertyEditor::Align::UseDefaultAlignment && !m_sharePriorColumn && !m_minimumWidth;
+            }
         };
-        AZStd::unordered_map<size_t, AttributeInfo*> m_domOrderToAttributeInfo;
-        AttributeInfo* GetAttributes(size_t domIndex);
+        AZStd::unordered_map<size_t, AttributeInfo> m_childIndexToCachedAttributeInfo;
+        AttributeInfo* GetCachedAttributes(size_t domIndex);
+
+        bool m_expandingProgrammatically = false; //!< indicates whether an expansion is in progress
 
         // row attributes extracted from the DOM
         AZStd::optional<bool> m_forceAutoExpand;
         AZStd::optional<bool> m_expandByDefault;
-
-        // a map from the propertyHandler widgets to the propertyHandlers that created them
-        struct HandlerInfo
-        {
-            PropertyEditorToolsSystemInterface::PropertyHandlerId handlerId = nullptr;
-            AZStd::unique_ptr<PropertyHandlerWidgetInterface> hanlderInterface;
-        };
-        AZStd::unordered_map<QWidget*, HandlerInfo> m_widgetToPropertyHandlerInfo;
     };
 
     class DocumentPropertyEditor
@@ -167,14 +176,27 @@ namespace AzToolsFramework
         , public IPropertyEditor
     {
         Q_OBJECT
+        friend class DPERowWidget;
 
     public:
-        AZ_CLASS_ALLOCATOR(DocumentPropertyEditor, AZ::SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(DocumentPropertyEditor, AZ::SystemAllocator);
 
         explicit DocumentPropertyEditor(QWidget* parentWidget = nullptr);
         ~DocumentPropertyEditor();
 
+        /*! Sets whether this DPE should allow vertical scrolling and show a scrollbar, or just take up
+            the full space that its contents requests.
+            This is typically used when a DPE is going into another scroll area and it is undesirable
+            for the DPE to provide its own vertical scrollbar */
+        void SetAllowVerticalScroll(bool allowVerticalScroll);
+        virtual QSize sizeHint() const override;
+
         auto GetAdapter()
+        {
+            return m_adapter;
+        }
+
+        const auto GetAdapter() const
         {
             return m_adapter;
         }
@@ -183,28 +205,68 @@ namespace AzToolsFramework
         void SetSavedExpanderStateForRow(const AZ::Dom::Path& rowPath, bool isExpanded);
         bool GetSavedExpanderStateForRow(const AZ::Dom::Path& rowPath) const;
         bool HasSavedExpanderStateForRow(const AZ::Dom::Path& rowPath) const;
+        bool ShouldEraseExpanderStateWhenRowRemoved() const;
         void RemoveExpanderStateForRow(const AZ::Dom::Path& rowPath);
+        void ApplyExpansionStates();
         void ExpandAll();
         void CollapseAll();
 
         // IPropertyEditor overrides
         void SetSavedStateKey(AZ::u32 key, AZStd::string propertyEditorName = {}) override;
+        void ClearInstances() override;
 
         AZ::Dom::Value GetDomValueForRow(DPERowWidget* row) const;
-
-        void ReleaseHandler(AZStd::unique_ptr<PropertyHandlerWidgetInterface>&& handler);
 
         // sets whether this DPE should also spawn a DPEDebugWindow when its adapter
         // is set. Initially, this takes its value from the CVAR ed_showDPEDebugView,
         // but can be overridden here
         void SetSpawnDebugView(bool shouldSpawn);
 
-        static constexpr const char* GetEnableDPECVarName() { return "ed_enableDPE"; }
+        static constexpr const char* GetEnableDPECVarName()
+        {
+            return "ed_enableDPE";
+        }
         static bool ShouldReplaceRPE();
+        static bool ShouldReplaceCVarEditor();
 
-        AZStd::vector<size_t> GetPathToRoot(DPERowWidget* row) const;
+        static constexpr const char* GetEnableCVarEditorName()
+        {
+            return "ed_enableCVarDPE";
+        }
+
+        AZStd::vector<size_t> GetPathToRoot(const DPERowWidget* row) const;
         bool IsRecursiveExpansionOngoing() const;
         void SetRecursiveExpansionOngoing(bool isExpanding);
+
+        // shared pools of recycled widgets
+        static auto GetRowPool()
+        {
+            return static_cast<AZ::InstancePoolManager*>(AZ::Interface<AZ::InstancePoolManagerInterface>::Get())->GetPool<DPERowWidget>();
+        }
+
+        static auto GetLabelPool()
+        {
+            return static_cast<AZ::InstancePoolManager*>(AZ::Interface<AZ::InstancePoolManagerInterface>::Get())
+                ->GetPool<AzQtComponents::ElidingLabel>();
+        }
+
+        void RegisterHandlerPool(AZ::Name handlerName, AZStd::shared_ptr<AZ::InstancePoolBase> handlerPool);
+
+        struct HandlerInfo
+        {
+            PropertyEditorToolsSystemInterface::PropertyHandlerId handlerId = nullptr;
+            PropertyHandlerWidgetInterface* handlerInterface = nullptr;
+
+            bool IsNull()
+            {
+                return !handlerId && !handlerInterface;
+            }
+        };
+        static HandlerInfo GetInfoFromWidget(const QWidget* widget);
+
+    signals:
+        void ExpanderChangedByUser();
+        void RequestSizeUpdate(); //!< needed to inform the ComponentEditor Card that the DPE's sizehint needs to be re-evaluated
 
     public slots:
         //! set the DOM adapter for this DPE to inspect
@@ -214,11 +276,11 @@ namespace AzToolsFramework
     protected:
         QVBoxLayout* GetVerticalLayout();
 
+        QWidget* GetWidgetAtPath(const AZ::Dom::Path& path);
+
         void HandleReset();
         void HandleDomChange(const AZ::Dom::Patch& patch);
         void HandleDomMessage(const AZ::DocumentPropertyEditor::AdapterMessage& message, AZ::Dom::Value& value);
-
-        void CleanupReleasedHandlers();
 
         AZ::DocumentPropertyEditor::DocumentAdapterPtr m_adapter;
         AZ::DocumentPropertyEditor::DocumentAdapter::ResetEvent::Handler m_resetHandler;
@@ -226,14 +288,33 @@ namespace AzToolsFramework
         AZ::DocumentPropertyEditor::DocumentAdapter::MessageEvent::Handler m_domMessageHandler;
 
         QVBoxLayout* m_layout = nullptr;
+        bool m_allowVerticalScroll = true;
 
-        AZStd::unique_ptr<DocumentPropertyEditorSettings> m_dpeSettings;
+        AZStd::unique_ptr<AZ::DocumentPropertyEditor::ExpanderSettings> m_dpeSettings;
         bool m_isRecursiveExpansionOngoing = false;
-
         bool m_spawnDebugView = false;
 
-        QTimer* m_handlerCleanupTimer;
-        AZStd::vector<AZStd::unique_ptr<PropertyHandlerWidgetInterface>> m_unusedHandlers;
         DPERowWidget* m_rootNode = nullptr;
+
+        // keep pools of frequently used widgets that can be recycled for efficiency without
+        // incurring the cost of creating and destroying them
+        AZStd::shared_ptr<AZ::InstancePool<DPERowWidget>> m_rowPool;
+        AZStd::shared_ptr<AZ::InstancePool<AzQtComponents::ElidingLabel>> m_labelPool;
+
+        QWidget* CreateWidgetForHandler(PropertyEditorToolsSystemInterface::PropertyHandlerId handlerId, const AZ::Dom::Value& domValue);
+        static AZ::Name GetNameForHandlerId(PropertyEditorToolsSystemInterface::PropertyHandlerId handlerId);
+        static void ReleaseHandler(HandlerInfo& handler);
+
+        // Co-owns the handler pool that is needed in DPE and the ownership would be released when the DPE is deleted
+        AZStd::unordered_map<AZ::Name, AZStd::shared_ptr<AZ::InstancePoolBase>> m_handlerPools;
     };
 } // namespace AzToolsFramework
+
+// expose type info for external classes so that they can be used with the InstancePool system
+namespace AZ
+{
+    AZ_TYPE_INFO_SPECIALIZE(AzToolsFramework::DPERowWidget, "{C457A594-6E19-4674-A617-3CC09CF7E532}");
+    AZ_TYPE_INFO_SPECIALIZE(AzQtComponents::ElidingLabel, "{02674C46-1401-4237-97F1-2774A067BF80}");
+} // namespace AZ
+
+Q_DECLARE_METATYPE(AzToolsFramework::DocumentPropertyEditor::HandlerInfo);

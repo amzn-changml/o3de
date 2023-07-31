@@ -54,6 +54,7 @@ namespace AZ
             if (m_passData)
             {
                 PassUtils::ExtractPipelineGlobalConnections(m_passData, m_pipelineGlobalConnections);
+                m_viewTag = m_passData->m_pipelineViewTag;
             }
 
             m_flags.m_enabled = true;
@@ -212,24 +213,25 @@ namespace AZ
 
         void Pass::AddAttachmentBinding(PassAttachmentBinding attachmentBinding)
         {
+            auto index = static_cast<uint8_t>(m_attachmentBindings.size());
+            // Add the binding. This will assert if the fixed size array is full.
+            m_attachmentBindings.push_back(attachmentBinding);
+
             // Add the index of the binding to the input, output or input/output list based on the slot type
             switch (attachmentBinding.m_slotType)
             {
             case PassSlotType::Input:
-                m_inputBindingIndices.push_back(uint8_t(m_attachmentBindings.size()));
+                m_inputBindingIndices.push_back(index);
                 break;
             case PassSlotType::InputOutput:
-                m_inputOutputBindingIndices.push_back(uint8_t(m_attachmentBindings.size()));
+                m_inputOutputBindingIndices.push_back(index);
                 break;
             case PassSlotType::Output:
-                m_outputBindingIndices.push_back(uint8_t(m_attachmentBindings.size()));
+                m_outputBindingIndices.push_back(index);
                 break;
             default:
                 break;
             }
-
-            // Add the binding
-            m_attachmentBindings.push_back(attachmentBinding);
         }
 
         // --- Finders ---
@@ -1319,7 +1321,9 @@ namespace AZ
                 return;
             }
 
-            AZ_Error("PassSystem", m_state == PassState::Idle, "Pass::FrameBegin - Pass [%s] is attempting to render, but is not in the Idle state.", m_path.GetCStr());
+            AZ_Error("PassSystem", m_state == PassState::Idle,
+                "Pass::FrameBegin - Pass [%s] is attempting to render, and should be in the 'Idle' or 'Queued' state, but is in the '%s' state.",
+                m_path.GetCStr(), ToString(m_state).data());
 
             m_state = PassState::Rendering;
 
@@ -1364,8 +1368,18 @@ namespace AZ
 
         const PipelineViewTag& Pass::GetPipelineViewTag() const
         {
-            static PipelineViewTag viewTag;
-            return viewTag;
+            if (m_viewTag.IsEmpty())
+            {
+                if (m_flags.m_isPipelineRoot && m_pipeline)
+                {
+                    return m_pipeline->GetMainViewTag();
+                }
+                else if (m_parent)
+                {
+                    return m_parent->GetPipelineViewTag();
+                }
+            }
+            return m_viewTag;
         }
 
         void Pass::SetRenderPipeline(RenderPipeline* pipeline)
@@ -1418,7 +1432,7 @@ namespace AZ
             // even when pass is disabled so it can continue work correctly when re-enable it.
 
             // Only get the DrawListTag if this pass has a DrawListTag and it's PipelineViewId matches
-            if (HasPipelineViewTag() && HasDrawListTag() && GetPipelineViewTag() == viewTag)
+            if (BindViewSrg() && HasDrawListTag() && GetPipelineViewTag() == viewTag)
             {
                 RHI::DrawListTag drawListTag = GetDrawListTag();
                 if (drawListTag.IsValid() && outPassesByDrawList.find(drawListTag) == outPassesByDrawList.end())
@@ -1429,9 +1443,9 @@ namespace AZ
             }
         }
 
-        void Pass::GetPipelineViewTags(SortedPipelineViewTags& outTags) const
+        void Pass::GetPipelineViewTags(PipelineViewTags& outTags) const
         {
-            if (HasPipelineViewTag())
+            if (BindViewSrg())
             {
                 outTags.insert(GetPipelineViewTag());
             }
@@ -1439,7 +1453,10 @@ namespace AZ
 
         void Pass::SortDrawList(RHI::DrawList& drawList) const
         {
-            RHI::SortDrawList(drawList, m_drawListSortType);
+            if (!drawList.empty())
+            {
+                RHI::SortDrawList(drawList, m_drawListSortType);
+            }
         }
 
         // --- Debug & Validation functions ---
@@ -1467,7 +1484,8 @@ namespace AZ
             return GetPipelineStatisticsResultInternal();
         }
 
-        bool Pass::ReadbackAttachment(AZStd::shared_ptr<AttachmentReadback> readback, uint32_t readbackIndex, const Name& slotName, PassAttachmentReadbackOption option)
+        bool Pass::ReadbackAttachment(AZStd::shared_ptr<AttachmentReadback> readback, uint32_t readbackIndex, const Name& slotName
+            , PassAttachmentReadbackOption option, const RHI::ImageSubresourceRange* mipsRange)
         {
             // Return false if it's already readback
             if (m_attachmentReadback)
@@ -1488,7 +1506,7 @@ namespace AZ
                         // Append slot index and pass name so the read back's name won't be same as the attachment used in other passes.
                         AZStd::string readbackName = AZStd::string::format("%s_%d_%d_%s", attachmentId.GetCStr(),
                             readbackIndex, bindingIndex, GetName().GetCStr());
-                        if (readback->ReadPassAttachment(binding.GetAttachment().get(), AZ::Name(readbackName)))
+                        if (readback->ReadPassAttachment(binding.GetAttachment().get(), AZ::Name(readbackName), mipsRange))
                         {
                             m_readbackOption = PassAttachmentReadbackOption::Output;
                             // The m_readbackOption is only meaningful if the attachment is used for InputOutput.

@@ -51,10 +51,12 @@ set(FILES
     Include/Atom/RHI/Device.h
     Include/Atom/RHI/DeviceBusTraits.h
     Include/Atom/RHI/DeviceObject.h
+    Include/Atom/RHI/MultiDeviceObject.h
     Include/Atom/RHI/CommandQueue.h
     Include/Atom/RHI/ValidationLayer.h
     Source/RHI/Device.cpp
     Source/RHI/DeviceObject.cpp
+    Source/RHI/MultiDeviceObject.cpp
     Source/RHI/CommandQueue.cpp
     Source/RHI/ValidationLayer.cpp
     Include/Atom/RHI/Factory.h
@@ -114,6 +116,7 @@ set(FILES
     Include/Atom/RHI/ObjectPool.h
     Source/RHI/Object.cpp
     Include/Atom/RHI/PageTileAllocator.h
+    Include/Atom/RHI/PageTiles.h
     Source/RHI/PageTileAllocator.cpp
     Include/Atom/RHI/PhysicalDevice.h
     Source/RHI/PhysicalDevice.cpp
@@ -132,13 +135,17 @@ set(FILES
     Source/RHI/QueryPool.cpp
     Source/RHI/QueryPoolSubAllocator.cpp
     Include/Atom/RHI/Resource.h
+    Include/Atom/RHI/MultiDeviceResource.h
     Include/Atom/RHI/ResourceInvalidateBus.h
     Include/Atom/RHI/ResourceView.h
     Source/RHI/Resource.cpp
+    Source/RHI/MultiDeviceResource.cpp
     Source/RHI/ResourceView.cpp
     Include/Atom/RHI/ResourcePool.h
+    Include/Atom/RHI/MultiDeviceResourcePool.h
     Include/Atom/RHI/ResourcePoolDatabase.h
     Source/RHI/ResourcePool.cpp
+    Source/RHI/MultiDeviceResourcePool.cpp
     Source/RHI/ResourcePoolDatabase.cpp
     Include/Atom/RHI/MemoryAllocation.h
     Include/Atom/RHI/MemorySubAllocator.h
@@ -157,7 +164,7 @@ set(FILES
     Source/RHI/ImageScopeAttachment.cpp
     Source/RHI/ResolveScopeAttachment.cpp
     Source/RHI/ScopeAttachment.cpp
-    Include/Atom/RHI/ShaderResourceGroup.h
+    Include/Atom/RHI/ShaderResourceGroup.h    
     Include/Atom/RHI/ShaderResourceGroupData.h
     Include/Atom/RHI/ShaderResourceGroupDebug.h
     Include/Atom/RHI/ShaderResourceGroupInvalidateRegistry.h
@@ -183,6 +190,8 @@ set(FILES
     Include/Atom/RHI/AliasedAttachmentAllocator.h
     Include/Atom/RHI/AliasingBarrierTracker.h
     Source/RHI/AliasingBarrierTracker.cpp
+    Include/Atom/RHI/TileAllocator.h
+    Include/Atom/RHI/TileAllocator.inl
     Include/Atom/RHI/TransientAttachmentPool.h
     Source/RHI/TransientAttachmentPool.cpp
     Include/Atom/RHI/RHIUtils.h

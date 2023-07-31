@@ -25,7 +25,12 @@ namespace AZ
         {
             return aznew Scope();
         }
-
+    
+        void Scope::InitInternal()
+        {
+            m_markerName = Name(GetMarkerLabel());
+        }
+    
         void Scope::DeactivateInternal()
         {
             for (RHI::ResourcePoolResolver* resolvePolicyBase : GetResourcePoolResolves())
@@ -53,21 +58,15 @@ namespace AZ
             m_scopeMultisampleState = imageDescriptor.m_multisampleState;
             if(m_scopeMultisampleState.m_customPositionsCount > 0)
             {
+                NSUInteger numSampleLocations = m_scopeMultisampleState.m_samples;
                 AZStd::vector<MTLSamplePosition> mtlCustomSampleLocations;
                 AZStd::transform( m_scopeMultisampleState.m_customPositions.begin(),
-                                 m_scopeMultisampleState.m_customPositions.begin() + m_scopeMultisampleState.m_customPositionsCount,
+                                 m_scopeMultisampleState.m_customPositions.begin() + numSampleLocations,
                                  AZStd::back_inserter(mtlCustomSampleLocations), [&](const auto& item)
                 {
                     return ConvertSampleLocation(item);
                 });
-                
-                MTLSamplePosition samplePositions[m_scopeMultisampleState.m_customPositionsCount];
-                
-                for(int i = 0 ; i < m_scopeMultisampleState.m_customPositionsCount; i++)
-                {
-                    samplePositions[i] = mtlCustomSampleLocations[i];
-                }
-                [m_renderPassDescriptor setSamplePositions:samplePositions count:m_scopeMultisampleState.m_customPositionsCount];
+                [m_renderPassDescriptor setSamplePositions:mtlCustomSampleLocations.data() count:numSampleLocations];
             }
         }
     
@@ -296,7 +295,7 @@ namespace AZ
             }
             
             const bool isPrologue = commandListIndex == 0;
-            commandList.SetName(GetId());
+            commandList.SetName(m_markerName);
             commandList.SetRenderPassInfo(m_renderPassDescriptor, m_scopeMultisampleState, m_residentHeaps);
             
             if (isPrologue)

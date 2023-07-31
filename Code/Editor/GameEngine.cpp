@@ -25,8 +25,8 @@
 // AzFramework
 #include <AzFramework/Asset/AssetSystemBus.h>
 #include <AzFramework/Input/Devices/Mouse/InputDeviceMouse.h>
+#include <AzFramework/Input/Devices/Keyboard/InputDeviceKeyboard.h>
 #include <AzFramework/Input/Buses/Requests/InputSystemCursorRequestBus.h>
-#include <AzFramework/Terrain/TerrainDataRequestBus.h>      // for TerrainDataRequests
 #include <AzFramework/Archive/IArchive.h>
 
 // Editor
@@ -35,7 +35,6 @@
 #include "Settings.h"
 
 // CryCommon
-#include <CryCommon/INavigationSystem.h>
 #include <CryCommon/MainThreadRenderRequestBus.h>
 
 // Editor
@@ -45,7 +44,6 @@
 #include "AnimationContext.h"
 #include "MainWindow.h"
 #include "Include/IObjectManager.h"
-#include "ActionManager.h"
 
 // Implementation of System Callback structure.
 struct SSystemUserCallback
@@ -351,7 +349,6 @@ AZ::Outcome<void, AZStd::string> CGameEngine::Init(
 
     sip.bEditor = true;
     sip.bDedicatedServer = false;
-    AZ::Interface<AZ::IConsole>::Get()->PerformCommand("sv_isDedicated false");
     sip.bPreview = bPreviewMode;
     sip.bTestMode = bTestMode;
     sip.hInstance = nullptr;
@@ -438,7 +435,7 @@ AZ::Outcome<void, AZStd::string> CGameEngine::Init(
     gEnv->pConsole->RemoveCommand("quit");
     REGISTER_COMMAND("quit", CGameEngine::HandleQuitRequest, VF_RESTRICTEDMODE, "Quit/Shutdown the engine");
 
-    EBUS_EVENT(CrySystemEventBus, OnCryEditorInitialized);
+    CrySystemEventBus::Broadcast(&CrySystemEventBus::Events::OnCryEditorInitialized);
 
     return AZ::Success();
 }
@@ -535,15 +532,13 @@ void CGameEngine::SwitchToInGame()
     m_pISystem->GetIMovieSystem()->EnablePhysicsEvents(true);
     m_bInGameMode = true;
 
-    // Disable accelerators.
-    GetIEditor()->EnableAcceleratos(false);
     //! Send event to switch into game.
     GetIEditor()->GetObjectManager()->SendEvent(EVENT_INGAME);
 
     m_pISystem->GetIMovieSystem()->Reset(true, false);
 
     // Transition to runtime entity context.
-    EBUS_EVENT(AzToolsFramework::EditorEntityContextRequestBus, StartPlayInEditor);
+    AzToolsFramework::EditorEntityContextRequestBus::Broadcast(&AzToolsFramework::EditorEntityContextRequestBus::Events::StartPlayInEditor);
 
     if (!CCryEditApp::instance()->IsInAutotestMode())
     {
@@ -559,7 +554,7 @@ void CGameEngine::SwitchToInGame()
 void CGameEngine::SwitchToInEditor()
 {
     // Transition to editor entity context.
-    EBUS_EVENT(AzToolsFramework::EditorEntityContextRequestBus, StopPlayInEditor);
+    AzToolsFramework::EditorEntityContextRequestBus::Broadcast(&AzToolsFramework::EditorEntityContextRequestBus::Events::StopPlayInEditor);
 
     // Reset movie system
     for (int i = m_pISystem->GetIMovieSystem()->GetNumPlayingSequences(); --i >= 0;)
@@ -571,9 +566,6 @@ void CGameEngine::SwitchToInEditor()
     CViewport* pGameViewport = GetIEditor()->GetViewManager()->GetGameViewport();
 
     m_pISystem->GetIMovieSystem()->EnablePhysicsEvents(m_bSimulationMode);
-
-    // Enable accelerators.
-    GetIEditor()->EnableAcceleratos(true);
 
     // [Anton] - order changed, see comments for CGameEngine::SetSimulationMode
     //! Send event to switch out of game.
@@ -607,7 +599,7 @@ void CGameEngine::HandleQuitRequest(IConsoleCmdArgs* /*args*/)
     }
     else
     {
-        MainWindow::instance()->GetActionManager()->GetAction(ID_APP_EXIT)->trigger();
+        MainWindow::instance()->window()->close();
     }
 }
 
@@ -788,7 +780,7 @@ void CGameEngine::Update()
     }
 
     AZ::ComponentApplication* componentApplication = nullptr;
-    EBUS_EVENT_RESULT(componentApplication, AZ::ComponentApplicationBus, GetApplication);
+    AZ::ComponentApplicationBus::BroadcastResult(componentApplication, &AZ::ComponentApplicationBus::Events::GetApplication);
 
     if (m_bInGameMode)
     {
@@ -802,6 +794,22 @@ void CGameEngine::Update()
         if (CViewport* pRenderViewport = GetIEditor()->GetViewManager()->GetGameViewport())
         {
             pRenderViewport->Update();
+        }
+
+        // Check for the Escape key to exit game mode here rather than in Qt, 
+        // because all Qt events are usually filtered out in game mode in 
+        // QtEditorApplication_<platform>.cpp nativeEventFilter() to prevent 
+        // using Editor menu actions and shortcuts that shouldn't trigger while 
+        // playing the game.
+        // When the user opens the console, Qt events will be allowed 
+        // so the user can interact with limited Editor content like the console.
+        const AzFramework::InputChannel* inputChannel = nullptr;
+        const AzFramework::InputChannelId channelId(AzFramework::InputDeviceKeyboard::Key::Escape);
+        AzFramework::InputChannelRequestBus::EventResult(inputChannel, channelId, &AzFramework::InputChannelRequests::GetInputChannel);
+        if(inputChannel && inputChannel->GetState() == AzFramework::InputChannel::State::Began)
+        {
+            // leave game mode
+            RequestSetGameMode(false);
         }
     }
     else
@@ -831,39 +839,8 @@ void CGameEngine::OnEditorNotifyEvent(EEditorNotifyEvent event)
     }
 }
 
-void CGameEngine::OnTerrainModified(const Vec2& modPosition, float modAreaRadius, bool fullTerrain)
+void CGameEngine::OnAreaModified([[maybe_unused]] const AABB& modifiedArea)
 {
-    INavigationSystem* pNavigationSystem = nullptr; // INavigationSystem will be converted to an AZInterface (LY-111343)
-
-    if (pNavigationSystem)
-    {
-        // Only report local modifications, not a change in the full terrain (probably happening during initialization)
-        if (fullTerrain == false)
-        {
-            const Vec2 offset(modAreaRadius * 1.5f, modAreaRadius * 1.5f);
-            AABB updateBox;
-            updateBox.min = modPosition - offset;
-            updateBox.max = modPosition + offset;
-            AzFramework::Terrain::TerrainDataRequests* terrain = AzFramework::Terrain::TerrainDataRequestBus::FindFirstHandler();
-            AZ_Assert(terrain != nullptr, "Expecting a valid terrain handler when the terrain is modified");
-            const float terrainHeight1 = terrain->GetHeightFromFloats(updateBox.min.x, updateBox.min.y);
-            const float terrainHeight2 = terrain->GetHeightFromFloats(updateBox.max.x, updateBox.max.y);
-            const float terrainHeight3 = terrain->GetHeightFromFloats(modPosition.x, modPosition.y);
-
-            updateBox.min.z = min(terrainHeight1, min(terrainHeight2, terrainHeight3)) - (modAreaRadius * 2.0f);
-            updateBox.max.z = max(terrainHeight1, max(terrainHeight2, terrainHeight3)) + (modAreaRadius * 2.0f);
-            pNavigationSystem->WorldChanged(updateBox);
-        }
-    }
-}
-
-void CGameEngine::OnAreaModified(const AABB& modifiedArea)
-{
-    INavigationSystem* pNavigationSystem = nullptr; // INavigationSystem will be converted to an AZInterface (LY-111343)
-    if (pNavigationSystem)
-    {
-        pNavigationSystem->WorldChanged(modifiedArea);
-    }
 }
 
 void CGameEngine::ExecuteQueuedEvents()

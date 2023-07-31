@@ -65,7 +65,7 @@ namespace SettingsRegistryTests
     };
 
     class SettingsRegistryTest
-        : public UnitTest::AllocatorsFixture
+        : public UnitTest::LeakDetectionFixture
     {
     public:
         ~SettingsRegistryTest() override = default;
@@ -101,8 +101,6 @@ namespace SettingsRegistryTests
 
         void SetUp() override
         {
-            SetupAllocator();
-
             m_serializeContext = AZStd::make_unique<AZ::SerializeContext>();
             m_registrationContext = AZStd::make_unique<AZ::JsonRegistrationContext>();
             
@@ -122,8 +120,6 @@ namespace SettingsRegistryTests
             m_registry.reset();
             m_registrationContext.reset();
             m_serializeContext.reset();
-
-            TeardownAllocator();
         }
 
         AZ::IO::FixedMaxPath CreateTestFile(AZStd::string_view name, AZStd::string_view content)
@@ -1329,13 +1325,8 @@ namespace SettingsRegistryTests
             EXPECT_EQ(1, value);
         };
         auto testNotifier1 = m_registry->RegisterNotifier(callback);
-        bool result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
-        ASSERT_TRUE(result);
-
-        AZStd::string history;
-        result = m_registry->Get(history, AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0");
-        ASSERT_TRUE(result);
-        EXPECT_STREQ(path.c_str(), history.c_str());
+        auto outcome = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
+        ASSERT_TRUE(outcome);
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFile_MergeTestFileWithRootKey_PatchAppliedAndReported)
@@ -1351,32 +1342,21 @@ namespace SettingsRegistryTests
             EXPECT_EQ(1, value);
         };
         auto testNotifier1 = m_registry->RegisterNotifier(callback);
-        bool result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, "/Path", nullptr);
-        ASSERT_TRUE(result);
-
-        AZStd::string history;
-        result = m_registry->Get(history, AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0");
-        ASSERT_TRUE(result);
-        EXPECT_STREQ(path.c_str(), history.c_str());
+        auto outcome = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, "/Path", nullptr);
+        ASSERT_TRUE(outcome);
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFile_MergeTestFileWithBuffer_PatchAppliedAndReported)
     {
         auto path = CreateTestFile("test.setreg", R"({ "Test": 1 })");
 
-        AZStd::vector<char> buffer;
-        buffer.push_back(32);
-        buffer.push_back(64);
-        bool result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, &buffer);
+        auto result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, {});
         EXPECT_TRUE(result);
-        EXPECT_TRUE(buffer.empty());
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFile_EmptyPath_ReturnsFalse)
     {
-        AZ_TEST_START_TRACE_SUPPRESSION;
-        bool result = m_registry->MergeSettingsFile("", AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
-        AZ_TEST_STOP_TRACE_SUPPRESSION(1);
+        auto result = m_registry->MergeSettingsFile("", AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
         EXPECT_FALSE(result);
     }
 
@@ -1387,7 +1367,7 @@ namespace SettingsRegistryTests
         CreateTestFile("test.setreg", R"({ "Test": 1 })");
 
         AZStd::string_view subPath(path.c_str(), path.Native().size() - 4);
-        bool result = m_registry->MergeSettingsFile(subPath, AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
+        auto result = m_registry->MergeSettingsFile(subPath, AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
         EXPECT_TRUE(result);
     }
 
@@ -1396,88 +1376,56 @@ namespace SettingsRegistryTests
         constexpr AZStd::fixed_string<AZ::IO::MaxPathLength + 1> path(AZ::IO::MaxPathLength + 1, '1');
         const AZStd::string_view subPath(path);
 
-        AZ_TEST_START_TRACE_SUPPRESSION;
-        bool result = m_registry->MergeSettingsFile(subPath, AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
-        AZ_TEST_STOP_TRACE_SUPPRESSION(1);
+        auto result = m_registry->MergeSettingsFile(subPath, AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
         EXPECT_FALSE(result);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Error"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Path"));
+        EXPECT_FALSE(result.GetMessages().empty());
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFile_InvalidPath_ReturnsFalse)
     {
-        AZ_TEST_START_TRACE_SUPPRESSION;
-        bool result = m_registry->MergeSettingsFile("InvalidPath", AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
-        AZ_TEST_STOP_TRACE_SUPPRESSION(1);
+        auto result = m_registry->MergeSettingsFile("InvalidPath", AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
         EXPECT_FALSE(result);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Error"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Path"));
+        EXPECT_FALSE(result.GetMessages().empty());
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFile_InvalidRootKey_ReturnsFalse)
     {
         auto path = CreateTestFile("test.setreg", R"({ "Test": 1 })");
 
-        AZ_TEST_START_TRACE_SUPPRESSION;
-        bool result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, "$", nullptr);
-        AZ_TEST_STOP_TRACE_SUPPRESSION(1);
+        auto result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, "$", nullptr);
         EXPECT_FALSE(result);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Error"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Path"));
+        EXPECT_FALSE(result.GetMessages().empty());
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFile_ParseError_ReturnsFalse)
     {
         auto path = CreateTestFile("test.setreg", "{ Test: 1 }");
 
-        AZ_TEST_START_TRACE_SUPPRESSION;
-        bool result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
-        AZ_TEST_STOP_TRACE_SUPPRESSION(1);
+        auto result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, {}, nullptr);
         EXPECT_FALSE(result);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Error"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Path"));
+        EXPECT_FALSE(result.GetMessages().empty());
     }
 
-    TEST_F(SettingsRegistryTest, MergeSettingsFile_NonObjectRoot_EmptyRootKey_JsonMergePatch_ReturnsFalse)
+    TEST_F(SettingsRegistryTest, MergeSettingsFile_NonObjectRoot_EmptyAnchorKey_JsonMergePatch_ReturnsFalse)
     {
         auto path = CreateTestFile("test.setreg", R"("BooleanValue": false)");
 
-        AZ_TEST_START_TRACE_SUPPRESSION;
-        bool result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, {});
-        AZ_TEST_STOP_TRACE_SUPPRESSION(1);
+        auto result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, {});
         EXPECT_FALSE(result);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Error"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Path"));
+        EXPECT_FALSE(result.GetMessages().empty());
     }
 
-    TEST_F(SettingsRegistryTest, MergeSettingsFile_NonObjectRoot_NonEmptyRootKey_JsonMergePatch_ReturnsFalse)
+    TEST_F(SettingsRegistryTest, MergeSettingsFile_NonObjectRoot_NonEmptyAnchorKey_JsonMergePatch_ReturnsTrue)
     {
         // Because the root key isn't empty the setting registry will not be be completely overridden and therefore
         // it is safe to merge the .setreg file with a boolean element at the root
         auto path = CreateTestFile("test.setreg", R"("BooleanValue": false)");
 
-        AZ_TEST_START_TRACE_SUPPRESSION;
-        EXPECT_FALSE(m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, "/Test"));
-        AZ_TEST_STOP_TRACE_SUPPRESSION(1);
-        // There should be an error message about attempting to serialize a root json value that is not a Json Object
-        // to the settings registry
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Error"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Path"));
+        auto result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, "/Test");
+        EXPECT_TRUE(result);
     }
 
-    TEST_F(SettingsRegistryTest, MergeSettingsFile_EmptyObjectRoot_EmptyRootKey_JsonMergePatch_PatchAppliedAndReported)
+    TEST_F(SettingsRegistryTest, MergeSettingsFile_EmptyObjectRoot_EmptyAnchorKey_JsonMergePatch_PatchAppliedAndReported)
     {
         // In this scenario the object root is empty. The Merge should complete successfully
         // but leave the settings registry unchanged.
@@ -1488,17 +1436,126 @@ namespace SettingsRegistryTests
 
         // Merging a file with a empty JSON Object should be effectively a no-op.
         // There are some changes in the settings registry to record the merge history for introspection purposes.
-        bool result = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, {});
-        EXPECT_TRUE(result);
-
-        AZStd::string history;
-        result = m_registry->Get(history, AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0");
-        EXPECT_TRUE(result);
-        EXPECT_STREQ(path.c_str(), history.c_str());
+        auto outcome = m_registry->MergeSettingsFile(path.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, {});
+        EXPECT_TRUE(outcome);
 
         AZ::s64 intValue{};
         EXPECT_TRUE(m_registry->Get(intValue, "/TestObject/IntValue"));
         EXPECT_EQ(7, intValue);
+    }
+
+    TEST_F(SettingsRegistryTest, MergeSettingsFile_JsonWithImport_MergesImportedFiles_InOrder)
+    {
+        auto filePath = CreateTestFile("Memory.phone.setreg", R"({ "pre_field": {"first": 7 },
+            "$import": "Memory.os.setreg", "non_override": 7, "post_field": {"2nd": "twenty-one"} })");
+        CreateTestFile("Memory.os.setreg", R"({ "$import": { "filename": "Memory.mobile.setreg" },
+            "non_override2": "Hello World", "override_imported_settings": "override" })");
+        CreateTestFile("Memory.mobile.setreg", R"({ "Memory": 1, "override_imported_settings": "initial",
+            "pre_field": {"first": 14, "second": "fourteen"}, "post_field": [2] })");
+
+        // anchor the settings to scalability
+        constexpr AZStd::string_view anchorKey = "/Test/Scalability";
+        auto result = m_registry->MergeSettingsFile(filePath.Native(), AZ::SettingsRegistryInterface::Format::JsonMergePatch, anchorKey);
+        ASSERT_TRUE(result);
+
+        using FixedValueString = AZ::SettingsRegistryInterface::FixedValueString;
+        AZ::s64 intValue{};
+        EXPECT_TRUE(m_registry->Get(intValue, FixedValueString(anchorKey) + "/non_override"));
+        EXPECT_EQ(7, intValue);
+
+        AZStd::string stringValue;
+        EXPECT_TRUE(m_registry->Get(stringValue, FixedValueString(anchorKey) + "/non_override2"));
+        EXPECT_EQ("Hello World", stringValue);
+
+        // Check the overridden imported settigns
+        stringValue.clear();
+        EXPECT_TRUE(m_registry->Get(stringValue, FixedValueString(anchorKey) + "/override_imported_settings"));
+        // As the Memory.os.setreg imports the Memory.mobile.setreg all of its settings
+        // should be merged afterwards and therefore overrides them
+        EXPECT_EQ("override", stringValue);
+
+        intValue = {};
+        EXPECT_TRUE(m_registry->Get(intValue, FixedValueString(anchorKey) + "/Memory"));
+        EXPECT_EQ(1, intValue);
+
+        // Check that the "pre_field" is object "first" field is overridden
+        // but the "post_field" overrides the import files value
+        // The "Memory.mobile.setreg" would merge over the "Memory.phone.setreg"
+        // because its import values appear afterwards
+        intValue = {};
+        EXPECT_TRUE(m_registry->Get(intValue, FixedValueString(anchorKey) + "/pre_field/first"));
+        EXPECT_EQ(14, intValue);
+
+        stringValue.clear();
+        EXPECT_TRUE(m_registry->Get(stringValue, FixedValueString(anchorKey) + "/pre_field/second"));
+        EXPECT_EQ("fourteen", stringValue);
+
+        stringValue.clear();
+        // The "Memory.phone.setreg" "post_field" should retain its value
+        // as that field appears after the import
+        EXPECT_TRUE(m_registry->Get(stringValue, FixedValueString(anchorKey) + "/post_field/2nd"));
+        EXPECT_EQ("twenty-one", stringValue);
+    }
+
+    TEST_F(SettingsRegistryTest, MergeSettingsFile_JsonWithImport_MultipleImports_MergesBasedOnOrder)
+    {
+        CreateTestFile("number.setreg", R"({ "object_field": { "1": 23,
+            "2": 34 }})");
+        CreateTestFile("string.setreg", R"({ "object_field": { "1": "Hello",
+           "3": "World" }})");
+
+        // anchor the settings underneath the Aggregate key
+        constexpr AZStd::string_view anchorKey = "/Test/Aggregate";
+        {
+            // Test by importing the files in order of number.setreg followed by
+            // string.setreg. In this scenario, the "object_field/1" from string.setreg
+            // should be the value in the Settings Registry
+            auto numberStringFilePath = CreateTestFile("aggregate.setreg", R"({
+                "$import": "number.setreg",
+                "$import": "string.setreg" })");
+            auto result = m_registry->MergeSettingsFile(numberStringFilePath.Native(),
+                AZ::SettingsRegistryInterface::Format::JsonMergePatch, anchorKey);
+            ASSERT_TRUE(result);
+
+            using FixedValueString = AZ::SettingsRegistryInterface::FixedValueString;
+            AZStd::string stringValue;
+            EXPECT_TRUE(m_registry->Get(stringValue, FixedValueString(anchorKey) + "/object_field/1"));
+            EXPECT_EQ("Hello", stringValue);
+
+            AZ::s64 intValue{};
+            EXPECT_TRUE(m_registry->Get(intValue, FixedValueString(anchorKey) + "/object_field/2"));
+            EXPECT_EQ(34, intValue);
+
+            stringValue.clear();
+            EXPECT_TRUE(m_registry->Get(stringValue, FixedValueString(anchorKey) + "/object_field/3"));
+            EXPECT_EQ("World", stringValue);
+        }
+
+        {
+            // Test by importing the files in order of string.setreg followed by
+            // number.setreg. In this scenario, the "object_field/1" from number.setreg
+            // should be the value in the Settings Registry
+            auto stringNumberFilePath = CreateTestFile("aggregate.setreg", R"({
+                "$import": "string.setreg",
+                "$import": "number.setreg" })");
+
+            auto result = m_registry->MergeSettingsFile(stringNumberFilePath.Native(),
+                AZ::SettingsRegistryInterface::Format::JsonMergePatch, anchorKey);
+            ASSERT_TRUE(result);
+
+            using FixedValueString = AZ::SettingsRegistryInterface::FixedValueString;
+            AZ::s64 intValue{};
+            EXPECT_TRUE(m_registry->Get(intValue, FixedValueString(anchorKey) + "/object_field/1"));
+            EXPECT_EQ(23, intValue);
+
+            intValue = {};
+            EXPECT_TRUE(m_registry->Get(intValue, FixedValueString(anchorKey) + "/object_field/2"));
+            EXPECT_EQ(34, intValue);
+
+            AZStd::string stringValue;
+            EXPECT_TRUE(m_registry->Get(stringValue, FixedValueString(anchorKey) + "/object_field/3"));
+            EXPECT_EQ("World", stringValue);
+        }
     }
 
     //
@@ -1528,16 +1585,9 @@ namespace SettingsRegistryTests
         };
         auto testNotifier1 = m_registry->RegisterNotifier(callback);
 
-        bool result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), {"editor", "test"}, {});
+        auto result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), {"editor", "test"}, {});
         EXPECT_TRUE(result);
         EXPECT_EQ(4, counter);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0")); // Folder and specialization settings.
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/2"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/3"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/4"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::NoType, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/5"));
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFolder_WithPlatformFiles_FilesAppliedInSpecializationOrder)
@@ -1568,18 +1618,9 @@ namespace SettingsRegistryTests
         };
         auto testNotifier1 = m_registry->RegisterNotifier(callback);
 
-        bool result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, "Special");
+        auto result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, "Special");
         EXPECT_TRUE(result);
         EXPECT_EQ(6, counter);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0")); // Folder and specialization settings.
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/2"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/3"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/4"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/5"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/6"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::NoType, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/7"));
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFolder_DifferentlyNamedFiles_FilesAppliedInAlphabeticAndSpecializationOrder)
@@ -1605,16 +1646,9 @@ namespace SettingsRegistryTests
         };
         auto testNotifier1 = m_registry->RegisterNotifier(callback);
         
-        bool result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, {});
+        auto result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, {});
         EXPECT_TRUE(result);
         EXPECT_EQ(4, counter);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0")); // Folder and specialization settings.
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/2"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/3"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/4"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::NoType, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/5"));
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFolder_JsonPatchFiles_FilesAppliedInAlphabeticAndSpecializationOrder)
@@ -1644,16 +1678,9 @@ namespace SettingsRegistryTests
         };
         auto testNotifier1 = m_registry->RegisterNotifier(callback);
 
-        bool result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, {});
+        auto result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, {});
         EXPECT_TRUE(result);
         EXPECT_EQ(4, counter);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0")); // Folder and specialization settings.
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/2"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/3"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/4"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::NoType, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/5"));
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFolder_UnsupportedFilesAreIgnored_OneFileAppliedAndSuccessReturned)
@@ -1675,13 +1702,9 @@ namespace SettingsRegistryTests
         };
         auto testNotifier1 = m_registry->RegisterNotifier(callback);
 
-        bool result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, "Special");
+        auto result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, "Special");
         EXPECT_TRUE(result);
         EXPECT_EQ(1, counter);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0")); // Folder and specialization settings.
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::NoType, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/2"));
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFolder_WithScratchBuffer_FilesAppliedInSpecializationOrder)
@@ -1709,39 +1732,25 @@ namespace SettingsRegistryTests
 
         AZStd::vector<char> buffer;
 
-        bool result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, {}, "", &buffer);
+        auto result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, {}, "", &buffer);
         EXPECT_TRUE(result);
         EXPECT_EQ(4, counter);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0")); // Folder and specialization settings.
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/2"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/3"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/4"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::NoType, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/5"));
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFolder_EmptyFolder_ReportsSuccessButNothingAdded)
     {
-        bool result = m_registry->MergeSettingsFolder(m_tempDirectory.GetDirectoryAsFixedMaxPath().Native(), { "editor", "test" }, {});
+        auto result = m_registry->MergeSettingsFolder(m_tempDirectory.GetDirectoryAsFixedMaxPath().Native(), { "editor", "test" }, {});
         EXPECT_TRUE(result);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0")); // Folder and specialization settings.
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::NoType, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1"));
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFolder_PathTooLong_ReportsErrorAndReturnsFalse)
     {
         constexpr AZStd::fixed_string<AZ::IO::MaxPathLength + 1> path(AZ::IO::MaxPathLength + 1, 'a');
         
-        AZ_TEST_START_TRACE_SUPPRESSION;
-        bool result = m_registry->MergeSettingsFolder(path, { "editor", "test" }, {});
-        AZ_TEST_STOP_TRACE_SUPPRESSION(1);
+        auto result = m_registry->MergeSettingsFolder(path, { "editor", "test" }, {});
         EXPECT_FALSE(result);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Error"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0/Path"));
+        // The message structure should contain the error message
+        EXPECT_FALSE(result.GetMessages().empty());
     }
 
     TEST_F(SettingsRegistryTest, MergeSettingsFolder_ConflictingSpecializations_ReportsErrorAndReturnsFalse)
@@ -1749,17 +1758,9 @@ namespace SettingsRegistryTests
         CreateTestFile("Memory.test.editor.setreg", "{}");
         CreateTestFile("Memory.editor.test.setreg", "{}");
 
-        AZ_TEST_START_TRACE_SUPPRESSION;
-        bool result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, {});
-        EXPECT_GT(::UnitTest::TestRunner::Instance().StopAssertTests(), 0);
+        auto result = m_registry->MergeSettingsFolder((m_tempDirectory.GetDirectoryAsFixedMaxPath() / AZ::SettingsRegistryInterface::RegistryFolder).Native(), { "editor", "test" }, {});
         EXPECT_FALSE(result);
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/0")); // Folder and specialization settings.
-
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::Object, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1/Error"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1/Path"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1/File1"));
-        EXPECT_EQ(AZ::SettingsRegistryInterface::Type::String, m_registry->GetType(AZ_SETTINGS_REGISTRY_HISTORY_KEY "/1/File2"));
+        // The message structure should contain the error message
+        EXPECT_FALSE(result.GetMessages().empty());
     }
 } // namespace SettingsRegistryTests

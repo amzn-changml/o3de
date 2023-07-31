@@ -145,7 +145,6 @@ namespace AzToolsFramework
         : public ViewportInteraction::ViewportSelectionRequests
         , public ActionManagerRegistrationNotificationBus::Handler
         , public EditorContextMenuBus::Handler
-        , private EditorEventsBus::Handler
         , private EditorTransformComponentSelectionRequestBus::Handler
         , private ToolsApplicationNotificationBus::Handler
         , private Camera::EditorCameraNotificationBus::Handler
@@ -219,10 +218,6 @@ namespace AzToolsFramework
 
         void SetupBoxSelect();
 
-        // Legacy ActionManager
-        void RegisterActions();
-        void UnregisterActions();
-
         // ActionManagerRegistrationNotificationBus overrides ...
         void OnActionUpdaterRegistrationHook() override;
         void OnActionRegistrationHook() override;
@@ -271,9 +266,6 @@ namespace AzToolsFramework
         void PopulateEditorGlobalContextMenu(QMenu* menu, const AZStd::optional<AzFramework::ScreenPoint>& point, int flags) override;
         int GetMenuPosition() const override;
         AZStd::string GetMenuIdentifier() const override;
-
-        // EditorEventsBus overrides ...
-        void OnEscape() override;
 
         // ToolsApplicationNotificationBus overrides ...
         void BeforeEntitySelectionChanged() override;
@@ -350,7 +342,6 @@ namespace AzToolsFramework
         Mode m_mode = Mode::Translation; //!< Manipulator mode - default to translation.
         Pivot m_pivotMode = Pivot::Object; //!< Entity pivot mode - default to object (authored root).
         ReferenceFrame m_referenceFrame = ReferenceFrame::Local; //!< What reference frame is the Manipulator currently operating in.
-        Influence m_influence = Influence::Group; //!< What sphere of influence does the Manipulator have.
         Frame m_axisPreview; //!< Axes of entity at the time of mouse down to indicate delta of translation.
         bool m_triedToRefresh = false; //!< Did a refresh event occur to recalculate the current Manipulator transform.
         //! Was EditorTransformComponentSelection responsible for the most recent entity selection change.

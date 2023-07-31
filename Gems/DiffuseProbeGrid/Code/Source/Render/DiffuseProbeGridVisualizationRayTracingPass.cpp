@@ -17,6 +17,7 @@
 #include <DiffuseProbeGrid_Traits_Platform.h>
 #include <Render/DiffuseProbeGridFeatureProcessor.h>
 #include <Render/DiffuseProbeGridVisualizationRayTracingPass.h>
+#include <RayTracing/RayTracingFeatureProcessor.h>
 
 namespace AZ
 {
@@ -275,6 +276,8 @@ namespace AZ
         {
             RPI::Scene* scene = m_pipeline->GetScene();
             DiffuseProbeGridFeatureProcessor* diffuseProbeGridFeatureProcessor = scene->GetFeatureProcessor<DiffuseProbeGridFeatureProcessor>();
+            RayTracingFeatureProcessor* rayTracingFeatureProcessor = scene->GetFeatureProcessor<RayTracingFeatureProcessor>();
+            AZ_Assert(rayTracingFeatureProcessor, "DiffuseProbeGridVisualizationRayTracingPass requires the RayTracingFeatureProcessor");
 
             const AZStd::vector<RPI::ViewPtr>& views = m_pipeline->GetViews(RPI::PipelineViewTag{ "MainCamera" });
             if (views.empty())
@@ -294,13 +297,14 @@ namespace AZ
 
                 const RHI::ShaderResourceGroup* shaderResourceGroups[] = {
                     diffuseProbeGrid->GetVisualizationRayTraceSrg()->GetRHIShaderResourceGroup(),
-                    views[0]->GetRHIShaderResourceGroup()
+                    rayTracingFeatureProcessor->GetRayTracingSceneSrg()->GetRHIShaderResourceGroup(),
+                    views[0]->GetRHIShaderResourceGroup(),
                 };
 
                 RHI::DispatchRaysItem dispatchRaysItem;
-                dispatchRaysItem.m_width = m_outputAttachmentSize.m_width;
-                dispatchRaysItem.m_height = m_outputAttachmentSize.m_height;
-                dispatchRaysItem.m_depth = 1;
+                dispatchRaysItem.m_arguments.m_direct.m_width = m_outputAttachmentSize.m_width;
+                dispatchRaysItem.m_arguments.m_direct.m_height = m_outputAttachmentSize.m_height;
+                dispatchRaysItem.m_arguments.m_direct.m_depth = 1;
                 dispatchRaysItem.m_rayTracingPipelineState = m_rayTracingPipelineState.get();
                 dispatchRaysItem.m_rayTracingShaderTable = m_rayTracingShaderTable.get();
                 dispatchRaysItem.m_shaderResourceGroupCount = RHI::ArraySize(shaderResourceGroups);

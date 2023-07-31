@@ -70,6 +70,7 @@ namespace Multiplayer
     using SessionShutdownEvent = AZ::Event<AzNetworking::INetworkInterface*>;
     using LevelLoadBlockedEvent = AZ::Event<>;
     using NoServerLevelLoadedEvent = AZ::Event<>;
+    using VersionMismatchEvent = AZ::Event<>;
 
     //! @class IMultiplayer
     //! @brief IMultiplayer provides insight into the Multiplayer session and its Agents
@@ -147,12 +148,10 @@ namespace Multiplayer
         //! @param handler The ServerAcceptanceReceived Handler to add
         virtual void AddServerAcceptanceReceivedHandler(ServerAcceptanceReceivedEvent::Handler& handler) = 0;
 
-        //! Adds a SessionInitEvent Handler which is invoked when a new network session starts.
-        //! @param handler The SessionInitEvent Handler to add
+        //! @deprecated If looking for an event when a multiplayer session is created, use SessionNotificationBus::OnCreateSessionBegin or SessionNotificationBus::OnCreateSessionEnd
         virtual void AddSessionInitHandler(SessionInitEvent::Handler& handler) = 0;
 
-        //! Adds a SessionShutdownEvent Handler which is invoked when the current network session ends.
-        //! @param handler The SessionShutdownEvent handler to add
+        //! @deprecated If looking for an event when a multiplayer session ends, use SessionNotificationBus::OnDestroySessionBegin or SessionNotificationBus::OnDestroySessionEnd.
         virtual void AddSessionShutdownHandler(SessionShutdownEvent::Handler& handler) = 0;
 
         //! Adds a LevelLoadBlockedEvent Handler which is invoked whenever the multiplayer system blocks a level load.
@@ -163,6 +162,11 @@ namespace Multiplayer
         //! @param handler The NoServerLevelLoadedEvent handler to add
         virtual void AddNoServerLevelLoadedHandler(NoServerLevelLoadedEvent::Handler& handler) = 0;
 
+        //! Adds a VersionMismatchEvent Handler which is invoked whenever two multiplayer endpoints have a version mismatch.
+        //! For example, the provided handler will be triggered if a client tries connecting to a server that's using a different multiplayer version.
+        //! @param handler The VersionMismatchEvent handler to add
+        virtual void AddVersionMismatchHandler(VersionMismatchEvent::Handler& handler) = 0;
+        
         //! Signals a NotifyClientMigrationEvent with the provided parameters.
         //! @param connectionId       the connection id of the client that is migrating
         //! @param hostId             the host id of the host the client is migrating to

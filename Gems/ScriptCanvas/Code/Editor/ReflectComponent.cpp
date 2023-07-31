@@ -130,7 +130,6 @@ namespace ScriptCanvasEditor
         CreateNodeGroupMimeEvent::Reflect(context);
         CreateCommentNodeMimeEvent::Reflect(context);
         CreateCustomNodeMimeEvent::Reflect(context);
-        CreateDataDrivenNodeMimeEvent::Reflect(context);
         CreateEBusHandlerMimeEvent::Reflect(context);
         CreateEBusHandlerEventMimeEvent::Reflect(context);
         CreateEBusSenderMimeEvent::Reflect(context);
@@ -158,7 +157,6 @@ namespace ScriptCanvasEditor
                 ec->Class<ReflectComponent>("Script Canvas Reflections", "Script Canvas Reflect Component")
                     ->ClassElement(AZ::Edit::ClassElements::EditorData, "")
                     ->Attribute(AZ::Edit::Attributes::Category, "Scripting")
-                    ->Attribute(AZ::Edit::Attributes::AppearsInAddComponentMenu, AZ_CRC("System"))
                     ;
             }
         }

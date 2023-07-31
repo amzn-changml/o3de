@@ -8,10 +8,16 @@
 #include <AzCore/std/containers/vector.h>
 #include <AzCore/Asset/AssetTypeInfoBus.h>
 
+#include <AzFramework/API/ApplicationAPI.h>
+#include <AzFramework/Gem/GemInfo.h>
 #include <AzFramework/StringFunc/StringFunc.h>
 
 #include <AzCore/IO/FileIO.h>
 #include <AzCore/IO/Path/Path.h>
+#include <AzCore/Serialization/Json/JsonSerialization.h>
+#include <AzCore/Serialization/Json/JsonUtils.h>
+#include <AzCore/Settings/SettingsRegistryMergeUtils.h>
+#include <AzCore/Utils/Utils.h>
 
 #include <AzToolsFramework/AssetBrowser/Entries/RootAssetBrowserEntry.h>
 #include <AzToolsFramework/AssetBrowser/Entries/FolderAssetBrowserEntry.h>
@@ -19,7 +25,7 @@
 #include <AzToolsFramework/AssetBrowser/Entries/ProductAssetBrowserEntry.h>
 #include <AzToolsFramework/AssetDatabase/AssetDatabaseConnection.h>
 #include <AzToolsFramework/AssetBrowser/Entries/AssetBrowserEntryCache.h>
-
+#include <AzToolsFramework/AssetBrowser/Favorites/AssetBrowserFavoritesManager.h>
 #include <QVariant>
 
 namespace AzToolsFramework
@@ -30,6 +36,7 @@ namespace AzToolsFramework
             : AssetBrowserEntry()
         {
             EntryCache::CreateInstance();
+            AssetBrowserFavoritesManager::CreateInstance();
         }
 
         AssetBrowserEntry::AssetEntryType RootAssetBrowserEntry::GetEntryType() const
@@ -43,7 +50,18 @@ namespace AzToolsFramework
             EntryCache::GetInstance()->Clear();
 
             m_enginePath = AZ::IO::Path(enginePath).LexicallyNormal();
-            m_fullPath = m_enginePath;
+            m_projectPath = AZ::IO::Path(AZ::Utils::GetProjectPath()).LexicallyNormal();
+            SetFullPath(m_enginePath);
+            AZ::SettingsRegistryInterface* settingsRegistry = AZ::SettingsRegistry::Get();
+            if (settingsRegistry != nullptr)
+            {
+                AZStd::vector<AzFramework::GemInfo> gemInfoList;
+                AzFramework::GetGemsInfo(gemInfoList, *settingsRegistry);
+                for (AzFramework::GemInfo gemInfo : gemInfoList)
+                {
+                    m_gemNames.insert(gemInfo.m_absoluteSourcePaths.begin(), gemInfo.m_absoluteSourcePaths.end());
+                }
+            }
         }
 
         bool RootAssetBrowserEntry::IsInitialUpdate() const
@@ -125,6 +143,41 @@ namespace AzToolsFramework
                 source->m_displayName = QString::fromUtf8(source->m_name.c_str());
                 source->m_scanFolderId = fileDatabaseEntry.m_scanFolderPK;
                 source->m_extension = absoluteFilePath.Extension().Native();
+                source->m_diskSize = AZ::IO::SystemFile::Length(absoluteFilePath.c_str());
+                source->m_modificationTime = AZ::IO::SystemFile::ModificationTime(absoluteFilePath.c_str());
+                AZ::IO::FixedMaxPath assetPath;
+                if (auto settingsRegistry = AZ::SettingsRegistry::Get(); settingsRegistry != nullptr)
+                {
+                    settingsRegistry->Get(assetPath.Native(), AZ::SettingsRegistryMergeUtils::FilePathKey_CacheRootFolder);
+                    assetPath /= fileDatabaseEntry.m_fileName + ".abdata.json";
+
+                    auto result = AZ::JsonSerializationUtils::ReadJsonFile(assetPath.Native());
+
+                    if (result)
+                    {
+                        auto& doc = result.GetValue();
+
+                        const rapidjson::Value& metadata = doc["metadata"];
+                        if (metadata.HasMember("dimension"))
+                        {
+                            const rapidjson::Value& dimension = metadata["dimension"];
+                            if (dimension.IsArray())
+                            {
+                                source->m_dimension.SetX(static_cast<float>(dimension[0].GetDouble()));
+                                source->m_dimension.SetY(static_cast<float>(dimension[1].GetDouble()));
+                                source->m_dimension.SetZ(static_cast<float>(dimension[2].GetDouble()));
+                            }
+                        }
+                        if (metadata.HasMember("vertices"))
+                        {
+                            const rapidjson::Value& vertices = metadata["vertices"];
+                            if (vertices.IsUint())
+                            {
+                                source->m_vertices = vertices.GetUint();
+                            }
+                        }
+                    }
+                }
                 parent->AddChild(source);
                 file = source;
             }
@@ -254,14 +307,16 @@ namespace AzToolsFramework
             // the absolute path is just the relative path with cache root prepended.
             AZ::IO::Path pathFromDatabase(productWithUuidDatabaseEntry.second.m_productName.c_str());
             AZ::IO::PathView cleanedRelative = pathFromDatabase.RelativePath();
+            AZ::IO::FixedMaxPath storageForLexicallyRelative{};
             // remove the first element from the path if you can:
             if (!cleanedRelative.empty())
             {
-                cleanedRelative = cleanedRelative.LexicallyRelative(*cleanedRelative.begin());
+                storageForLexicallyRelative = cleanedRelative.LexicallyRelative(*cleanedRelative.begin());
+                cleanedRelative = storageForLexicallyRelative;
             }
             product->m_relativePath = cleanedRelative;
-            product->m_fullPath = (AZ::IO::Path("@products@") / cleanedRelative).LexicallyNormal();
-
+            product->m_visiblePath = cleanedRelative;
+            product->SetFullPath((AZ::IO::Path("@products@") / cleanedRelative).LexicallyNormal());
             // compute the display data from the above data.
             // does someone have information about a more friendly name for this type?
             AZStd::string assetTypeName;
@@ -367,6 +422,7 @@ namespace AzToolsFramework
             folder->m_displayName = QString::fromUtf8(folderName.data(), aznumeric_caster(folderName.size()));
             folder->m_isScanFolder = isScanFolder;
             parent->AddChild(folder);
+            folder->m_isGemFolder = m_gemNames.contains(folder->GetFullPath());
             return folder;
         }
 
@@ -386,6 +442,21 @@ namespace AzToolsFramework
             if (absolutePathView == AZ::IO::PathView(parent->GetFullPath()))
             {
                 return parent;
+            }
+
+            // If the project is not inside the root engine folder
+            if (!m_projectPath.IsRelativeTo(m_enginePath))
+            {
+                // Update the parent to be the project directory if it isn't already
+                if (absolutePathView.IsRelativeTo(m_projectPath) && !parent->m_fullPath.IsRelativeTo(m_projectPath))
+                {
+                    parent->SetFullPath(m_projectPath.ParentPath());
+                }
+                // Update the parent to be the o3de directory if it isn't already
+                else if (absolutePathView.IsRelativeTo(m_enginePath) && !parent->m_fullPath.IsRelativeTo(m_enginePath))
+                {
+                    parent->SetFullPath(m_enginePath.ParentPath());
+                }
             }
 
             // create all missing folders
@@ -410,8 +481,9 @@ namespace AzToolsFramework
             // note that the children of roots have the same fullpath of the child itself
             // they don't inherit a path from the root because the root is an invisible no-path not
             // shown root.
-            child->m_fullPath = m_fullPath / child->m_name;
+            child->SetFullPath(m_fullPath / child->m_name);
             child->m_relativePath = child->m_name;
+            child->m_visiblePath = child->m_name;
 
             // the display path is the relative path without the child's name.  So it is blank here.
             child->m_displayPath = QString();

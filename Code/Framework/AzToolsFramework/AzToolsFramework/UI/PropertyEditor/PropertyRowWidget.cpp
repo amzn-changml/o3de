@@ -198,6 +198,9 @@ namespace AzToolsFramework
 
         if (!m_containerClearButton)
         {
+            QIcon icon = QIcon(QStringLiteral(":/Cursors/Grab_release.svg"));
+            this->setCursor(QCursor(icon.pixmap(16), 5, 2));
+
             // add those extra controls on the right hand side
             m_containerClearButton = new QToolButton(this);
             m_containerClearButton->setAutoRaise(true);
@@ -239,6 +242,8 @@ namespace AzToolsFramework
         m_sourceNode = dataNode;
         m_treeDepth = depth;
         m_requestedLabelWidth = labelWidth;
+
+        this->unsetCursor();
 
         // discover stuff about node.
 
@@ -317,11 +322,23 @@ namespace AzToolsFramework
                 }
             }
 
+            if (m_parentRow && m_parentRow->m_isSceneSetting)
+            {
+                m_isSceneSetting = true;
+                setStyleSheet("QFrame {background-color: #555555; color: white;}");
+                setContentsMargins(0, 0, 8, 0);
+                if (m_treeDepth > 0)
+                {
+                    m_treeDepth = m_treeDepth - 1;
+                }
+            }
+
             RefreshAttributesFromNode(true);
 
             // --------------------- HANDLER discovery:
             // in order to discover this, we need the property type and handler type.
-            EBUS_EVENT_RESULT(m_handler, PropertyTypeRegistrationMessages::Bus, ResolvePropertyHandler, m_handlerName, typeUuid);
+            PropertyTypeRegistrationMessages::Bus::BroadcastResult(
+                m_handler, &PropertyTypeRegistrationMessages::Bus::Events::ResolvePropertyHandler, m_handlerName, typeUuid);
 
             
             if (m_handler)
@@ -368,8 +385,6 @@ namespace AzToolsFramework
             delete m_containerClearButton;
             delete m_containerAddButton;
         }
-
-        this->unsetCursor();
 
         if ((m_parentRow) && (m_parentRow->IsContainerEditable()))
         {
@@ -950,7 +965,7 @@ namespace AzToolsFramework
                 }
             }
         }
-        else if (attributeName == AZ_CRC("ValueText", 0x251534d1))
+        else if (attributeName == AZ::Edit::Attributes::ValueText)
         {
             m_defaultValueString.clear();
             reader.Read<AZStd::string>(m_defaultValueString);
@@ -969,6 +984,20 @@ namespace AzToolsFramework
         {
             m_forceAutoExpand = false; // Does not always expand by default
             reader.Read<bool>(m_forceAutoExpand);
+        }
+        else if (attributeName == AZ::Edit::Attributes::CategoryStyle)
+        {
+            //! The "display divider" attribute is used to separate the header of a group from the rest of the body in the scene settings tool,
+            //! Set the style of this row to emulate the style of a component card header,
+            //! And notify the PropertyRowWidget that we are parsing over the scene settings reflection data.
+            AZStd::string categoryAttributeValue;
+            reader.Read<AZStd::string>(categoryAttributeValue);
+            if (categoryAttributeValue.compare("display divider") == 0)
+            {
+                m_isSceneSetting = true;
+                setContentsMargins(8, 0, 4, 0);
+                setStyleSheet("QFrame {background-color: #333333; margin-top: 5px; border-top-right-radius: 2px; border-top-left-radius: 2px;}");
+            }
         }
         // Attribute types you are NOT allowed to update at runtime
         else if ((initial) && (attributeName == AZ::Edit::Attributes::ContainerCanBeModified))

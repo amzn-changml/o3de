@@ -28,7 +28,7 @@ using namespace ScriptCanvasEditor;
 class GlobalHandler : ScriptCanvasTesting::GlobalEBus::Handler
 {
 public:
-    AZ_CLASS_ALLOCATOR(GlobalHandler, AZ::SystemAllocator, 0);
+    AZ_CLASS_ALLOCATOR(GlobalHandler, AZ::SystemAllocator);
 
     AZ::Event<> m_zeroParam;
     AZ::Event<AZStd::vector<AZStd::string>&> m_byReference;
@@ -970,4 +970,24 @@ TEST_F(ScriptCanvasTestFixture, StringFormatSquareBracketTranslation)
 TEST_F(ScriptCanvasTestFixture, AutoGenFunctions)
 {
     RunUnitTestGraph("LY_SC_UnitTest_AutoGenFunctions", ExecutionMode::Interpreted);
+}
+
+TEST_F(ScriptCanvasTestFixture, CompactNodeBasicOperators)
+{
+    RunUnitTestGraph("LY_SC_UnitTest_CompactNodeBasicOperators", ExecutionMode::Interpreted);
+}
+
+TEST_F(ScriptCanvasTestFixture, CompactNodeMathematicalFunctions)
+{
+    RunUnitTestGraph("LY_SC_UnitTest_CompactNodeMathematicalFunctions", ExecutionMode::Interpreted);
+}
+
+TEST_F(ScriptCanvasTestFixture, CompactNodeTrigonometry)
+{
+    RunUnitTestGraph("LY_SC_UnitTest_CompactNodeTrigonometry", ExecutionMode::Interpreted);
+}
+
+TEST_F(ScriptCanvasTestFixture, CompactNodeChain)
+{
+    RunUnitTestGraph("LY_SC_UnitTest_CompactNodeChain", ExecutionMode::Interpreted);
 }

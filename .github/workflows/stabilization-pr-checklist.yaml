@@ -1,7 +1,8 @@
 on:
   pull_request:
     branches:
-      - stabilization/**
+    - stabilization/**
+    
 jobs:
   comment-on-PR:
     runs-on: ubuntu-latest

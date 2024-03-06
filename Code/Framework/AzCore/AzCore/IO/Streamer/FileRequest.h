@@ -270,8 +270,12 @@ namespace AZ::IO::Requests
 
 namespace AZ::IO
 {
+    class Streamer_SchedulerTest_RequestSorting_Test;
+
     class FileRequest final
     {
+        friend Streamer_SchedulerTest_RequestSorting_Test;
+
     public:
         inline constexpr static AZStd::chrono::steady_clock::time_point s_noDeadlineTime = AZStd::chrono::steady_clock::time_point::max();
 
@@ -281,7 +285,7 @@ namespace AZ::IO
         using CommandVariant = Requests::CommandVariant;
         using OnCompletionCallback = AZStd::function<void(FileRequest& request)>;
 
-        AZ_CLASS_ALLOCATOR(FileRequest, SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(FileRequest, SystemAllocator);
 
         enum class Usage : u8
         {
@@ -407,10 +411,11 @@ namespace AZ::IO
         friend class StreamerContext;
         friend class Scheduler;
         friend class Device;
+        friend class Streamer_SchedulerTest_RequestSorting_Test;
         friend bool operator==(const FileRequestHandle& lhs, const FileRequestPtr& rhs);
 
     public:
-        AZ_CLASS_ALLOCATOR(ExternalFileRequest, SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(ExternalFileRequest, SystemAllocator);
 
         explicit ExternalFileRequest(StreamerContext* owner);
 

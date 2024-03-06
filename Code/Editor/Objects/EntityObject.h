@@ -16,7 +16,6 @@
 #include "BaseObject.h"
 
 #include "IMovieSystem.h"
-#include "Gizmo.h"
 
 #include <QObject>
 #endif
@@ -24,10 +23,8 @@
 #define CLASS_LIGHT "Light"
 #define CLASS_DESTROYABLE_LIGHT "DestroyableLight"
 #define CLASS_RIGIDBODY_LIGHT "RigidBodyLight"
-#define CLASS_ENVIRONMENT_LIGHT "EnvironmentLight"
 
 class CEntityObject;
-class CSelectionGroup;
 class QMenu;
 
 /*!
@@ -36,7 +33,6 @@ class QMenu;
 struct CEntityEventTarget
 {
     CBaseObject* target; //! Target object.
-    _smart_ptr<CGizmo> pLineGizmo;
     QString event;
     QString sourceEvent;
 };
@@ -49,7 +45,6 @@ struct CEntityLink
     GUID targetId;   // Target entity id.
     CEntityObject* target; // Target entity.
     QString name;    // Name of the link.
-    _smart_ptr<CGizmo> pLineGizmo;
 };
 
 struct IPickEntitesOwner
@@ -199,8 +194,6 @@ public:
     {
         m_bEnableReload = bEnable;
     }
-
-    static void StoreUndoEntityLink(CSelectionGroup* pGroup);
 
 protected:
     template <typename T>

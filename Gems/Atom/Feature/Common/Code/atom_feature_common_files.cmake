@@ -27,6 +27,7 @@ set(FILES
     Include/Atom/Feature/ImGui/ImGuiUtils.h
     Include/Atom/Feature/ImGui/SystemBus.h
     Include/Atom/Feature/ImageBasedLights/ImageBasedLightFeatureProcessor.h
+    Include/Atom/Feature/LightingChannel/LightingChannelConfiguration.h
     Include/Atom/Feature/LookupTable/LookupTableAsset.h
     Include/Atom/Feature/Mesh/MeshFeatureProcessor.h
     Include/Atom/Feature/Mesh/ModelReloaderSystemInterface.h
@@ -34,6 +35,7 @@ set(FILES
     Include/Atom/Feature/PostProcessing/SMAAFeatureProcessorInterface.h
     Include/Atom/Feature/PostProcess/PostFxLayerCategoriesConstants.h
     Include/Atom/Feature/ReflectionProbe/ReflectionProbeFeatureProcessorInterface.h
+    Include/Atom/Feature/SpecularReflections/SpecularReflectionsFeatureProcessorInterface.h
     Include/Atom/Feature/SkyBox/SkyBoxFogBus.h
     Include/Atom/Feature/SkyBox/SkyboxConstants.h
     Include/Atom/Feature/SkyBox/SkyBoxLUT.h
@@ -79,6 +81,7 @@ set(FILES
     Source/CoreLights/DepthExponentiationPass.cpp
     Source/CoreLights/DirectionalLightFeatureProcessor.h
     Source/CoreLights/DirectionalLightFeatureProcessor.cpp
+    Source/CoreLights/DirectionalLightShadowNotificationBus.h
     Source/CoreLights/DiskLightFeatureProcessor.h
     Source/CoreLights/DiskLightFeatureProcessor.cpp
     Source/CoreLights/EsmShadowmapsPass.h
@@ -142,6 +145,7 @@ set(FILES
     Source/ImGui/ImGuiSystemComponent.cpp
     Source/ImGui/ImGuiSystemComponent.h
     Source/ImageBasedLights/ImageBasedLightFeatureProcessor.cpp
+    Source/LightingChannel/LightingChannelConfiguration.cpp
     Source/LookupTable/LookupTableAsset.cpp
     Source/Material/ConvertEmissiveUnitFunctor.cpp
     Source/Material/ConvertEmissiveUnitFunctor.h
@@ -151,13 +155,17 @@ set(FILES
     Source/Material/Transform2DFunctor.h
     Source/Material/UseTextureFunctor.cpp
     Source/Material/UseTextureFunctor.h
-    Source/Material/DrawListFunctor.cpp
-    Source/Material/DrawListFunctor.h
     Source/Math/GaussianMathFilter.h
     Source/Math/GaussianMathFilter.cpp
     Source/Math/MathFilter.h
     Source/Math/MathFilter.cpp
     Source/Math/MathFilterDescriptor.h
+    Source/Mesh/MeshInstanceGroupKey.cpp
+    Source/Mesh/MeshInstanceGroupKey.h
+    Source/Mesh/MeshInstanceGroupList.cpp
+    Source/Mesh/MeshInstanceGroupList.h
+    Source/Mesh/MeshInstanceManager.cpp
+    Source/Mesh/MeshInstanceManager.h
     Source/Mesh/MeshFeatureProcessor.cpp
     Source/Mesh/ModelReloader.cpp
     Source/Mesh/ModelReloader.h
@@ -171,6 +179,8 @@ set(FILES
     Source/OcclusionCullingPlane/OcclusionCullingPlaneFeatureProcessor.cpp
     Source/OcclusionCullingPlane/OcclusionCullingPlane.h
     Source/OcclusionCullingPlane/OcclusionCullingPlane.cpp
+    Source/Silhouette/SilhouetteFeatureProcessor.cpp
+    Source/Silhouette/SilhouetteFeatureProcessor.h
     Source/PostProcess/PostProcessBase.cpp
     Source/PostProcess/PostProcessBase.h
     Source/PostProcess/PostProcessFeatureProcessor.cpp
@@ -187,8 +197,16 @@ set(FILES
     Source/PostProcess/DepthOfField/DepthOfFieldSettings.h
     Source/PostProcess/ExposureControl/ExposureControlSettings.cpp
     Source/PostProcess/ExposureControl/ExposureControlSettings.h
+    Source/PostProcess/FilmGrain/FilmGrainSettings.cpp
+    Source/PostProcess/FilmGrain/FilmGrainSettings.h
+    Source/PostProcess/PaniniProjection/PaniniProjectionSettings.cpp
+    Source/PostProcess/PaniniProjection/PaniniProjectionSettings.h
     Source/PostProcess/Ssao/SsaoSettings.cpp
     Source/PostProcess/Ssao/SsaoSettings.h
+    Source/PostProcess/WhiteBalance/WhiteBalanceSettings.cpp
+    Source/PostProcess/WhiteBalance/WhiteBalanceSettings.h
+    Source/PostProcess/Vignette/VignetteSettings.cpp
+    Source/PostProcess/Vignette/VignetteSettings.h
     Source/PostProcess/LookModification/LookModificationSettings.cpp
     Source/PostProcess/LookModification/LookModificationSettings.h
     Source/PostProcessing/BlendColorGradingLutsPass.h
@@ -205,6 +223,12 @@ set(FILES
     Source/PostProcessing/BloomParentPass.cpp
     Source/PostProcessing/ChromaticAberrationPass.h
     Source/PostProcessing/ChromaticAberrationPass.cpp
+    Source/PostProcessing/FilmGrainPass.h
+    Source/PostProcessing/FilmGrainPass.cpp
+    Source/PostProcessing/PaniniProjectionPass.h
+    Source/PostProcessing/PaniniProjectionPass.cpp
+    Source/PostProcessing/VignettePass.h
+    Source/PostProcessing/VignettePass.cpp
     Source/PostProcessing/DepthOfFieldCompositePass.h
     Source/PostProcessing/DepthOfFieldCompositePass.cpp
     Source/PostProcessing/DepthOfFieldBokehBlurPass.h
@@ -256,6 +280,8 @@ set(FILES
     Source/PostProcessing/SubsurfaceScatteringPass.h
     Source/PostProcessing/TaaPass.h
     Source/PostProcessing/TaaPass.cpp
+    Source/PostProcessing/WhiteBalancePass.h
+    Source/PostProcessing/WhiteBalancePass.cpp
     Source/RayTracing/RayTracingFeatureProcessor.h
     Source/RayTracing/RayTracingFeatureProcessor.cpp
     Source/RayTracing/RayTracingResourceList.h
@@ -269,12 +295,22 @@ set(FILES
     Source/ReflectionProbe/ReflectionProbeFeatureProcessor.cpp
     Source/ReflectionProbe/ReflectionProbe.h
     Source/ReflectionProbe/ReflectionProbe.cpp
+    Source/SpecularReflections/SpecularReflectionsFeatureProcessor.h
+    Source/SpecularReflections/SpecularReflectionsFeatureProcessor.cpp
+    Source/ReflectionScreenSpace/ReflectionScreenSpacePass.cpp
+    Source/ReflectionScreenSpace/ReflectionScreenSpacePass.h
     Source/ReflectionScreenSpace/ReflectionScreenSpaceTracePass.cpp
     Source/ReflectionScreenSpace/ReflectionScreenSpaceTracePass.h
+    Source/ReflectionScreenSpace/ReflectionScreenSpaceDownsampleDepthLinearPass.cpp
+    Source/ReflectionScreenSpace/ReflectionScreenSpaceDownsampleDepthLinearPass.h
+    Source/ReflectionScreenSpace/ReflectionScreenSpaceDownsampleDepthLinearChildPass.cpp
+    Source/ReflectionScreenSpace/ReflectionScreenSpaceDownsampleDepthLinearChildPass.h
     Source/ReflectionScreenSpace/ReflectionScreenSpaceBlurPass.cpp
     Source/ReflectionScreenSpace/ReflectionScreenSpaceBlurPass.h
     Source/ReflectionScreenSpace/ReflectionScreenSpaceBlurChildPass.cpp
     Source/ReflectionScreenSpace/ReflectionScreenSpaceBlurChildPass.h
+    Source/ReflectionScreenSpace/ReflectionScreenSpaceFilterPass.cpp
+    Source/ReflectionScreenSpace/ReflectionScreenSpaceFilterPass.h
     Source/ReflectionScreenSpace/ReflectionScreenSpaceCompositePass.cpp
     Source/ReflectionScreenSpace/ReflectionScreenSpaceCompositePass.h
     Source/ReflectionScreenSpace/ReflectionCopyFrameBufferPass.cpp
@@ -315,6 +351,10 @@ set(FILES
     Source/SkyAtmosphere/SkyAtmosphereParentPass.h
     Source/SkyAtmosphere/SkyAtmospherePass.cpp
     Source/SkyAtmosphere/SkyAtmospherePass.h
+    Source/SplashScreen/SplashScreenFeatureProcessor.cpp
+    Source/SplashScreen/SplashScreenFeatureProcessor.h
+    Source/SplashScreen/SplashScreenPass.cpp
+    Source/SplashScreen/SplashScreenPass.h
     Source/TransformService/TransformServiceFeatureProcessor.cpp
     Source/Utils/GpuBufferHandler.cpp
 )

@@ -39,7 +39,7 @@ namespace AZ
             static const char* Group;
 
             AZ_RTTI(BufferAsset, "{F6C5EA8A-1DB3-456E-B970-B6E2AB262AED}", Data::AssetData);
-            AZ_CLASS_ALLOCATOR(BufferAsset, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(BufferAsset, AZ::SystemAllocator);
 
             static void Reflect(AZ::ReflectContext* context);
 
@@ -63,6 +63,11 @@ namespace AZ
             // AssetData overrides...
             bool HandleAutoReload() override
             {
+                // Automatic asset reloads via the AssetManager are disabled for Atom models and their dependent assets because reloads
+                // need to happen in a specific order to refresh correctly. They require more complex code than what the default
+                // AssetManager reloading provides. See ModelReloader() for the actual handling of asset reloads.
+                // Models need to be loaded via the MeshFeatureProcessor to reload correctly, and reloads can be listened
+                // to by using MeshFeatureProcessor::ConnectModelChangeEventHandler().
                 return false;
             }
 

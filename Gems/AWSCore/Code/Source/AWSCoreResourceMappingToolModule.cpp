@@ -16,7 +16,7 @@ namespace AWSCore
     {
     public:
         AZ_RTTI(AWSCoreResourceMappingToolModule, "{9D16F400-009C-47FF-A186-E48BEB73D94D}", AZ::Module);
-        AZ_CLASS_ALLOCATOR(AWSCoreResourceMappingToolModule, AZ::SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(AWSCoreResourceMappingToolModule, AZ::SystemAllocator);
 
         AWSCoreResourceMappingToolModule()
         {
@@ -35,7 +35,8 @@ namespace AWSCore
     };
 }
 
-// DO NOT MODIFY THIS LINE UNLESS YOU RENAME THE GEM
-// The first parameter should be GemName_GemIdLower
-// The second should be the fully qualified name of the class above
+#if defined(O3DE_GEM_NAME)
+AZ_DECLARE_MODULE_CLASS(AZ_JOIN(Gem_, O3DE_GEM_NAME, _ResourceMappingTool), AWSCore::AWSCoreResourceMappingToolModule)
+#else
 AZ_DECLARE_MODULE_CLASS(Gem_AWSCore_ResourceMappingTool, AWSCore::AWSCoreResourceMappingToolModule)
+#endif

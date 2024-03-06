@@ -20,6 +20,7 @@
 #include <AzCore/Component/ComponentBus.h>
 #include <AzCore/Component/EntityBus.h>
 #include <AzCore/Component/TickBus.h>
+#include <AzCore/Console/IConsoleTypes.h>
 #include <AzCore/Asset/AssetCommon.h>
 #include <AzToolsFramework/UI/PropertyEditor/PropertyEditorAPI.h>
 #include <AzToolsFramework/Undo/UndoSystem.h>
@@ -61,6 +62,7 @@ namespace AZ
 
 namespace AzToolsFramework
 {
+    class ActionManagerInterface;
     class ComponentEditor;
     class ComponentPaletteWidget;
     class ComponentModeCollectionInterface;
@@ -119,7 +121,7 @@ namespace AzToolsFramework
         , public AzToolsFramework::PropertyEditorEntityChangeNotificationBus::MultiHandler
         , private AzToolsFramework::ViewportEditorModeNotificationsBus::Handler
         , public EditorInspectorComponentNotificationBus::MultiHandler
-        , private AzToolsFramework::ComponentModeFramework::EditorComponentModeNotificationBus::Handler
+        , private ComponentModeFramework::EditorComponentModeNotificationBus::Handler
         , public AZ::EntitySystemBus::Handler
         , public AZ::TickBus::Handler
         , private EditorWindowUIRequestBus::Handler
@@ -129,7 +131,7 @@ namespace AzToolsFramework
         Q_OBJECT;
     public:
 
-        AZ_CLASS_ALLOCATOR(EntityPropertyEditor, AZ::SystemAllocator, 0)
+        AZ_CLASS_ALLOCATOR(EntityPropertyEditor, AZ::SystemAllocator)
 
         enum class ReorderState
         {
@@ -184,7 +186,7 @@ namespace AzToolsFramework
 
         bool IsLockedToSpecificEntities() const { return !m_overrideSelectedEntityIds.empty(); }
 
-        static bool AreComponentsCopyable(const AZ::Entity::ComponentArrayType& components, const ComponentFilter& filter);
+        static bool AreComponentsCopyable(AZStd::span<AZ::Component* const> components, const ComponentFilter& filter);
 
         ReorderState GetReorderState() const;
         ComponentEditor* GetEditorForCurrentReorderRowWidget() const;
@@ -225,14 +227,16 @@ namespace AzToolsFramework
         //////////////////////////////////////////////////////////////////////////
 
         //////////////////////////////////////////////////////////////////////////
-        /// AzToolsFramework::EditorEntityContextNotificationBus implementation
+        /// AzToolsFramework::EditorEntityContextNotificationBus overrides ...
         void OnStartPlayInEditor() override;
         void OnStopPlayInEditor() override;
-        void OnContextReset() override;
+        void OnPrepareForContextReset() override;
         //////////////////////////////////////////////////////////////////////////
 
+        // PropertyEditorEntityChangeNotificationBus overrides ...
         void OnEntityComponentPropertyChanged(AZ::ComponentId /*componentId*/) override;
 
+        // EditorInspectorComponentNotificationBus overides ...
         void OnComponentOrderChanged() override;
 
         //////////////////////////////////////////////////////////////////////////
@@ -245,24 +249,25 @@ namespace AzToolsFramework
         void OnEntityStartStatusChanged(const AZ::EntityId& entityId) override;
         //////////////////////////////////////////////////////////////////////////
 
-        // EditorComponentModeNotificationBus
-        void ActiveComponentModeChanged(const AZ::Uuid& componentType) override;
-
         // ViewportEditorModeNotificationsBus overrides ...
         void OnEditorModeActivated(
             const AzToolsFramework::ViewportEditorModesInterface& editorModeState, AzToolsFramework::ViewportEditorMode mode) override;
         void OnEditorModeDeactivated(
             const AzToolsFramework::ViewportEditorModesInterface& editorModeState, AzToolsFramework::ViewportEditorMode mode) override;
 
-        // EntityPropertEditorRequestBus
+        // EditorComponentModeNotificationBus overrides ...
+        void ActiveComponentModeChanged(const AZ::Uuid& componentType) override;
+
+        // EntityPropertEditorRequestBus overrides ...
         void GetSelectedAndPinnedEntities(EntityIdList& selectedEntityIds) override;
         void GetSelectedEntities(EntityIdList& selectedEntityIds) override;
         void SetNewComponentId(AZ::ComponentId componentId) override;
+        void VisitComponentEditors(const VisitComponentEditorsCallback& callback) const override;
 
-        // TickBus
+        // TickBus overrides ...
         void OnTick(float deltaTime, AZ::ScriptTimePoint time) override;
 
-        // EditorWindowRequestBus overrides
+        // EditorWindowRequestBus overrides ...
         void SetEditorUiEnabled(bool enable) override;
 
         // ReadOnlyEntityPublicNotificationBus overrides ...
@@ -292,11 +297,11 @@ namespace AzToolsFramework
         void UpdateEntityDisplay();
         static bool DoesComponentPassFilter(const AZ::Component* component, const ComponentFilter& filter);
         static bool IsComponentRemovable(const AZ::Component* component);
-        bool AreComponentsRemovable(const AZ::Entity::ComponentArrayType& components) const;
+        bool AreComponentsRemovable(AZStd::span<AZ::Component* const> components) const;
         static AZStd::optional<int> GetFixedComponentListIndex(const AZ::Component* component);
         static bool IsComponentDraggable(const AZ::Component* component);
-        bool AreComponentsDraggable(const AZ::Entity::ComponentArrayType& components) const;
-        bool AreComponentsCopyable(const AZ::Entity::ComponentArrayType& components) const;
+        bool AreComponentsDraggable(AZStd::span<AZ::Component* const> components) const;
+        bool AreComponentsCopyable(AZStd::span<AZ::Component* const> components) const;
 
         void AddMenuOptionsForComponents(QMenu& menu, const QPoint& position);
         void AddMenuOptionsForFields(InstanceDataNode* fieldNode, InstanceDataNode* componentNode, const AZ::SerializeContext::ClassData* componentClassData, QMenu& menu);
@@ -346,8 +351,8 @@ namespace AzToolsFramework
         void OnDisplayComponentEditorMenu(const QPoint& position);
         void OnRequestRequiredComponents(const QPoint& position,
             const QSize& size,
-            const AZStd::vector<AZ::ComponentServiceType>& services,
-            const AZStd::vector<AZ::ComponentServiceType>& incompatibleServices);
+            AZStd::span<const AZ::ComponentServiceType> services,
+            AZStd::span<const AZ::ComponentServiceType> incompatibleServices);
 
         AZ::Component* ExtractMatchingComponent(AZ::Component* component, AZ::Entity::ComponentArrayType& availableComponents);
 
@@ -359,8 +364,8 @@ namespace AzToolsFramework
             ComponentPaletteWidget* componentPalette,
             const QPoint& position,
             const QSize& size,
-            const AZStd::vector<AZ::ComponentServiceType>& serviceFilter,
-            const AZStd::vector<AZ::ComponentServiceType>& incompatibleServiceFilter);
+            AZStd::span<const AZ::ComponentServiceType> serviceFilter,
+            AZStd::span<const AZ::ComponentServiceType> incompatibleServiceFilter);
 
         enum class SelectionEntityTypeInfo
         {
@@ -398,7 +403,8 @@ namespace AzToolsFramework
         QAction* m_actionToMoveComponentsDown = nullptr;
         QAction* m_actionToMoveComponentsTop = nullptr;
         QAction* m_actionToMoveComponentsBottom = nullptr;
-        QAction* m_resetToSliceAction = nullptr;
+
+        AzToolsFramework::ActionManagerInterface* m_actionManagerInterface = nullptr;
 
         void CreateActions();
         void UpdateActions();
@@ -407,14 +413,14 @@ namespace AzToolsFramework
         bool CanPasteComponentsOnEntity(const ComponentTypeMimeData::ClassDataContainer& classDataForComponentsToPaste, const AZ::Entity* entity) const;
 
         AZ::Entity::ComponentArrayType GetCopyableComponents() const;
-        void DeleteComponents(const AZ::Entity::ComponentArrayType& components);
+        void DeleteComponents(AZStd::span<AZ::Component* const> components);
         void DeleteComponents();
         void CutComponents();
         void CopyComponents();
         void PasteComponents();
-        void EnableComponents(const AZ::Entity::ComponentArrayType& components);
+        void EnableComponents(AZStd::span<AZ::Component* const> components);
         void EnableComponents();
-        void DisableComponents(const AZ::Entity::ComponentArrayType& components);
+        void DisableComponents(AZStd::span<AZ::Component* const> components);
         void DisableComponents();
         void MoveComponentsUp();
         void MoveComponentsDown();
@@ -430,10 +436,10 @@ namespace AzToolsFramework
         void MoveComponentAfter(const AZ::Component* sourceComponent, const AZ::Component* targetComponent, ScopedUndoBatch &undo);
 
         //reorder each element of source before corresponding element of target
-        void MoveComponentRowBefore(const AZ::Entity::ComponentArrayType &sourceComponents, const AZ::Entity::ComponentArrayType &targetComponents, ScopedUndoBatch &undo);
+        void MoveComponentRowBefore(AZStd::span<AZ::Component* const> sourceComponents, AZStd::span<AZ::Component* const> targetComponents, ScopedUndoBatch &undo);
 
         //reorder each element of source after corresponding element of target
-        void MoveComponentRowAfter(const AZ::Entity::ComponentArrayType &sourceComponents, const AZ::Entity::ComponentArrayType &targetComponents, ScopedUndoBatch &undo);
+        void MoveComponentRowAfter(AZStd::span<AZ::Component* const> sourceComponents, AZStd::span<AZ::Component* const> targetComponents, ScopedUndoBatch &undo);
 
         //determine if any neighboring component editor rows can be exchanged
         bool IsMoveAllowed(const ComponentEditorVector& componentEditors) const;
@@ -467,7 +473,7 @@ namespace AzToolsFramework
         ComponentEditorVector GetIntersectingComponentEditors(const QRect& globalRect) const;
 
         const ComponentEditorVector& GetSelectedComponentEditors() const;
-        const AZ::Entity::ComponentArrayType& GetSelectedComponents() const;
+        AZStd::span<AZ::Component* const> GetSelectedComponents() const;
         const AZStd::unordered_map<AZ::EntityId, AZ::Entity::ComponentArrayType>& GetSelectedComponentsByEntityId() const;
         void UpdateSelectionCache();
 
@@ -487,6 +493,7 @@ namespace AzToolsFramework
         AZStd::unordered_map<AZ::ComponentId, ComponentEditorSaveState> m_componentEditorSaveStateTable;
 
         void UpdateOverlay();
+        void UpdateOverrideVisualization(ComponentEditor& componentEditor);
 
         friend class EntityPropertyEditorOverlay;
         class EntityPropertyEditorOverlay* m_overlay = nullptr;
@@ -635,6 +642,7 @@ namespace AzToolsFramework
         QStandardItem* m_comboItems[StatusItems];
         EntityIdSet m_overrideSelectedEntityIds;
 
+        // Prefab interfaces
         Prefab::PrefabPublicInterface* m_prefabPublicInterface = nullptr;
         Prefab::InstanceUpdateExecutorInterface* m_instanceUpdateExecutorInterface = nullptr;
         bool m_prefabsAreEnabled = false;
@@ -658,8 +666,6 @@ namespace AzToolsFramework
         float m_moveFadeSecondsRemaining;
         AZStd::vector<int> m_indexMapOfMovedRow;
 
-        AzToolsFramework::ComponentModeCollectionInterface* m_componentModeCollection = nullptr;
-
         // When m_initiatingPropertyChangeNotification is set to true, it means this EntityPropertyEditor is
         // broadcasting a change to all listeners about a property change for a given entity.  This is needed
         // so that we don't update the values twice for this inspector
@@ -673,6 +679,8 @@ namespace AzToolsFramework
         //! Stores a component id to be focused on next time the UI updates.
         AZStd::optional<AZ::ComponentId> m_newComponentId;
 
+        AZ::ConsoleCommandInvokedEvent::Handler m_commandInvokedHandler;
+
     private slots:
         void OnPropertyRefreshRequired(); // refresh is needed for a property.
         void UpdateContents();
@@ -683,6 +691,7 @@ namespace AzToolsFramework
         void OnStatusChanged(int index);
         void OnSearchContextMenu(const QPoint& pos);
         void BuildEntityIconMenu();
+        void OnComponentOverrideContextMenu(const QPoint& position);
 
         void OnSearchTextChanged();
         void ClearSearchFilter();
@@ -697,7 +706,7 @@ namespace AzToolsFramework
     };
 
     void SortComponentsByOrder(AZ::EntityId entityId, AZ::Entity::ComponentArrayType& componentsOnEntity);
-    void SaveComponentOrder(AZ::EntityId entityId, const AZ::Entity::ComponentArrayType& componentsInOrder);
+    void SaveComponentOrder(AZ::EntityId entityId, AZStd::span<AZ::Component* const> componentsInOrder);
 
 } // namespace AzToolsFramework
 

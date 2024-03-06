@@ -13,29 +13,23 @@
 #include <AzCore/Math/Uuid.h>
 #include <AzCore/RTTI/RTTI.h>
 #include <AzCore/EBus/EBus.h>
-#include <AzCore/Serialization/SerializeContext.h>
 #include <AzCore/Component/ComponentBus.h>
 #include "PropertyEditorAPI_Internals.h"
 #include <AzToolsFramework/UI/DocumentPropertyEditor/PropertyHandlerWidget.h>
+#include <AzToolsFramework/UI/PropertyEditor/InstanceDataHierarchy.h>
 
 class QWidget;
 class QCheckBox;
 class QLabel;
 
+namespace AZ
+{
+    class SerializeContext;
+}
+
 namespace AzToolsFramework
 {
     class InstanceDataNode;
-
-    // when a property is modified, we attempt to retrieve the value that comes out in response to the Property Modification function that you may supply
-    // if you return anything other than Refresh_None, the tree may be queued for update:
-    enum PropertyModificationRefreshLevel : int
-    {
-        Refresh_None,
-        Refresh_Values,
-        Refresh_AttributesAndValues,
-        Refresh_EntireTree,
-        Refresh_EntireTree_NewContent,
-    };
 
     // only ONE property handler is ever created for each kind of property.
     // so do not store state for a particular GUI, inside your property handler.  Your one handler may be responsible for translating
@@ -142,7 +136,7 @@ namespace AzToolsFramework
         // Invoked by widgets to notify the property editor that the editing session has finished
         // This can be used to end an undo batch operation
         virtual void OnEditingFinished([[maybe_unused]] QWidget* editorGUI) {}
-    }; 
+    };
 
     using PropertyEditorGUIMessagesBus = AZ::EBus<PropertyEditorGUIMessages>;
 
@@ -187,9 +181,9 @@ namespace AzToolsFramework
             using HandlerType = RpePropertyHandlerWrapper<void*>;
             PropertyEditorToolsSystemInterface::HandlerData registrationInfo;
             registrationInfo.m_name = HandlerType::GetHandlerName(*this);
-            registrationInfo.m_shouldHandleNode = [this](const AZ::Dom::Value& node)
+            registrationInfo.m_shouldHandleType = [this](const AZ::TypeId& typeId)
             {
-                return HandlerType::ShouldHandleNode(*this, node);
+                return HandlerType::ShouldHandleType(*this, typeId);
             };
             registrationInfo.m_factory = [this]()
             {
@@ -236,9 +230,8 @@ namespace AzToolsFramework
             }
         }
 
-        void WriteGUIValuesIntoTempProperty_Internal(QWidget* widget, void* tempValue, const AZ::Uuid& propertyType, AZ::SerializeContext* serializeContext) override
+        void WriteGUIValuesIntoTempProperty_Internal(QWidget* widget, void* tempValue, const AZ::Uuid& propertyType, AZ::SerializeContext*) override
         {
-            (void)serializeContext;
             WriteGUIValuesIntoProperty(0, reinterpret_cast<WidgetType*>(widget), tempValue, propertyType);
         }
 

@@ -18,7 +18,7 @@ namespace AZ
             if (auto serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
             {
                 serializeContext->Class<AreaLightComponentConfig, ComponentConfig>()
-                    ->Version(8) // Added AffectsGI
+                    ->Version(9) // Added AffectsGI
                     ->Field("LightType", &AreaLightComponentConfig::m_lightType)
                     ->Field("Color", &AreaLightComponentConfig::m_color)
                     ->Field("IntensityMode", &AreaLightComponentConfig::m_intensityMode)
@@ -39,9 +39,13 @@ namespace AZ
                     ->Field("Shadow Filter Method", &AreaLightComponentConfig::m_shadowFilterMethod)
                     ->Field("Filtering Sample Count", &AreaLightComponentConfig::m_filteringSampleCount)
                     ->Field("Esm Exponent", &AreaLightComponentConfig::m_esmExponent)
+                    ->Field("Shadow Caching Mode", &AreaLightComponentConfig::m_shadowCachingMode)
+                    ->Field("Shadow Caching Enabled", &AreaLightComponentConfig::m_cacheShadows) // temporary attribute that is used for edit context but ignored in serialize context.
                     // Global Illumination
                     ->Field("Affects GI", &AreaLightComponentConfig::m_affectsGI)
                     ->Field("Affects GI Factor", &AreaLightComponentConfig::m_affectsGIFactor)
+                    // Lighting channel
+                    ->Field("LightingChannelConfig", &AreaLightComponentConfig::m_lightingChannelConfig)
                     ;
             }
         }
@@ -189,13 +193,14 @@ namespace AZ
 
         bool AreaLightComponentConfig::IsShadowPcfDisabled() const
         {
-            return !(m_shadowFilterMethod == ShadowFilterMethod::Pcf ||
+            return ShadowsDisabled() || !(m_shadowFilterMethod == ShadowFilterMethod::Pcf ||
                 m_shadowFilterMethod == ShadowFilterMethod::EsmPcf);
         }
 
         bool AreaLightComponentConfig::IsEsmDisabled() const
         {
-            return !(m_shadowFilterMethod == ShadowFilterMethod::Esm || m_shadowFilterMethod == ShadowFilterMethod::EsmPcf);
+            return ShadowsDisabled() ||
+                !(m_shadowFilterMethod == ShadowFilterMethod::Esm || m_shadowFilterMethod == ShadowFilterMethod::EsmPcf);
         }
     }
 }

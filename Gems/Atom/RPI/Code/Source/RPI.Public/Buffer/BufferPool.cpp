@@ -24,7 +24,7 @@ namespace AZ
         Data::Instance<BufferPool> BufferPool::FindOrCreate(const Data::Asset<ResourcePoolAsset>& resourcePoolAsset)
         {
             return Data::InstanceDatabase<BufferPool>::Instance().FindOrCreate(
-                Data::InstanceId::CreateFromAssetId(resourcePoolAsset.GetId()),
+                Data::InstanceId::CreateFromAsset(resourcePoolAsset),
                 resourcePoolAsset);
         }
 
@@ -56,10 +56,10 @@ namespace AZ
                 return RHI::ResultCode::Fail;
             }
 
+            bufferPool->SetName(AZ::Name{ poolAsset.GetPoolName() });
             RHI::ResultCode resultCode = bufferPool->Init(device, *desc);
             if (resultCode == RHI::ResultCode::Success)
             {
-                bufferPool->SetName(AZ::Name{ poolAsset.GetPoolName() });
                 m_pool = bufferPool;
             }
 

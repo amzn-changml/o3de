@@ -344,9 +344,9 @@ namespace UnitTest
     }
 
     template <typename ComponentType>
-    AZStd::vector<AZ::Component*> GetComponentsForEntity(AZ::Entity* entity)
+    AZ::Entity::ComponentArrayType GetComponentsForEntity(AZ::Entity* entity)
     {
-        AZStd::vector<AZ::Component*> components;
+        AZ::Entity::ComponentArrayType components;
         AzToolsFramework::GetAllComponentsForEntity(entity, components);
 
         auto itr = AZStd::remove_if(components.begin(), components.end(), [](AZ::Component* component) {return AzToolsFramework::GetUnderlyingComponentType(*component) != azrtti_typeid<ComponentType>();});
@@ -562,12 +562,12 @@ namespace UnitTest
     };
 
     class AddComponentsTest
-        : public AllocatorsTestFixture
+        : public LeakDetectionFixture
     {
     public:
         void SetUp() override
         {
-            AllocatorsTestFixture::SetUp();
+            LeakDetectionFixture::SetUp();
 
             AZ::SettingsRegistryInterface* registry = AZ::SettingsRegistry::Get();
             auto projectPathKey =
@@ -578,7 +578,9 @@ namespace UnitTest
             AZ::SettingsRegistryMergeUtils::MergeSettingsToRegistry_AddRuntimeFilePaths(*registry);
 
             AzFramework::Application::Descriptor descriptor;
-            m_app.Start(descriptor);
+            AZ::ComponentApplication::StartupParameters startupParameters;
+            startupParameters.m_loadSettingsRegistry = false;
+            m_app.Start(descriptor, startupParameters);
 
             // Without this, the user settings component would attempt to save on finalize/shutdown. Since the file is
             // shared across the whole engine, if multiple tests are run in parallel, the saving could cause a crash 
@@ -610,7 +612,7 @@ namespace UnitTest
         {
             m_app.Stop();
 
-            AllocatorsTestFixture::TearDown();
+            LeakDetectionFixture::TearDown();
         }
 
         AzToolsFramework::ToolsApplication m_app;
@@ -848,7 +850,7 @@ namespace UnitTest
         ASSERT_EQ(pendingComponentInfo.m_validComponentsThatAreIncompatible[0], whiteBriefsComponent);
 
         // disable white briefs component, which should resolve heart briefs, and check container counts
-        AzToolsFramework::DisableComponents(whiteBriefsComponent);
+        AzToolsFramework::DisableComponents({ whiteBriefsComponent });
         ASSERT_EQ(1, CountComponentsOnEntity<BlueJeansComponent>(m_entity1));
         ASSERT_EQ(0, CountComponentsOnEntity<WhiteBriefsComponent>(m_entity1));
         ASSERT_EQ(1, CountComponentsOnEntity<HeartBoxersComponent>(m_entity1));
@@ -863,7 +865,7 @@ namespace UnitTest
         ASSERT_EQ(1, m_entity1Counter.GetDisabledCount());
 
         // re-enable white briefs component which is now pending because it's re-added after heart boxers was resolved
-        AzToolsFramework::EnableComponents(whiteBriefsComponent);
+        AzToolsFramework::EnableComponents({ whiteBriefsComponent });
         ASSERT_EQ(1, CountComponentsOnEntity<BlueJeansComponent>(m_entity1));
         ASSERT_EQ(0, CountComponentsOnEntity<WhiteBriefsComponent>(m_entity1));
         ASSERT_EQ(1, CountComponentsOnEntity<HeartBoxersComponent>(m_entity1));
@@ -878,7 +880,7 @@ namespace UnitTest
         ASSERT_EQ(0, m_entity1Counter.GetDisabledCount());
 
         // Try removing pending component (should be uneventful, but it is a branch internally)
-        auto removalOutcome = AzToolsFramework::RemoveComponents(component);
+        auto removalOutcome = AzToolsFramework::RemoveComponents({ component });
         ASSERT_TRUE(removalOutcome.IsSuccess());
         ASSERT_EQ(1, CountComponentsOnEntity<BlueJeansComponent>(m_entity1));
         ASSERT_EQ(1, CountComponentsOnEntity<WhiteBriefsComponent>(m_entity1));
@@ -991,7 +993,7 @@ namespace UnitTest
         ASSERT_EQ(pendingComponentInfo.m_validComponentsThatAreIncompatible[0], hatesSocksComponent);
 
         // Remove HatesSocks from entity 1 to valid the entire entity
-        auto removalOutcome = AzToolsFramework::RemoveComponents(hatesSocksComponent);
+        auto removalOutcome = AzToolsFramework::RemoveComponents({ hatesSocksComponent });
         ASSERT_TRUE(removalOutcome.IsSuccess());
         ASSERT_TRUE((VerifyRemovalValidatedComponents<WoolSocksComponent, LeatherBootsComponent>::OnOutcomeForEntity(removalOutcome, m_entity1)));
     }
@@ -1085,7 +1087,7 @@ namespace UnitTest
     //      Memory
     //      Serialize (and Edit) contexts
     class MockApplicationFixture
-        : public AllocatorsFixture
+        : public LeakDetectionFixture
         , public AZ::ComponentApplicationBus::Handler
     {
     public:
@@ -1122,13 +1124,13 @@ namespace UnitTest
         //////////////////////////////////////////////////////////////////////////
 
         MockApplicationFixture()
-            : AllocatorsFixture()
+            : LeakDetectionFixture()
         {
         }
 
         void SetUp() override
         {
-            AllocatorsFixture::SetUp();
+            LeakDetectionFixture::SetUp();
 
             ComponentApplicationBus::Handler::BusConnect();
             AZ::Interface<AZ::ComponentApplicationRequests>::Register(this);
@@ -1149,7 +1151,7 @@ namespace UnitTest
             AZ::Interface<AZ::ComponentApplicationRequests>::Unregister(this);
             ComponentApplicationBus::Handler::BusDisconnect();
 
-            AllocatorsFixture::TearDown();
+            LeakDetectionFixture::TearDown();
         }
     };
 
@@ -1425,7 +1427,9 @@ namespace UnitTest
 
         // now add a socks component to the pending set which will fulfill the boots' dependency
         testEntity->CreateComponent<AzToolsFramework::Components::GenericComponentWrapper>(aznew LeatherBootsComponent());
-        AzToolsFramework::EditorPendingCompositionRequestBus::Event(testEntity->GetId(), &AzToolsFramework::EditorPendingCompositionRequests::AddPendingComponent, aznew WoolSocksComponent());
+        WoolSocksComponent* woolSocksComponent = aznew WoolSocksComponent();
+        woolSocksComponent->SetSerializedIdentifier("WoolSocksComponent"); // pending composition component cannot store an empty serialized identifier.
+        AzToolsFramework::EditorPendingCompositionRequestBus::Event(testEntity->GetId(), &AzToolsFramework::EditorPendingCompositionRequests::AddPendingComponent, woolSocksComponent);
 
         pendingComponents.clear();
         AzToolsFramework::EditorPendingCompositionRequestBus::Event(testEntity->GetId(), &AzToolsFramework::EditorPendingCompositionRequests::GetPendingComponents, pendingComponents);

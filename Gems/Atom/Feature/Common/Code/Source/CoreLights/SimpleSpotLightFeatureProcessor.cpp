@@ -148,7 +148,7 @@ namespace AZ
             AZ_Assert(handle.IsValid(), "Invalid LightHandle passed to SimpleSpotLightFeatureProcessor::SetDirection().");
 
             AZStd::array<float, 3>& direction = m_lightData.GetData(handle.GetIndex()).m_direction;
-            lightDirection.StoreToFloat3(direction.data());
+            lightDirection.GetNormalized().StoreToFloat3(direction.data());
             m_deviceBufferNeedsUpdate = true;
         }
 
@@ -181,6 +181,14 @@ namespace AZ
             AZ_Assert(handle.IsValid(), "Invalid LightHandle passed to SimpleSpotLightFeatureProcessor::SetAffectsGIFactor().");
 
             m_lightData.GetData(handle.GetIndex()).m_affectsGIFactor = affectsGIFactor;
+            m_deviceBufferNeedsUpdate = true;
+        }
+
+        void SimpleSpotLightFeatureProcessor::SetLightingChannelMask(LightHandle handle, uint32_t lightingChannelMask)
+        {
+            AZ_Assert(handle.IsValid(), "Invalid LightHandle passed to SimpleSpotLightFeatureProcessor::SetLightingChannelMask().");
+
+            m_lightData.GetData(handle.GetIndex()).m_lightingChannelMask = lightingChannelMask;
             m_deviceBufferNeedsUpdate = true;
         }
 

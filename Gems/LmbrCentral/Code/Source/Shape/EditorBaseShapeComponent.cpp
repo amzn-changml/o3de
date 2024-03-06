@@ -200,11 +200,12 @@ namespace LmbrCentral
 
     void EditorBaseShapeComponent::OnShapeColorChanged()
     {
-        m_shapeColor.SetA(AzFramework::ViewportColors::DeselectedColor.GetA());
+        AZ::Color drawColor(m_shapeColor);
+        drawColor.SetA(AzFramework::ViewportColors::DeselectedColor.GetA());
 
         if (m_shapeConfig)
         {
-            m_shapeConfig->SetDrawColor(m_shapeColor);
+            m_shapeConfig->SetDrawColor(drawColor);
         }
     }
 
@@ -216,14 +217,14 @@ namespace LmbrCentral
         }
     }
 
-    AZ::Aabb EditorBaseShapeComponent::GetWorldBounds()
+    AZ::Aabb EditorBaseShapeComponent::GetWorldBounds() const
     {
         AZ::Aabb aabb = AZ::Aabb::CreateNull();
         ShapeComponentRequestsBus::EventResult(aabb, GetEntityId(), &ShapeComponentRequests::GetEncompassingAabb);
         return aabb;
     }
 
-    AZ::Aabb EditorBaseShapeComponent::GetLocalBounds()
+    AZ::Aabb EditorBaseShapeComponent::GetLocalBounds() const
     {
         AZ::Transform unused;
         AZ::Aabb resultBounds = AZ::Aabb::CreateNull();

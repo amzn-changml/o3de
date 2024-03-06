@@ -26,6 +26,7 @@ namespace AZ
             : public PolygonLightFeatureProcessorInterface
         {
         public:
+            AZ_CLASS_ALLOCATOR(PolygonLightFeatureProcessor, AZ::SystemAllocator)
             AZ_RTTI(AZ::Render::PolygonLightFeatureProcessor, "{59E4245F-AD7B-4181-B80A-1B973A50B4C8}", AZ::Render::PolygonLightFeatureProcessorInterface);
 
             static void Reflect(AZ::ReflectContext* context);
@@ -48,8 +49,10 @@ namespace AZ
             void SetPolygonPoints(LightHandle handle, const Vector3* vectices, const uint32_t vertexCount, const Vector3& direction) override;
             void SetLightEmitsBothDirections(LightHandle handle, bool lightEmitsBothDirections) override;
             void SetAttenuationRadius(LightHandle handle, float attenuationRadius) override;
+            void SetLightingChannelMask(LightHandle handle, uint32_t lightingChannelMask) override;
 
             const Data::Instance<RPI::Buffer> GetLightBuffer()const;
+            const Data::Instance<RPI::Buffer> GetLightPointBuffer()const;
             uint32_t GetLightCount()const;
 
         private:

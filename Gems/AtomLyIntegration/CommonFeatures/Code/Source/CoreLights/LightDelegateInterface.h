@@ -84,6 +84,9 @@ namespace AZ
             virtual void SetEsmExponent(float exponent) = 0;
             //! Sets the normal bias. Reduces acne by biasing the shadowmap lookup along the geometric normal.
             virtual void SetNormalShadowBias(float bias) = 0;
+            //! Sets the current shadow caching mode. Cached shadows use persistent textures and only update
+            //! when they detect a change. Regular shadows use transient textures but re-render every frame.
+            virtual void SetShadowCachingMode(AreaLightComponentConfig::ShadowCachingMode cachingMode) = 0;
 
             // Global Illumination
 
@@ -92,6 +95,8 @@ namespace AZ
             //! Sets the multiplier on the contribution to diffuse global illumination.
             virtual void SetAffectsGIFactor(float affectsGIFactor) = 0;
 
+            //! Set the lighting channel mask
+            virtual void SetLightingChannelMask(uint32_t lightingChannelMask) = 0;
             // Debug Visualization
 
             //! Returns the Aabb for the debug visualization of the light.

@@ -82,7 +82,7 @@ namespace GraphCanvas
     {
     public:
         AZ_RTTI(SlotConfiguration, "{E080FC05-EEB6-47A6-B939-F62A45C2B1D2}");
-        AZ_CLASS_ALLOCATOR(SlotConfiguration, AZ::SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(SlotConfiguration, AZ::SystemAllocator);
 
         virtual ~SlotConfiguration() = default;
 
@@ -90,6 +90,8 @@ namespace GraphCanvas
 
         AZStd::string m_tooltip;
         AZStd::string m_name;
+
+        bool m_isNameHidden = false;
 
         SlotGroup m_slotGroup = SlotGroups::Invalid;
 
@@ -102,7 +104,7 @@ namespace GraphCanvas
     {
     public:
         AZ_RTTI(ExecutionSlotConfiguration, "{1129A6DE-CF46-4E87-947F-D2EB432EEA2E}", SlotConfiguration);
-        AZ_CLASS_ALLOCATOR(ExecutionSlotConfiguration, AZ::SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(ExecutionSlotConfiguration, AZ::SystemAllocator);
 
         ExecutionSlotConfiguration() = default;
 
@@ -116,7 +118,7 @@ namespace GraphCanvas
     {
     public:
         AZ_TYPE_INFO(SlotGroupConfiguration, "{88F7AB93-9F26-4059-BD37-FFBD41E38AF6}");
-        AZ_CLASS_ALLOCATOR(SlotGroupConfiguration, AZ::SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(SlotGroupConfiguration, AZ::SystemAllocator);
 
         struct ExtendabilityConfig
         {
@@ -407,3 +409,5 @@ namespace GraphCanvas
 
     using SlotLayoutRequestBus = AZ::EBus<SlotLayoutRequests>;
 }
+
+DECLARE_EBUS_EXTERN(GraphCanvas::SlotRequests);

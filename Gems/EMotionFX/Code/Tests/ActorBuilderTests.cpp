@@ -35,7 +35,6 @@ namespace EMotionFX
     // This fixture is responsible for creating the scene description used by
     // the actor builder pipeline tests
     using ActorBuilderPipelineFixtureBase = InitSceneAPIFixture<
-        AZ::MemoryComponent,
         AZ::AssetManagerComponent,
         AZ::JobManagerComponent,
         AZ::StreamerComponent,
@@ -77,6 +76,8 @@ namespace EMotionFX
 
         void TearDown() override
         {
+            m_actor.reset();
+
             delete m_scene;
             m_scene = nullptr;
 

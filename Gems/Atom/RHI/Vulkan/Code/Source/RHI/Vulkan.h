@@ -14,6 +14,8 @@
 #include <Atom/RHI.Reflect/Bits.h>
 #include <Atom/RHI.Reflect/AttachmentEnums.h>
 
+#include <vma/vk_mem_alloc.h>
+
 #if !defined(_RELEASE)
     #define AZ_VULKAN_USE_DEBUG_LABELS
 #endif
@@ -62,7 +64,11 @@ namespace AZ
             /// Shuts down the debug callback system.
             void ShutdownDebugMessages(const GladVulkanContext& context, VkInstance instance);
 
+            /// Returns the instance layers used for Vulkan validation.
             RawStringList GetValidationLayers();
+
+            /// Returns the instance extensions used for Vulkan validation.
+            RawStringList GetValidationExtensions();
 
             /// Set the debug name of an object.
             void SetNameToObject(uint64_t objectHandle, const char* name, VkObjectType objectType, const Device& device);
@@ -106,6 +112,9 @@ namespace AZ
         /// Converts from a vector of AZStd::string to a vector of raw const char* pointers.
         void ToRawStringList(const StringList& source, RawStringList& dest);
 
+        /// Removes items from a RawStringList that are contained in another RawStringList.
+        void RemoveRawStringList(RawStringList& removeFrom, const RawStringList& toRemove);
+
         RawStringList FilterList(const RawStringList& source, const StringList& filter);
 
         bool ResourceViewOverlaps(const RHI::BufferView& lhs, const RHI::BufferView& rhs);
@@ -119,6 +128,32 @@ namespace AZ
         bool IsRenderAttachmentUsage(RHI::ScopeAttachmentUsage usage);
 
         bool operator==(const VkImageSubresourceRange& lhs, const VkImageSubresourceRange& rhs);
+
+        /// Appends a list of Vulkan structs to end of the "next" chain
+        template<class T>
+        void AppendVkStruct(T& init, const AZStd::vector<void*>& nextStructs)
+        {
+            VkBaseOutStructure* baseStruct = reinterpret_cast<VkBaseOutStructure*>(&init);
+            // Find the last struct in the chain
+            while (baseStruct->pNext)
+            {
+                baseStruct = baseStruct->pNext;
+            }
+
+            // Add the new structs to the chain
+            for (void* nextStruct : nextStructs)
+            {
+                baseStruct->pNext = reinterpret_cast<VkBaseOutStructure*>(nextStruct);
+                baseStruct = baseStruct->pNext;
+            }
+        }
+
+        /// Appends a Vulkan struct to end of the "next" chain
+        template<class T>
+        void AppendVkStruct(T& init, void* nextStruct)
+        {
+            AppendVkStruct(init, AZStd::vector<void*>{ nextStruct });
+        }
 
         AZ_DEFINE_ENUM_BITWISE_OPERATORS(VkImageLayout);
     }

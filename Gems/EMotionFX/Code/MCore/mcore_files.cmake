@@ -7,7 +7,6 @@
 #
 
 set(FILES
-    Source/AABB.h
     Source/Algorithms.cpp
     Source/Algorithms.h
     Source/Algorithms.inl
@@ -15,7 +14,6 @@ set(FILES
     Source/Array2D.inl
     Source/Attribute.cpp
     Source/Attribute.h
-    Source/AttributeAllocator.cpp
     Source/AttributeAllocator.h
     Source/AttributeBool.cpp
     Source/AttributeBool.h
@@ -35,8 +33,6 @@ set(FILES
     Source/AttributeVector4.h
     Source/AzCoreConversions.h
     Source/BoundingSphere.h
-    Source/Color.cpp
-    Source/Color.h
     Source/Command.cpp
     Source/Command.h
     Source/CommandGroup.cpp

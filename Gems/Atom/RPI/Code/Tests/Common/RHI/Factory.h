@@ -21,7 +21,7 @@ namespace UnitTest
             Factory();
             ~Factory();
 
-            AZ_CLASS_ALLOCATOR(Factory, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(Factory, AZ::SystemAllocator);
 
             static AZ::RHI::Ptr<AZ::RHI::Device> CreateDefaultDevice();
 
@@ -35,6 +35,8 @@ namespace UnitTest
             AZ::RHI::APIPriority GetDefaultPriority() override;
 
             uint32_t GetAPIUniqueIndex() const override { return 0; };
+
+            bool SupportsXR() const override;
 
             AZ::RHI::PhysicalDeviceList EnumeratePhysicalDevices() override;
 
@@ -91,6 +93,8 @@ namespace UnitTest
             AZ::RHI::Ptr<AZ::RHI::RayTracingPipelineState> CreateRayTracingPipelineState() override;
 
             AZ::RHI::Ptr<AZ::RHI::RayTracingShaderTable> CreateRayTracingShaderTable() override;
+
+            AZ::RHI::Ptr<AZ::RHI::DispatchRaysIndirectBuffer> CreateDispatchRaysIndirectBuffer() override;
         };
     }
 }

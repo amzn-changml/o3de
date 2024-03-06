@@ -26,7 +26,7 @@ namespace EMotionFX
     {
         namespace Rule
         {
-            AZ_CLASS_ALLOCATOR_IMPL(MorphTargetRule, AZ::SystemAllocator, 0)
+            AZ_CLASS_ALLOCATOR_IMPL(MorphTargetRule, AZ::SystemAllocator)
 
             MorphTargetRule::MorphTargetRule()
                 :m_readOnly(false)
@@ -83,10 +83,11 @@ namespace EMotionFX
                 auto filteredView = AZ::SceneAPI::Containers::Views::MakeFilterView(keyValueView, AZ::SceneAPI::Containers::DerivedTypeFilter<AZ::SceneAPI::DataTypes::IBlendShapeData>());
                 for (auto it = filteredView.begin(); it != filteredView.end(); ++it)
                 {
-                    AZStd::set<AZ::Crc32> types;
+                    AZ::SceneAPI::Events::GraphMetaInfo::VirtualTypesSet types;
                     auto keyValueIterator = it.GetBaseIterator();
                     AZ::SceneAPI::Containers::SceneGraph::NodeIndex index = graph.ConvertToNodeIndex(keyValueIterator.GetFirstIterator());
-                    EBUS_EVENT(AZ::SceneAPI::Events::GraphMetaInfoBus, GetVirtualTypes, types, scene, index);
+                    AZ::SceneAPI::Events::GraphMetaInfoBus::Broadcast(
+                        &AZ::SceneAPI::Events::GraphMetaInfoBus::Events::GetVirtualTypes, types, scene, index);
                     if (types.find(AZ::SceneAPI::Events::GraphMetaInfo::GetIgnoreVirtualType()) == types.end())
                     {
                         selection.AddSelectedNode(it->first.GetPath());
@@ -107,7 +108,7 @@ namespace EMotionFX
 
             //MorphTargetRuleReadOnly
 
-            AZ_CLASS_ALLOCATOR_IMPL(MorphTargetRuleReadOnly, AZ::SystemAllocator, 0)
+            AZ_CLASS_ALLOCATOR_IMPL(MorphTargetRuleReadOnly, AZ::SystemAllocator)
             
             MorphTargetRuleReadOnly::MorphTargetRuleReadOnly()
                 :m_descriptionText("All morph targets motions imported")
@@ -166,10 +167,11 @@ namespace EMotionFX
                 auto filteredView = AZ::SceneAPI::Containers::Views::MakeFilterView(keyValueView, AZ::SceneAPI::Containers::DerivedTypeFilter<AZ::SceneAPI::DataTypes::IBlendShapeData>());
                 for (auto it = filteredView.begin(); it != filteredView.end(); ++it)
                 {
-                    AZStd::set<AZ::Crc32> types;
+                    AZStd::unordered_set<AZ::Crc32> types;
                     auto keyValueIterator = it.GetBaseIterator();
                     AZ::SceneAPI::Containers::SceneGraph::NodeIndex index = graph.ConvertToNodeIndex(keyValueIterator.GetFirstIterator());
-                    EBUS_EVENT(AZ::SceneAPI::Events::GraphMetaInfoBus, GetVirtualTypes, types, scene, index);
+                    AZ::SceneAPI::Events::GraphMetaInfoBus::Broadcast(
+                        &AZ::SceneAPI::Events::GraphMetaInfoBus::Events::GetVirtualTypes, types, scene, index);
                     if (types.find(AZ::SceneAPI::Events::GraphMetaInfo::GetIgnoreVirtualType()) == types.end())
                     {
                         morphTargetAnimations++;

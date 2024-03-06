@@ -67,6 +67,14 @@ namespace AzToolsFramework
             }
         }
 
+        EditorLayer::~EditorLayer()
+        {
+            for (AZ::Entity* entity : m_layerEntities)
+            {
+                delete entity;
+            }
+        }
+
         void EditorLayer::Reflect(AZ::ReflectContext* context)
         {
             if (auto serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
@@ -1390,7 +1398,7 @@ namespace AzToolsFramework
             newLayer->SetSaveFormat(saveFormat);
             newLayer->SetOverwriteFlag(true);
 
-            AZStd::vector<AZ::Component*> newComponents;
+            AZ::Entity::ComponentArrayType newComponents;
             newComponents.push_back(newLayer);
 
             AzToolsFramework::Layers::EditorLayerCreationBus::Broadcast(

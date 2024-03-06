@@ -34,15 +34,7 @@ namespace AZ
 
             m_descriptorSetCount = RHI::Limits::Device::FrameCountMax;
 
-            const uint32_t constantSize = layout.GetConstantDataSize();
-            if (constantSize > 0)
-            {
-                BufferPoolDescriptor bufferPoolDescriptor;
-                bufferPoolDescriptor.m_bindFlags = RHI::BufferBindFlags::Constant;
-                bufferPoolDescriptor.m_heapMemoryLevel = RHI::HeapMemoryLevel::Host;
-                m_constantBufferPool = BufferPool::Create();
-                m_constantBufferPool->Init(device, bufferPoolDescriptor);
-            }
+            m_constantBufferPool = device.GetConstantBufferPool();
 
             DescriptorSetLayout::Descriptor layoutDescriptor;
             layoutDescriptor.m_device = &device;
@@ -92,6 +84,8 @@ namespace AZ
                 {
                     return RHI::ResultCode::OutOfMemory;
                 }
+                AZStd::string name = AZStd::string::format("%s_%d", GetName().GetCStr(), static_cast<int>(i));
+                descriptorSet->SetName(AZ::Name(name));
                 group.m_compiledData.push_back(descriptorSet);
             }
             

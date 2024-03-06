@@ -21,7 +21,7 @@ ly_add_target(
             ${pal_dir}
     BUILD_DEPENDENCIES
         PRIVATE
-            3rdParty::AWSNativeSDK::Core
+            3rdParty::AWSNativeSDK::AWSCore
             AZ::AzCore
 )
 
@@ -67,5 +67,6 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED)
     )
     ly_add_googletest(
         NAME AZ::AWSNativeSDKInit.Tests
+        LABELS REQUIRES_tiaf
     )
 endif()

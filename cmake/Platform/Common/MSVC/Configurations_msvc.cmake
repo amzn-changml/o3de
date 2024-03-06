@@ -26,6 +26,7 @@ endif()
 ly_append_configurations_options(
     DEFINES
         _ENABLE_EXTENDED_ALIGNED_STORAGE # Enables support for extended alignment for the MSVC std::aligned_storage class
+        _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING # Prevents triggering of STL4043 when checked iterators are used in 3rdParty libraries(QT and AWSNativeSDK)
     COMPILATION
         /fp:fast        # allows the compiler to reorder, combine, or simplify floating-point operations to optimize floating-point code for speed and space
         /Gd             # Use _cdecl calling convention for all functions
@@ -136,6 +137,17 @@ else()
             /DEBUG      # Despite the documentation states /Zi implies /DEBUG, without it, stack traces are not expanded
             /INCREMENTAL:NO
 
+    )
+endif()
+
+set(O3DE_BUILD_WITH_DEBUG_SYMBOLS_RELEASE FALSE CACHE BOOL "Add debug symbols when building in release configuration. (default = FALSE)")
+if(O3DE_BUILD_WITH_DEBUG_SYMBOLS_RELEASE)
+    ly_append_configurations_options(
+        COMPILATION_RELEASE
+            /Od             # Enable debug symbols
+            /Zi             # Generate debugging information (no Edit/Continue)
+        LINK_NON_STATIC_RELEASE
+            /DEBUG          # Generate pdbs
     )
 endif()
 

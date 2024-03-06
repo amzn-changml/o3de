@@ -9,6 +9,11 @@
 #include <AWSMetricsModule.h>
 
 #include <AWSMetricsSystemComponent.h>
+
+#if defined(AWS_METRICS_EDITOR)
+#include <AWSMetricsEditorSystemComponent.h>
+#endif
+
 #include <AzCore/Module/Module.h>
 
 namespace AWSMetrics
@@ -17,16 +22,32 @@ namespace AWSMetrics
         : AZ::Module()
     {
         // Push results of [MyComponent]::CreateDescriptor() into m_descriptors here.
-        m_descriptors.insert(m_descriptors.end(), {AWSMetricsSystemComponent::CreateDescriptor()});
+        m_descriptors.insert(m_descriptors.end(),
+            {
+#if defined(AWS_METRICS_EDITOR)
+                AWSMetricsEditorSystemComponent::CreateDescriptor()
+#else
+                AWSMetricsSystemComponent::CreateDescriptor()
+#endif
+            }
+        );
     }
 
     AZ::ComponentTypeList AWSMetricsModule::GetRequiredSystemComponents() const
     {
-        return AZ::ComponentTypeList{azrtti_typeid<AWSMetricsSystemComponent>()};
+        return AZ::ComponentTypeList
+        {
+#if defined(AWS_METRICS_EDITOR)
+            azrtti_typeid<AWSMetricsEditorSystemComponent>()
+#else
+            azrtti_typeid<AWSMetricsSystemComponent>()
+#endif
+        };
     }
 }
 
-// DO NOT MODIFY THIS LINE UNLESS YOU RENAME THE GEM
-// The first parameter should be GemName_GemIdLower
-// The second should be the fully qualified name of the class above
+#if defined(O3DE_GEM_NAME)
+AZ_DECLARE_MODULE_CLASS(AZ_JOIN(Gem_, O3DE_GEM_NAME), AWSMetrics::AWSMetricsModule)
+#else
 AZ_DECLARE_MODULE_CLASS(Gem_AWSMetrics, AWSMetrics::AWSMetricsModule)
+#endif

@@ -13,6 +13,7 @@
 #include <Atom/RHI/Factory.h>
 #include <Atom/RHI/BufferPool.h>
 #include <Atom/RHI/RayTracingBufferPools.h>
+#include <Atom/RHI.Reflect/VkAllocator.h>
 
 namespace AZ
 {
@@ -35,7 +36,8 @@ namespace AZ
 
             if (buffers.m_accelerationStructure)
             {
-                device.GetContext().DestroyAccelerationStructureKHR(device.GetNativeDevice(), buffers.m_accelerationStructure, nullptr);
+                device.GetContext().DestroyAccelerationStructureKHR(
+                    device.GetNativeDevice(), buffers.m_accelerationStructure, VkSystemAllocator::Get());
                 buffers.m_accelerationStructure = nullptr;
             }
 
@@ -96,7 +98,7 @@ namespace AZ
 
             buffers.m_buildInfo = {};
             buffers.m_buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-            buffers.m_buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+            buffers.m_buildInfo.flags = GetAccelerationStructureBuildFlags(descriptor->GetBuildFlags());
             buffers.m_buildInfo.geometryCount = aznumeric_cast<uint32_t>(geometries.size());
             buffers.m_buildInfo.pGeometries = buffers.m_geometryDescs.data();
             buffers.m_buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
@@ -121,6 +123,7 @@ namespace AZ
             AZ::RHI::BufferDescriptor scratchBufferDescriptor;
             scratchBufferDescriptor.m_bindFlags = RHI::BufferBindFlags::ShaderReadWrite | RHI::BufferBindFlags::RayTracingScratchBuffer;
             scratchBufferDescriptor.m_byteCount = buildSizesInfo.buildScratchSize;
+            scratchBufferDescriptor.m_alignment = accelerationStructureProperties.minAccelerationStructureScratchOffsetAlignment;
             
             AZ::RHI::BufferInitRequest scratchBufferRequest;
             scratchBufferRequest.m_buffer = buffers.m_scratchBuffer.get();
@@ -160,7 +163,7 @@ namespace AZ
             createInfo.buffer = blasMemoryView->GetNativeBuffer();
 
             VkResult vkResult = device.GetContext().CreateAccelerationStructureKHR(
-                device.GetNativeDevice(), &createInfo, nullptr, &buffers.m_accelerationStructure);
+                device.GetNativeDevice(), &createInfo, VkSystemAllocator::Get(), &buffers.m_accelerationStructure);
             AssertSuccess(vkResult);
 
             buffers.m_buildInfo.dstAccelerationStructure = buffers.m_accelerationStructure;
@@ -171,6 +174,27 @@ namespace AZ
                 device.GetContext().GetBufferDeviceAddress(device.GetNativeDevice(), &addressInfo);
 
             return RHI::ResultCode::Success;
+        }
+
+        VkBuildAccelerationStructureFlagsKHR RayTracingBlas::GetAccelerationStructureBuildFlags(const RHI::RayTracingAccelerationStructureBuildFlags &buildFlags)
+        {
+            VkBuildAccelerationStructureFlagsKHR vkBuildFlags = { 0 };
+            if (RHI::CheckBitsAny(buildFlags, RHI::RayTracingAccelerationStructureBuildFlags::FAST_TRACE))
+            {
+                vkBuildFlags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+            }
+
+            if (RHI::CheckBitsAny(buildFlags, RHI::RayTracingAccelerationStructureBuildFlags::FAST_BUILD))
+            {
+                vkBuildFlags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
+            }
+
+            if (RHI::CheckBitsAny(buildFlags, RHI::RayTracingAccelerationStructureBuildFlags::ENABLE_UPDATE))
+            {
+                vkBuildFlags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+            }
+
+            return vkBuildFlags;
         }
     }
 }

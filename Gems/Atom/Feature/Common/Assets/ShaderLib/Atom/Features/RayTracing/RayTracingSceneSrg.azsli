@@ -8,6 +8,14 @@
 
 #include <Atom/Features/SrgSemantics.azsli>
 
+// this define specifies that the mesh buffers and material textures are stored in the Bindless Srg
+// Note1: The previous implementation using separate unbounded arrays is preserved since it demonstrates a TDR caused by
+//        the RHI unbounded array allocation.  This define and the previous codepath can be removed once the TDR is
+//        investigated and resolved.
+// Note2: There are corresponding USE_BINDLESS_SRG defines in the RayTracingMaterialSrg.azsli and RayTracingFeatureProcessor.h files
+//        that must match the setting of this define.
+#define USE_BINDLESS_SRG 1
+
 ShaderResourceGroup RayTracingSceneSrg : SRG_RayTracingScene
 {
     RaytracingAccelerationStructure m_scene;
@@ -20,7 +28,8 @@ ShaderResourceGroup RayTracingSceneSrg : SRG_RayTracingScene
         float3 m_rgbIntensity;
         float  m_affectsGIFactor;
         bool   m_affectsGI;
-        float3 m_padding;
+        uint m_lightingChannelMask;
+        float2 m_padding;
     };
     
     StructuredBuffer<DirectionalLight> m_directionalLights;
@@ -34,7 +43,8 @@ ShaderResourceGroup RayTracingSceneSrg : SRG_RayTracingScene
         float3 m_rgbIntensityCandelas;
         float m_affectsGIFactor;
         bool m_affectsGI;
-        float3 m_padding;
+        uint m_lightingChannelMask;
+        float2 m_padding;
     };
 
     StructuredBuffer<SimplePointLight> m_simplePointLights;
@@ -51,7 +61,8 @@ ShaderResourceGroup RayTracingSceneSrg : SRG_RayTracingScene
         float m_cosOuterConeAngle; // cosine of the inner cone angle
         float m_affectsGIFactor;
         bool m_affectsGI;
-        float2 m_padding;
+        uint m_lightingChannelMask;
+        float m_padding;
     };
 
     StructuredBuffer<SimpleSpotLight> m_simpleSpotLights;
@@ -67,7 +78,8 @@ ShaderResourceGroup RayTracingSceneSrg : SRG_RayTracingScene
         uint3 m_shadowIndices;
         float m_affectsGIFactor;
         bool m_affectsGI;
-        float3 m_padding;
+        uint m_lightingChannelMask;
+        float2 m_padding;
     };
     
     StructuredBuffer<PointLight> m_pointLights;
@@ -88,7 +100,8 @@ ShaderResourceGroup RayTracingSceneSrg : SRG_RayTracingScene
         uint m_shadowIndex;
         float m_affectsGIFactor;
         bool m_affectsGI;
-        float2 m_padding;
+        uint m_lightingChannelMask;
+        float m_padding;
     };
     
     StructuredBuffer<DiskLight> m_diskLights;
@@ -105,7 +118,8 @@ ShaderResourceGroup RayTracingSceneSrg : SRG_RayTracingScene
         float m_invAttenuationRadiusSquared;    // inverse of the distance at which this light no longer has an effect, squared. Also used for falloff calculations.
         float m_affectsGIFactor;
         bool m_affectsGI;
-        float2 m_padding;
+        uint m_lightingChannelMask;
+        float m_padding;
     };
     
     StructuredBuffer<CapsuleLight> m_capsuleLights;
@@ -124,7 +138,8 @@ ShaderResourceGroup RayTracingSceneSrg : SRG_RayTracingScene
         uint   m_flags;                         // see QuadLightFlag enum
         float  m_affectsGIFactor;
         bool   m_affectsGI;
-        float2 m_padding;
+        uint m_lightingChannelMask;
+        float m_padding;
     };
     
     StructuredBuffer<QuadLight> m_quadLights;
@@ -183,8 +198,10 @@ ShaderResourceGroup RayTracingSceneSrg : SRG_RayTracingScene
     #define MESH_BUFFER_FLAG_BITANGENT      (1 << 1)
     #define MESH_BUFFER_FLAG_UV             (1 << 2)
 
+#if !USE_BINDLESS_SRG
     // Unbounded array of mesh stream buffers:
     // Note 1: Index, Position, and Normal stream buffers are guaranteed to be valid for each mesh
     // Note 2: Optional stream buffers such as Tangent, Bitangent, and UV are indicated in the MeshInfo.m_bufferFlags field
     ByteAddressBuffer m_meshBuffers[];
+#endif
 }

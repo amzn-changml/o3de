@@ -34,9 +34,11 @@ namespace AzToolsFramework
     {
     public:
         AZ_RTTI(ToolsApplication, "{2895561E-BE90-4CC3-8370-DD46FCF74C01}", AzFramework::Application);
-        AZ_CLASS_ALLOCATOR(ToolsApplication, AZ::SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(ToolsApplication, AZ::SystemAllocator);
 
         ToolsApplication(int* argc = nullptr, char*** argv = nullptr);
+        explicit ToolsApplication(AZ::ComponentApplicationSettings componentAppSettings);
+        ToolsApplication(int* argc, char*** argv, AZ::ComponentApplicationSettings componentAppSettings);
         ~ToolsApplication();
 
         void Stop() override;

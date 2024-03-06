@@ -159,7 +159,7 @@ namespace UnitTest
     }
 
     class String
-        : public AllocatorsFixture
+        : public LeakDetectionFixture
     {
     };
 
@@ -1008,7 +1008,7 @@ namespace UnitTest
     }
 
     class Regex
-        : public AllocatorsFixture
+        : public LeakDetectionFixture
     {
     };
 
@@ -1543,11 +1543,19 @@ namespace UnitTest
         // Testing AZ_STRING_FORMATTER too
         result = AZStd::string::format("%s" AZ_STRING_FORMAT "%s", "[", AZ_STRING_ARG(view2), "]");
         EXPECT_EQ(AZStd::string{"[long]"}, result);
+
+        // Test the AZ_TRAIT_FORMAT_STRING_WPRINTF_* variants for wstrings
+        constexpr AZStd::wstring_view wideView = L"This is a long string";
+        AZStd::wstring wideResult = AZStd::wstring::format(AZ_TRAIT_FORMAT_STRING_WPRINTF_STRING_WITH_SIZE, AZ_STRING_ARG(view1));
+        EXPECT_EQ(wideView, wideResult);
+
+        wideResult = AZStd::wstring::format(AZ_TRAIT_FORMAT_STRING_WPRINTF_WSTRING_WITH_SIZE, AZ_STRING_ARG(wideView));
+        EXPECT_EQ(wideView, wideResult);
     }
 
     template<typename T>
     class BasicStringViewConstexprFixture
-        : public ScopedAllocatorSetupFixture
+        : public LeakDetectionFixture
     {};
 
     using StringViewElementTypes = ::testing::Types<char, wchar_t>;
@@ -2470,9 +2478,9 @@ namespace UnitTest
         // Is the size of the pointer (used for storing the memory address of the string)
         // + the size of the string "size" member used to store the size of the string
         // + the size of the string "capacity" member used to store the capacity of the string
-        size_t constexpr ExpectedBasicStringSize = sizeof(void*) + 2 * sizeof(size_t) + sizeof(AZStd::allocator);
+        size_t constexpr ExpectedBasicStringSize = sizeof(void*) + 2 * sizeof(size_t);
         static_assert(ExpectedBasicStringSize == sizeof(AZStd::string),
-            "Using Stateful allocator with basic_string class should result in a 32-byte string class"
+            "Using Stateful allocator with basic_string class should result in a 24-byte string class"
             " on 64-bit platforms ");
     }
 
@@ -2507,7 +2515,7 @@ namespace UnitTest
 
     template <typename StringType>
     class ImmutableStringFunctionsFixture
-        : public ScopedAllocatorSetupFixture
+        : public LeakDetectionFixture
     {};
     using StringTypesToTest = ::testing::Types<AZStd::string_view, AZStd::string, AZStd::fixed_string<1024>>;
     TYPED_TEST_CASE(ImmutableStringFunctionsFixture, StringTypesToTest);
@@ -2540,7 +2548,7 @@ namespace UnitTest
 
     template<typename T>
     class StringFormatFixture
-        : public UnitTest::AllocatorsTestFixture
+        : public UnitTest::LeakDetectionFixture
     {
     };
 
@@ -2556,7 +2564,7 @@ namespace UnitTest
 
     template<typename T>
     class StringTypeFixture
-        : public ScopedAllocatorSetupFixture
+        : public LeakDetectionFixture
     {};
 
     using StringTypeWithRangeFunctions = ::testing::Types<AZStd::string, AZStd::fixed_string<32>>;

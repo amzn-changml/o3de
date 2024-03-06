@@ -95,7 +95,7 @@ bool CUiAnimViewSequence::IsBoundToEditorObjects() const
 CUiAnimViewKeyHandle CUiAnimViewSequence::FindSingleSelectedKey()
 {
     CUiAnimViewSequence* pSequence = nullptr;
-    EBUS_EVENT_RESULT(pSequence, UiEditorAnimationBus, GetCurrentSequence);
+    UiEditorAnimationBus::BroadcastResult(pSequence, &UiEditorAnimationBus::Events::GetCurrentSequence);
     if (!pSequence)
     {
         return CUiAnimViewKeyHandle();
@@ -218,7 +218,7 @@ void CUiAnimViewSequence::ForceAnimation()
         if (IsActive())
         {
             CUiAnimationContext* pAnimationContext = nullptr;
-            EBUS_EVENT_RESULT(pAnimationContext, UiEditorAnimationBus, GetAnimationContext);
+            UiEditorAnimationBus::BroadcastResult(pAnimationContext, &UiEditorAnimationBus::Events::GetAnimationContext);
             pAnimationContext->ForceAnimation();
         }
     }
@@ -269,7 +269,7 @@ void CUiAnimViewSequence::OnKeysChanged()
         if (IsActive())
         {
             CUiAnimationContext* pAnimationContext = nullptr;
-            EBUS_EVENT_RESULT(pAnimationContext, UiEditorAnimationBus, GetAnimationContext);
+            UiEditorAnimationBus::BroadcastResult(pAnimationContext, &UiEditorAnimationBus::Events::GetAnimationContext);
             pAnimationContext->ForceAnimation();
         }
     }
@@ -536,11 +536,6 @@ void CUiAnimViewSequence::SelectSelectedNodesInViewport()
         }
     }
 #endif
-
-    for (auto iter = entitiesToBeSelected.begin(); iter != entitiesToBeSelected.end(); ++iter)
-    {
-        GetIEditor()->SelectObject(*iter);
-    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -646,7 +641,7 @@ void CUiAnimViewSequence::SyncSelectedTracksFromBase()
     if (IsActive())
     {
         CUiAnimationContext* pAnimationContext = nullptr;
-        EBUS_EVENT_RESULT(pAnimationContext, UiEditorAnimationBus, GetAnimationContext);
+        UiEditorAnimationBus::BroadcastResult(pAnimationContext, &UiEditorAnimationBus::Events::GetAnimationContext);
         pAnimationContext->ForceAnimation();
     }
 }
@@ -897,7 +892,7 @@ std::deque<CUiAnimViewTrack*> CUiAnimViewSequence::GetMatchingTracks(CUiAnimView
     const AZStd::string trackName = trackNode->getAttr("name");
 
     IUiAnimationSystem* animationSystem = nullptr;
-    EBUS_EVENT_RESULT(animationSystem, UiEditorAnimationBus, GetAnimationSystem);
+    UiEditorAnimationBus::BroadcastResult(animationSystem, &UiEditorAnimationBus::Events::GetAnimationSystem);
 
     CUiAnimParamType animParamType;
     animParamType.Serialize(animationSystem, trackNode, true);
@@ -986,7 +981,7 @@ void CUiAnimViewSequence::GetMatchedPasteLocationsRec(std::vector<TMatchedTrackL
             const AZStd::string trackName = xmlChildNode->getAttr("name");
 
             IUiAnimationSystem* animationSystem = nullptr;
-            EBUS_EVENT_RESULT(animationSystem, UiEditorAnimationBus, GetAnimationSystem);
+            UiEditorAnimationBus::BroadcastResult(animationSystem, &UiEditorAnimationBus::Events::GetAnimationSystem);
 
             CUiAnimParamType trackParamType;
             trackParamType.Serialize(animationSystem, xmlChildNode, true);
@@ -1380,7 +1375,7 @@ void CUiAnimViewSequence::EndRestoreTransaction()
 bool CUiAnimViewSequence::IsActiveSequence() const
 {
     CUiAnimViewSequence* pSequence = nullptr;
-    EBUS_EVENT_RESULT(pSequence, UiEditorAnimationBus, GetCurrentSequence);
+    UiEditorAnimationBus::BroadcastResult(pSequence, &UiEditorAnimationBus::Events::GetCurrentSequence);
 
     return pSequence == this;
 }

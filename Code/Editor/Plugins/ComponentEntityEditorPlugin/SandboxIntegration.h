@@ -19,6 +19,7 @@
 #include <AzFramework/Asset/AssetCatalogBus.h>
 #include <AzFramework/Entity/EntityDebugDisplayBus.h>
 #include <AzFramework/Viewport/DisplayContextRequestBus.h>
+#include <AzToolsFramework/ActionManager/ActionManagerRegistrationNotificationBus.h>
 #include <AzToolsFramework/API/EditorWindowRequestBus.h>
 #include <AzToolsFramework/API/ToolsApplicationAPI.h>
 #include <AzToolsFramework/Editor/EditorContextMenuBus.h>
@@ -71,8 +72,6 @@ class CToolsApplicationUndoLink;
 
 class QMenu;
 class QWidget;
-class CComponentEntityObject;
-class CHyperGraph;
 
 namespace AzToolsFramework
 {
@@ -104,6 +103,7 @@ class SandboxIntegrationManager
     , private AzToolsFramework::SliceEditorEntityOwnershipServiceNotificationBus::Handler
     , private IUndoManagerListener
     , private AzToolsFramework::Layers::EditorLayerComponentNotificationBus::Handler
+    , private AzToolsFramework::ActionManagerRegistrationNotificationBus::Handler
 {
 public:
 
@@ -143,7 +143,6 @@ private:
     void CloseViewPane(const char* paneName) override;
     void BrowseForAssets(AzToolsFramework::AssetBrowser::AssetSelectionModel& selection) override;
     void CreateEditorRepresentation(AZ::Entity* entity) override;
-    bool DestroyEditorRepresentation(AZ::EntityId entityId, bool deleteAZEntity) override;
     void CloneSelection(bool& handled) override;
     void DeleteSelectedEntities(bool includeDescendants) override;
     AZ::EntityId CreateNewEntity(AZ::EntityId parentId = AZ::EntityId()) override;
@@ -166,7 +165,6 @@ private:
     AZ::Vector3 GetWorldPositionAtViewportCenter() override;
     void InstantiateSliceFromAssetId(const AZ::Data::AssetId& assetId) override;
     void ClearRedoStack() override;
-    int GetIconTextureIdFromEntityIconPath(const AZStd::string& entityIconPath) override;
     //////////////////////////////////////////////////////////////////////////
 
     //////////////////////////////////////////////////////////////////////////
@@ -182,7 +180,7 @@ private:
 
     //////////////////////////////////////////////////////////////////////////
     // AzToolsFramework::EditorEntityContextNotificationBus::Handler
-    void OnContextReset() override;
+    void OnPrepareForContextReset() override;
     //////////////////////////////////////////////////////////////////////////
 
     //////////////////////////////////////////////////////////////////////////
@@ -197,6 +195,10 @@ private:
     // AzFramework::DisplayContextRequestBus
     void SetDC(DisplayContext* dc) override;
     DisplayContext* GetDC() override;
+
+    // ActionManagerRegistrationNotificationBus overrides ...
+    void OnActionRegistrationHook() override;
+    void OnMenuBindingHook() override;
 
     // Context menu handlers.
     void ContextMenu_NewEntity();
@@ -234,9 +236,9 @@ private:
         return m_defaultEntityIconLocation;
     }
 
-    AZStd::string GetComponentEditorIcon(const AZ::Uuid& componentType, AZ::Component* component) override;
+    AZStd::string GetComponentEditorIcon(const AZ::Uuid& componentType, const AZ::Component* component) override;
     AZStd::string GetComponentTypeEditorIcon(const AZ::Uuid& componentType) override;
-    AZStd::string GetComponentIconPath(const AZ::Uuid& componentType, AZ::Crc32 componentIconAttrib, AZ::Component* component) override;
+    AZStd::string GetComponentIconPath(const AZ::Uuid& componentType, AZ::Crc32 componentIconAttrib, const AZ::Component* component) override;
 
     //////////////////////////////////////////////////////////////////////////
     // IUndoManagerListener
@@ -275,7 +277,7 @@ private:
     };
 
 private:
-    ContextMenuBottomHandler m_contextMenuBottomHandler;
+    EditorContextMenuHandler m_contextMenuBottomHandler;
 
     //! Position of the cursor when the context menu is opened inside the 3d viewport.
     //! note: The optional will be empty if the context menu was opened outside the 3d viewport.

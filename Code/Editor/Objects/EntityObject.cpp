@@ -20,79 +20,13 @@
 // Editor
 #include "Settings.h"
 #include "Viewport.h"
-#include "LineGizmo.h"
 #include "Include/IObjectManager.h"
 #include "Objects/ObjectManager.h"
 #include "ViewManager.h"
 #include "AnimationContext.h"
 #include "HitContext.h"
-#include "Objects/SelectionGroup.h"
 
 static constexpr int VIEW_DISTANCE_MULTIPLIER_MAX = 100;
-
-//////////////////////////////////////////////////////////////////////////
-//! Undo Entity Link
-class CUndoEntityLink
-    : public IUndoObject
-{
-public:
-    CUndoEntityLink(CSelectionGroup* pSelection)
-    {
-        int nObjectSize = pSelection->GetCount();
-        m_Links.reserve(nObjectSize);
-        for (int i = 0; i < nObjectSize; ++i)
-        {
-            CBaseObject* pObj = pSelection->GetObject(i);
-            if (qobject_cast<CEntityObject*>(pObj))
-            {
-                SLink link;
-                link.entityID = pObj->GetId();
-                link.linkXmlNode = XmlHelpers::CreateXmlNode("undo");
-                ((CEntityObject*)pObj)->SaveLink(link.linkXmlNode);
-                m_Links.push_back(link);
-            }
-        }
-    }
-
-protected:
-    void Release() override { delete this; };
-    int GetSize() override { return sizeof(*this); }; // Return size of xml state.
-    QString GetObjectName() override{ return ""; };
-
-    void Undo([[maybe_unused]] bool bUndo) override
-    {
-        for (int i = 0, iLinkSize = static_cast<int>(m_Links.size()); i < iLinkSize; ++i)
-        {
-            SLink& link = m_Links[i];
-            CBaseObject* pObj = GetIEditor()->GetObjectManager()->FindObject(link.entityID);
-            if (pObj == nullptr)
-            {
-                continue;
-            }
-            if (!qobject_cast<CEntityObject*>(pObj))
-            {
-                continue;
-            }
-            CEntityObject* pEntity = (CEntityObject*)pObj;
-            if (link.linkXmlNode->getChildCount() == 0)
-            {
-                continue;
-            }
-            pEntity->LoadLink(link.linkXmlNode->getChild(0));
-        }
-    }
-    void Redo() override{}
-
-private:
-
-    struct SLink
-    {
-        GUID entityID;
-        XmlNodeRef linkXmlNode;
-    };
-
-    std::vector<SLink> m_Links;
-};
 
 //////////////////////////////////////////////////////////////////////////
 //! Undo object for attach/detach changes
@@ -1209,17 +1143,6 @@ void CEntityObject::ResolveEventTarget(CBaseObject* object, unsigned int index)
         object->AddEventListener(this);
     }
     m_eventTargets[index].target = object;
-
-    // Make line gizmo.
-    if (!m_eventTargets[index].pLineGizmo && object)
-    {
-        CLineGizmo* pLineGizmo = new CLineGizmo;
-        pLineGizmo->SetObjects(this, object);
-        pLineGizmo->SetColor(Vec3(0.8f, 0.4f, 0.4f), Vec3(0.8f, 0.4f, 0.4f));
-        pLineGizmo->SetName(m_eventTargets[index].event.toUtf8().data());
-        AddGizmo(pLineGizmo);
-        m_eventTargets[index].pLineGizmo = pLineGizmo;
-    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1365,17 +1288,6 @@ int CEntityObject::AddEventTarget(CBaseObject* target, const QString& event, con
         et.target->AddEventListener(this);
     }
 
-    if (target)
-    {
-        // Make line gizmo.
-        CLineGizmo* pLineGizmo = new CLineGizmo;
-        pLineGizmo->SetObjects(this, target);
-        pLineGizmo->SetColor(Vec3(0.8f, 0.4f, 0.4f), Vec3(0.8f, 0.4f, 0.4f));
-        pLineGizmo->SetName(event.toUtf8().data());
-        AddGizmo(pLineGizmo);
-        et.pLineGizmo = pLineGizmo;
-    }
-
     m_eventTargets.push_back(et);
 
     SetModified(false);
@@ -1388,11 +1300,6 @@ void CEntityObject::RemoveEventTarget(int index, [[maybe_unused]] bool bUpdateSc
     if (index >= 0 && index < m_eventTargets.size())
     {
         StoreUndo();
-
-        if (m_eventTargets[index].pLineGizmo)
-        {
-            RemoveGizmo(m_eventTargets[index].pLineGizmo);
-        }
 
         if (m_eventTargets[index].target)
         {
@@ -1425,26 +1332,10 @@ int CEntityObject::AddEntityLink(const QString& name, GUID targetEntityId)
 
     StoreUndo();
 
-    CLineGizmo* pLineGizmo = nullptr;
-
-    // Assign event target.
-    if (target)
-    {
-        target->AddEventListener(this);
-
-        // Make line gizmo.
-        pLineGizmo = new CLineGizmo;
-        pLineGizmo->SetObjects(this, target);
-        pLineGizmo->SetColor(Vec3(0.4f, 1.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f));
-        pLineGizmo->SetName(name.toUtf8().data());
-        AddGizmo(pLineGizmo);
-    }
-
     CEntityLink lnk;
     lnk.targetId = targetEntityId;
     lnk.target = target;
     lnk.name = name;
-    lnk.pLineGizmo = pLineGizmo;
     m_links.push_back(lnk);
 
     SetModified(false);
@@ -1473,11 +1364,6 @@ void CEntityObject::RemoveEntityLink(int index)
         CEntityLink& link = m_links[index];
         StoreUndo();
 
-        if (link.pLineGizmo)
-        {
-            RemoveGizmo(link.pLineGizmo);
-        }
-
         if (link.target)
         {
             link.target->RemoveEventListener(this);
@@ -1495,11 +1381,6 @@ void CEntityObject::RenameEntityLink(int index, const QString& newName)
     if (index >= 0 && index < m_links.size())
     {
         StoreUndo();
-
-        if (m_links[index].pLineGizmo)
-        {
-            m_links[index].pLineGizmo->SetName(newName.toUtf8().data());
-        }
 
         m_links[index].name = newName;
 
@@ -1930,19 +1811,6 @@ void CEntityObject::ClearCallbacks()
     }
 
     m_callbacks.clear();
-}
-
-void CEntityObject::StoreUndoEntityLink(CSelectionGroup* pGroup)
-{
-    if (!pGroup)
-    {
-        return;
-    }
-
-    if (CUndo::IsRecording())
-    {
-        CUndo::Record(new CUndoEntityLink(pGroup));
-    }
 }
 
 template <typename T>

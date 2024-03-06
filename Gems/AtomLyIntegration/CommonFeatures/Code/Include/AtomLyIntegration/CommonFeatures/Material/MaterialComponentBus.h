@@ -7,8 +7,8 @@
  */
 #pragma once
 
+#include <AtomLyIntegration/CommonFeatures/Material/MaterialAssignment.h>
 #include <AzCore/Component/ComponentBus.h>
-#include <Atom/Feature/Material/MaterialAssignment.h>
 
 namespace AZ
 {
@@ -19,7 +19,13 @@ namespace AZ
         {
         public:
             //! Get a map representing the default layout and values for all material assignment slots on the source model or object
-            virtual MaterialAssignmentMap GetDefautMaterialMap() const = 0;
+            virtual MaterialAssignmentMap GetDefaultMaterialMap() const = 0;
+
+            // O3DE_DEPRECATION_NOTICE(GHI-16783) Function is being replaced by GetDefaultMaterialMap
+            virtual MaterialAssignmentMap GetDefautMaterialMap() const
+            {
+                return GetDefaultMaterialMap();
+            }
 
             //! Search for a material assignment ID matching the lod and label parameters
             //! @param lod Index of the LOD to be searched for the material assignment ID. -1 is used to search the default material and
@@ -98,8 +104,13 @@ namespace AZ
 
             //! Check if the material slot contains an explicit material asset override
             //! @param materialAssignmentId ID of material slot.
-            //! @returns true if a valid material asset has been assigned. 
+            //! @returns true if a valid material asset has been assigned.
             virtual bool IsMaterialAssetIdOverridden(const MaterialAssignmentId& materialAssignmentId) const = 0;
+
+            //! Check if the material slot contains any overridden property values
+            //! @param materialAssignmentId ID of material slot.
+            //! @returns true if any property values have been overridden on this material slot.
+            virtual bool HasPropertiesOverridden(const MaterialAssignmentId& materialAssignmentId) const = 0;
 
             //! Set a material property override value wrapped by an AZStd::any
             //! @param materialAssignmentId ID of material slot.
@@ -177,6 +188,9 @@ namespace AZ
             //! This notification is forwarded from the consumer whenever material slot layout or default values are changed.
             virtual void OnMaterialSlotLayoutChanged(){};
 
+            //! This notification is sent once per tick whenever new material instances are created.
+            virtual void OnMaterialsCreated([[maybe_unused]] const MaterialAssignmentMap& materials){};
+
             //! This notification is sent whenever the material component has completed adding or removing a batch of instances for the
             //! material consumer to apply. The notification is not sent for individual property changes because the material component
             //! applies property changes directly to the material instances it manages.
@@ -185,8 +199,8 @@ namespace AZ
             //! script that might also result in this notification being sent.
             virtual void OnMaterialsUpdated([[maybe_unused]] const MaterialAssignmentMap& materials){};
 
-            //! This notification is sent whenever the material component creates a new material instance.
-            virtual void OnMaterialInstanceCreated([[maybe_unused]] const MaterialAssignment& materialAssignment){};
+            //! This notification is sent once per tick whenever the material component changes any material properties.
+            virtual void OnMaterialPropertiesUpdated([[maybe_unused]] const MaterialAssignmentMap& materials){};
         };
         using MaterialComponentNotificationBus = EBus<MaterialComponentNotifications>;
 
@@ -211,7 +225,13 @@ namespace AZ
             virtual MaterialAssignmentLabelMap GetMaterialLabels() const = 0;
 
             //! Returns the available material slots and default assigned materials
-            virtual MaterialAssignmentMap GetDefautMaterialMap() const = 0;
+            virtual MaterialAssignmentMap GetDefaultMaterialMap() const = 0;
+
+            // O3DE_DEPRECATION_NOTICE(GHI-16783) Function is being replaced by GetDefaultMaterialMap
+            virtual MaterialAssignmentMap GetDefautMaterialMap() const
+            {
+                return GetDefaultMaterialMap();
+            }
 
             //! Returns a map of UV Overridable UV channel names
             virtual AZStd::unordered_set<AZ::Name> GetModelUvNames() const = 0;

@@ -31,7 +31,7 @@ namespace AZ
 
         public:
             AZ_RTTI(ComputePass, "{61464A74-BD35-4954-AB27-492644EA6C2A}", RenderPass);
-            AZ_CLASS_ALLOCATOR(ComputePass, SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(ComputePass, SystemAllocator);
             virtual ~ComputePass();
 
             //! Creates a ComputePass
@@ -46,14 +46,19 @@ namespace AZ
             //! Return the shader
             Data::Instance<Shader> GetShader() const;
 
+            // When the compute shader is reloaded, this callback will be called. Subclasses of ComputePass
+            // should override OnShaderReloadedInternal() instead. By default  OnShaderReloadedInternal() will simply call
+            // the callback.
+            using ComputeShaderReloadedCallback = AZStd::function<void(ComputePass* computePass)>;
+            void SetComputeShaderReloadedCallback(ComputeShaderReloadedCallback callback);
+
         protected:
-            ComputePass(const PassDescriptor& descriptor);
+            ComputePass(const PassDescriptor& descriptor, AZ::Name supervariant = AZ::Name(""));
 
             // Pass behavior overrides...
             void FrameBeginInternal(FramePrepareParams params) override;
 
             // Scope producer functions...
-            void SetupFrameGraphDependencies(RHI::FrameGraphInterface frameGraph) override;
             void CompileResources(const RHI::FrameGraphCompileContext& context) override;
             void BuildCommandListInternal(const RHI::FrameGraphExecuteContext& context) override;
 
@@ -79,9 +84,14 @@ namespace AZ
             void OnShaderAssetReinitialized(const Data::Asset<ShaderAsset>& shaderAsset) override;
             void OnShaderVariantReinitialized(const ShaderVariant& shaderVariant) override;
 
-            void LoadShader();
+            void LoadShader(AZ::Name supervariant = AZ::Name(""));
             PassDescriptor m_passDescriptor;
 
+            // At the end of LoadShader(), this function is called. By default it executes
+            // the callback function. This gives an opportunity to subclasses and owners of compute passes
+            // to call SetTargetThreadCounts(), update shader constants, etc.
+            virtual void OnShaderReloadedInternal();
+            ComputeShaderReloadedCallback m_shaderReloadedCallback = nullptr;
         };
     }   // namespace RPI
 }   // namespace AZ

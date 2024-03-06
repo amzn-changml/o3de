@@ -20,6 +20,7 @@
 
 // Editor
 #include "MainWindow.h"
+#include "Controls/ReflectedPropertyControl/ReflectedVar.h"
 #include "CryEdit.h"
 #include "DisplaySettingsPythonFuncs.h"
 #include "GameEngine.h"
@@ -30,8 +31,17 @@
 
 namespace EditorInternal
 {
+    EditorToolsApplication::EditorToolsApplication(AZ::ComponentApplicationSettings componentAppSettings)
+        : EditorToolsApplication(nullptr, nullptr, AZStd::move(componentAppSettings))
+    {
+    }
     EditorToolsApplication::EditorToolsApplication(int* argc, char*** argv)
-        : ToolsApplication(argc, argv)
+        : EditorToolsApplication(argc, argv, {})
+    {
+    }
+
+    EditorToolsApplication::EditorToolsApplication(int* argc, char*** argv, AZ::ComponentApplicationSettings componentAppSettings)
+        : ToolsApplication(argc, argv, AZStd::move(componentAppSettings))
     {
         EditorToolsApplicationRequests::Bus::Handler::BusConnect();
         AzToolsFramework::ViewportInteraction::EditorModifierKeyRequestBus::Handler::BusConnect();
@@ -128,6 +138,12 @@ namespace EditorInternal
     void EditorToolsApplication::Reflect(AZ::ReflectContext* context)
     {
         ToolsApplication::Reflect(context);
+
+        // Reflect property control classes to the serialize context...
+        if (auto serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
+        {
+            ReflectedVarInit::setupReflection(serializeContext);
+        }
 
         if (auto behaviorContext = azrtti_cast<AZ::BehaviorContext*>(context))
         {

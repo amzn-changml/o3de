@@ -21,7 +21,7 @@ namespace AZ
             using Base = RHI::PipelineState;
 
         public:
-            AZ_CLASS_ALLOCATOR(PipelineState, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(PipelineState, AZ::SystemAllocator);
             AZ_RTTI(PipelineState, "40D76567-1C43-4D0F-885A-B63337DCE31B", Base);
 
             static RHI::Ptr<PipelineState> Create();
@@ -37,6 +37,11 @@ namespace AZ
             RHI::ResultCode InitInternal(RHI::Device& device, const RHI::PipelineStateDescriptorForDispatch& descriptor, RHI::PipelineLibrary* pipelineLibrary) override;
             RHI::ResultCode InitInternal(RHI::Device& device, const RHI::PipelineStateDescriptorForRayTracing& descriptor, RHI::PipelineLibrary* pipelineLibrary) override;
             void ShutdownInternal() override;
+            //////////////////////////////////////////////////////////////////////////
+
+            //////////////////////////////////////////////////////////////////////////
+            // RHI::Object
+            void SetNameInternal(const AZStd::string_view& name) override;
             //////////////////////////////////////////////////////////////////////////
 
             RHI::Ptr<Pipeline> m_pipeline;

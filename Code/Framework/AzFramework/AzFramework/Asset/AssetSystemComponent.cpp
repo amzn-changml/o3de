@@ -29,6 +29,8 @@
 #include <AzFramework/Asset/Benchmark/BenchmarkCommands.h>
 #include <AzFramework/Network/AssetProcessorConnection.h>
 
+DECLARE_EBUS_INSTANTIATION(AzFramework::AssetSystem::AssetSystemRequests);
+
 AZ_DECLARE_BUDGET(AzFramework);
 
 namespace AzFramework
@@ -262,6 +264,7 @@ namespace AzFramework
             RegisterSourceAssetRequest::Reflect(context);
             UnregisterSourceAssetRequest::Reflect(context);
             ShowAssetProcessorRequest::Reflect(context);
+            UpdateSourceControlStatusRequest::Reflect(context);
             ShowAssetInAssetProcessorRequest::Reflect(context);
             FileOpenRequest::Reflect(context);
             FileCloseRequest::Reflect(context);
@@ -671,9 +674,12 @@ namespace AzFramework
             AZStd::chrono::steady_clock::time_point start = AZStd::chrono::steady_clock::now();
             while (!ConnectedWithAssetProcessor() && AZStd::chrono::duration_cast<AZStd::chrono::milliseconds>(AZStd::chrono::steady_clock::now() - start) < timeout)
             {
+                AssetSystemStatusBus::Broadcast(&AssetSystemStatusBus::Events::AssetSystemWaiting);
+
                 if (NegotiationWithAssetProcessorFailed())
                 {
-                    EBUS_EVENT(AzFramework::AssetSystemConnectionNotificationsBus, NegotiationFailed);
+                    AzFramework::AssetSystemConnectionNotificationsBus::Broadcast(
+                        &AzFramework::AssetSystemConnectionNotificationsBus::Events::NegotiationFailed);
                     StartDisconnectingAssetProcessor();
                     return false;
                 }
@@ -709,6 +715,8 @@ namespace AzFramework
             while (!isAssetProcessorReady && (AZStd::chrono::steady_clock::now() - start) < timeout)
             {
                 AzFramework::ApplicationRequests::Bus::Broadcast(&AzFramework::ApplicationRequests::PumpSystemEventLoopUntilEmpty);
+
+                AssetSystemStatusBus::Broadcast(&AssetSystemStatusBus::Events::AssetSystemWaiting);
 
                 if (!ConnectedWithAssetProcessor())
                 {

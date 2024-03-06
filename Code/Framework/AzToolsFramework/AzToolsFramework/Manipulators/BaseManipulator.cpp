@@ -10,6 +10,7 @@
 
 #include <AzCore/Math/IntersectSegment.h>
 #include <AzToolsFramework/Entity/EditorEntityHelpers.h>
+#include <AzToolsFramework/UI/PropertyEditor/PropertyEditorAPI.h>
 #include <AzToolsFramework/Viewport/ViewportMessages.h>
 
 namespace AzToolsFramework
@@ -18,7 +19,7 @@ namespace AzToolsFramework
 
     const AZ::Color BaseManipulator::s_defaultMouseOverColor = AZ::Color(1.0f, 1.0f, 0.0f, 1.0f); // yellow
 
-    AZ_CLASS_ALLOCATOR_IMPL(BaseManipulator, AZ::SystemAllocator, 0)
+    AZ_CLASS_ALLOCATOR_IMPL(BaseManipulator, AZ::SystemAllocator)
 
     static bool EntityIdAndEntityComponentIdComparison(const AZ::EntityId entityId, const AZ::EntityComponentIdPair& entityComponentId)
     {
@@ -39,7 +40,7 @@ namespace AzToolsFramework
         {
             BeginAction();
             ToolsApplicationRequests::Bus::BroadcastResult(
-                m_undoBatch, &ToolsApplicationRequests::Bus::Events::BeginUndoBatch, "ManipulatorLeftMouseDown");
+                m_undoBatch, &ToolsApplicationRequests::Bus::Events::BeginUndoBatch, "Manipulator Left Mouse Down");
 
             for (const AZ::EntityComponentIdPair& entityComponentId : m_entityComponentIdPairs)
             {
@@ -65,7 +66,7 @@ namespace AzToolsFramework
         {
             BeginAction();
             ToolsApplicationRequests::Bus::BroadcastResult(
-                m_undoBatch, &ToolsApplicationRequests::Bus::Events::BeginUndoBatch, "ManipulatorRightMouseDown");
+                m_undoBatch, &ToolsApplicationRequests::Bus::Events::BeginUndoBatch, "Manipulator Right Mouse Down");
 
             for (const AZ::EntityComponentIdPair& entityComponentId : m_entityComponentIdPairs)
             {

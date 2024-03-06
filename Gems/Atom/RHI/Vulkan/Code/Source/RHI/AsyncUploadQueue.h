@@ -8,6 +8,7 @@
 #pragma once
 
 #include <Atom/RHI/DeviceObject.h>
+#include <Atom/RHI/BufferPool.h>
 #include <Atom/RHI/Fence.h>
 #include <Atom/RHI/StreamingImagePool.h>
 #include <AzCore/std/parallel/mutex.h>
@@ -20,12 +21,6 @@
 
 namespace AZ
 {
-    namespace RHI
-    {
-        struct BufferStreamRequest;
-        struct StreamingImageExpandRequest;
-    }
-
     namespace Vulkan
     {
         class Buffer;
@@ -43,7 +38,7 @@ namespace AZ
             using Base = RHI::DeviceObject;
 
         public:
-            AZ_CLASS_ALLOCATOR(AsyncUploadQueue, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(AsyncUploadQueue, AZ::SystemAllocator);
 
             AZ_DISABLE_COPY_MOVE(AsyncUploadQueue);
 
@@ -68,6 +63,9 @@ namespace AZ
 
             void WaitForUpload(const RHI::AsyncWorkHandle& workHandle);
 
+            // queue sparse bindings
+            void QueueBindSparse(const VkBindSparseInfo& bindSparseInfo);
+
         private:
             RHI::Ptr<CommandQueue> m_queue;
             RHI::Ptr<CommandList> m_commandList;
@@ -80,10 +78,11 @@ namespace AZ
                 uint32_t m_dataOffset = 0;
             };
 
-            RHI::ResultCode BuilidFramePackets();
+            RHI::ResultCode BuildFramePackets();
 
             FramePacket* BeginFramePacket(Queue* queue);
             void EndFramePacket(Queue* queue, Semaphore* semaphoreToSignal = nullptr);
+
 
             void EmmitPrologueMemoryBarrier(const Buffer& buffer, size_t offset, size_t size);
             void EmmitPrologueMemoryBarrier(const RHI::StreamingImageExpandRequest& request, uint32_t residentMip);

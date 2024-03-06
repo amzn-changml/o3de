@@ -43,6 +43,7 @@ namespace AZ
             RHI::APIType GetType() override;
             RHI::APIPriority GetDefaultPriority() override;
             uint32_t GetAPIUniqueIndex() const override { return APIUniqueIndex; }
+            bool SupportsXR() const override;
             RHI::PhysicalDeviceList EnumeratePhysicalDevices() override;
             RHI::Ptr<RHI::Buffer> CreateBuffer() override;
             RHI::Ptr<RHI::BufferPool> CreateBufferPool() override;
@@ -71,6 +72,7 @@ namespace AZ
             RHI::Ptr<RHI::RayTracingTlas> CreateRayTracingTlas() override;
             RHI::Ptr<RHI::RayTracingPipelineState> CreateRayTracingPipelineState() override;
             RHI::Ptr<RHI::RayTracingShaderTable> CreateRayTracingShaderTable() override;
+            RHI::Ptr<RHI::DispatchRaysIndirectBuffer> CreateDispatchRaysIndirectBuffer() override;
             ///////////////////////////////////////////////////////////////////
 
         private:

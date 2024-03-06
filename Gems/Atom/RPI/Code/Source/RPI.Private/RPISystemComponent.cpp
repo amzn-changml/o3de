@@ -49,7 +49,6 @@ namespace AZ
                 {
                     ec->Class<RPISystemComponent>("Atom RPI", "Atom Renderer")
                         ->ClassElement(AZ::Edit::ClassElements::EditorData, "")
-                        ->Attribute(AZ::Edit::Attributes::AppearsInAddComponentMenu, AZ_CRC("System", 0xc94d118b))
                         ->Attribute(AZ::Edit::Attributes::AutoExpand, true)
                         ->DataElement(AZ::Edit::UIHandlers::Default, &RPISystemComponent::m_rpiDescriptor, "RPI System Settings", "Settings for create RPI system")
                         ;
@@ -101,28 +100,50 @@ namespace AZ
 
             auto settingsRegistry = AZ::SettingsRegistry::Get();
             const char* settingPath = "/O3DE/Atom/RPI/Initialization";
-
-            // if the command line contains -NullRenderer, merge it to setting registry
-            const char* nullRendererOption = "NullRenderer"; // command line option name
             const char* setregName = "NullRenderer"; // same as serialization context name for RPISystemDescriptor::m_isNullRenderer
-            const AzFramework::CommandLine* commandLine = nullptr;
-            AzFramework::ApplicationRequests::Bus::BroadcastResult(commandLine, &AzFramework::ApplicationRequests::GetApplicationCommandLine);
 
-            AZStd::string commandLineValue;
-            if (commandLine)
+            AZ::ApplicationTypeQuery appType;
+            ComponentApplicationBus::Broadcast(&AZ::ComponentApplicationBus::Events::QueryApplicationType, appType);
+            
+            bool isNullRenderer = false;
+            if (appType.IsHeadless())
             {
+                // if the application is `headless`, merge `NullRenderer` attribute to the setting registry
+                isNullRenderer = true;
+            }
+            else
+            {
+                // Otherwise if the command line contains -NullRenderer merge it to setting registry
+                const char* nullRendererOption = "NullRenderer"; // command line option name
+                const AzFramework::CommandLine* commandLine = nullptr;
+                AzFramework::ApplicationRequests::Bus::BroadcastResult(commandLine, &AzFramework::ApplicationRequests::GetApplicationCommandLine);
                 if (commandLine->GetNumSwitchValues(nullRendererOption) > 0)
                 {
-                    // add it to setting registry
-                    auto overrideArg = AZStd::string::format("%s/%s=true", settingPath, setregName);
-                    settingsRegistry->MergeCommandLineArgument(overrideArg, "");
+                    isNullRenderer = true;
                 }
+            }
+
+            if (isNullRenderer)
+            {
+                // add it to setting registry
+                auto overrideArg = AZStd::string::format("%s/%s=true", settingPath, setregName);
+                settingsRegistry->MergeCommandLineArgument(overrideArg, "");
             }
 
             // load rpi desriptor from setting registry
             settingsRegistry->GetObject(m_rpiDescriptor, settingPath);
 
             m_rpiSystem.Initialize(m_rpiDescriptor);
+
+            // Part of RPI system initialization requires asset system to be ready
+            // which happens after the game system started
+            // Use the tick bus to delay this initialization
+            AZ::TickBus::QueueFunction(
+                [this]()
+                {
+                    m_rpiSystem.InitializeSystemAssets();
+                });
+
             AZ::SystemTickBus::Handler::BusConnect();
             AZ::RHI::RHISystemNotificationBus::Handler::BusConnect();
         }
@@ -138,6 +159,16 @@ namespace AZ
         {
             if (m_performanceCollector)
             {
+                if (m_gpuPassProfiler && !m_performanceCollector->IsWaitingBeforeCapture() && m_gpuPassProfiler->IsGpuTimeMeasurementEnabled())
+                {
+                    uint64_t durationNanoseconds = m_gpuPassProfiler->MeasureGpuTimeInNanoseconds(AZ::RPI::PassSystemInterface::Get()->GetRootPass());
+                    // The first three frames, it is expected to be zero. So only record non-zero samples.
+                    if (durationNanoseconds > 0)
+                    {
+                        m_performanceCollector->RecordSample(PerformanceSpecGpuTime, AZStd::chrono::microseconds(aznumeric_cast<int64_t>(durationNanoseconds / 1000)));
+                    }
+                }
+
                 m_performanceCollector->RecordPeriodicEvent(PerformanceSpecEngineCpuTime);
                 m_performanceCollector->FrameTick();
             }
@@ -187,6 +218,7 @@ namespace AZ
         AZ_CVAR_EXTERNED(AZ::CVarFixedString, r_metricsDataLogType);
         AZ_CVAR_EXTERNED(AZ::u32, r_metricsWaitTimePerCaptureBatch);
         AZ_CVAR_EXTERNED(AZ::u32, r_metricsFrameCountPerCaptureBatch);
+        AZ_CVAR_EXTERNED(bool, r_metricsMeasureGpuTime);
         AZ_CVAR_EXTERNED(bool, r_metricsQuitUponCompletion);
 
         AZStd::string RPISystemComponent::GetLogCategory()
@@ -199,9 +231,15 @@ namespace AZ
 
         void RPISystemComponent::InitializePerformanceCollector()
         {
-            auto onBatchCompleteCallback = [](AZ::u32 pendingBatches) {
+            auto onBatchCompleteCallback = [&](AZ::u32 pendingBatches) {
                 AZ_TracePrintf("RPISystem", "Completed a performance batch, still %u batches are pending.\n", pendingBatches);
                 r_metricsNumberOfCaptureBatches = pendingBatches;
+                if (pendingBatches == 0)
+                {
+                    m_gpuPassProfiler->SetGpuTimeMeasurementEnabled(false);
+                    // Force disabling timestamp collection in the root pass.
+                    AZ::RPI::PassSystemInterface::Get()->GetRootPass()->SetTimestampQueryEnabled(false);
+                }
                 if (r_metricsQuitUponCompletion && (pendingBatches == 0))
                 {
                     AzFramework::ConsoleRequestBus::Broadcast(
@@ -213,11 +251,15 @@ namespace AZ
                 PerformanceSpecGraphicsSimulationTime,
                 PerformanceSpecGraphicsRenderTime,
                 PerformanceSpecEngineCpuTime,
+                PerformanceSpecGpuTime,
                 });
             AZStd::string logCategory = GetLogCategory();
             m_performanceCollector = AZStd::make_unique<AZ::Debug::PerformanceCollector>(
                 logCategory, performanceMetrics, onBatchCompleteCallback);
+            m_gpuPassProfiler = AZStd::make_unique<GpuPassProfiler>();
+
             //Feed the CVAR values.
+            m_gpuPassProfiler->SetGpuTimeMeasurementEnabled(r_metricsMeasureGpuTime);
             m_performanceCollector->UpdateDataLogType(GetDataLogTypeFromCVar(r_metricsDataLogType));
             m_performanceCollector->UpdateFrameCountPerCaptureBatch(r_metricsFrameCountPerCaptureBatch);
             m_performanceCollector->UpdateWaitTimeBeforeEachBatch(AZStd::chrono::seconds(r_metricsWaitTimePerCaptureBatch));

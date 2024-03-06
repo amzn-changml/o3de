@@ -23,6 +23,7 @@ namespace SceneLoggingExample
         : public CryHooksModule
     {
     public:
+        AZ_CLASS_ALLOCATOR(SceneLoggingExampleModule, AZ::SystemAllocator)
         AZ_RTTI(SceneLoggingExampleModule, "{36AA9C0F-7976-40C7-AF54-C492AC5B16F6}", CryHooksModule);
 
         SceneLoggingExampleModule()
@@ -55,7 +56,8 @@ namespace SceneLoggingExample
     };
 } // namespace SceneLoggingExample
 
-// DO NOT MODIFY THIS LINE UNLESS YOU RENAME THE GEM.
-// The first parameter should be GemName_GemIdLower.
-// The second should be the fully qualified name of the class above.
+#if defined(O3DE_GEM_NAME)
+AZ_DECLARE_MODULE_CLASS(AZ_JOIN(Gem_, O3DE_GEM_NAME), SceneLoggingExample::SceneLoggingExampleModule)
+#else
 AZ_DECLARE_MODULE_CLASS(Gem_SceneLoggingExample, SceneLoggingExample::SceneLoggingExampleModule)
+#endif

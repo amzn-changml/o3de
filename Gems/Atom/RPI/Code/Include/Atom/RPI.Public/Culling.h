@@ -96,9 +96,10 @@ namespace AZ
             {
                 struct Lod
                 {
-                    float m_screenCoverageMin;
-                    float m_screenCoverageMax;
+                    float m_screenCoverageMin = 0.0f;
+                    float m_screenCoverageMax = 1.0f;
                     AZStd::vector<const RHI::DrawPacket*> m_drawPackets;
+                    void* m_visibleObjectUserData = nullptr;
                 };
 
                 AZStd::vector<Lod> m_lods;
@@ -112,8 +113,9 @@ namespace AZ
             LodData m_lodData;
 
             using FlagType = uint32_t;
-            FlagType m_prevFlags = 0;
-            AZStd::atomic<FlagType> m_flags = 0;
+            FlagType m_prevShaderOptionFlags = 0;
+            AZStd::atomic<FlagType> m_shaderOptionFlags = 0;
+            FlagType m_flags;
 
             //! Flag indicating if the object is visible in any view, meaning it passed the culling tests in the previous frame.
             //! This flag must be manually cleared by the Cullable object every frame.
@@ -173,7 +175,7 @@ namespace AZ
             {
             public:
                 AZ_TYPE_INFO(AZ::RPI::CullingDebugContext::CullStats, "{3B70C5D3-54F8-4160-8324-DFC71EB47412}");
-                AZ_CLASS_ALLOCATOR(CullStats, AZ::SystemAllocator, 0);
+                AZ_CLASS_ALLOCATOR(CullStats, AZ::SystemAllocator);
 
                 CullStats(AZ::Name name) : m_name(name) {}
                 CullStats() = default;
@@ -221,7 +223,7 @@ namespace AZ
         };
 
         //! Selects an lod (based on size-in-screen-space) and adds the appropriate DrawPackets to the view.
-        uint32_t AddLodDataToView(const Vector3& pos, const Cullable::LodData& lodData, RPI::View& view);
+        uint32_t AddLodDataToView(const Vector3& pos, const Cullable::LodData& lodData, RPI::View& view, AzFramework::VisibilityEntry::TypeFlags typeFlags);
 
         //! Centralized manager for culling-related processing for a given scene.
         //! There is one CullingScene owned by each Scene, so external systems (such as FeatureProcessors) should
@@ -230,7 +232,7 @@ namespace AZ
         {
         public:
             AZ_RTTI(CullingScene, "{5B23B55B-8A1D-4B0D-9760-15E87FC8518A}");
-            AZ_CLASS_ALLOCATOR(CullingScene, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(CullingScene, AZ::SystemAllocator);
             AZ_DISABLE_COPY_MOVE(CullingScene);
 
             CullingScene() = default;
@@ -255,10 +257,10 @@ namespace AZ
             void SetOcclusionPlanes(const OcclusionPlaneVector& occlusionPlanes) { m_occlusionPlanes = occlusionPlanes; }
 
             //! Notifies the CullingScene that culling will begin for this frame.
-            void BeginCulling(const AZStd::vector<ViewPtr>& views);
+            void BeginCulling(const Scene& scene, AZStd::span<const ViewPtr> views);
 
             //! Notifies the CullingScene that the culling is done for this frame.
-            void EndCulling();
+            void EndCulling(const Scene& scene, AZStd::span<const ViewPtr> views);
 
             //! Performs render culling and lod selection for a View, then adds the visible renderpackets to that View.
             //! Must be called between BeginCulling() and EndCulling(), once for each active scene/view pair.
@@ -288,21 +290,18 @@ namespace AZ
             //! Returns the number of cullables that have been added to the CullingScene
             uint32_t GetNumCullables() const;
 
-            CullingDebugContext& GetDebugContext()
-            {
-                return m_debugCtx;
-            }
+            CullingDebugContext& GetDebugContext();
 
             //! Returns the visibility scene
-            const AzFramework::IVisibilityScene* GetVisibilityScene() const { return m_visScene; }
+            const AzFramework::IVisibilityScene* GetVisibilityScene() const;
 
         protected:
             size_t CountObjectsInScene();
 
         private:
-            void BeginCullingTaskGraph(const AZStd::vector<ViewPtr>& views);
-            void BeginCullingJobs(const AZStd::vector<ViewPtr>& views);
-            void ProcessCullablesCommon(const Scene& scene, View& view, AZ::Frustum& frustum, void*& maskedOcclusionCulling);
+            void BeginCullingTaskGraph(const Scene& scene, AZStd::span<const ViewPtr> views);
+            void BeginCullingJobs(const Scene& scene, AZStd::span<const ViewPtr> views);
+            void ProcessCullablesCommon(const Scene& scene, View& view, AZ::Frustum& frustum);
 
             const Scene* m_parentScene = nullptr;
             AzFramework::IVisibilityScene* m_visScene = nullptr;

@@ -9,7 +9,6 @@
 #include "EditorCompoundShapeComponent.h"
 #include <QMessageBox>
 
-#include <AzCore/RTTI/ReflectContext.h>
 #include <AzCore/Serialization/EditContext.h>
 #include <AzToolsFramework/UI/UICore/WidgetHelpers.h>
 
@@ -95,7 +94,7 @@ namespace LmbrCentral
         CompoundShapeComponentHierarchyRequestsBus::Handler::BusDisconnect();
     }
 
-    bool EditorCompoundShapeComponent::HasChildId(const AZ::EntityId& entityId)
+    bool EditorCompoundShapeComponent::HasChildId(const AZ::EntityId& entityId) const
     {
         for (const AZ::EntityId& childEntityId : m_configuration.GetChildEntities())
         {

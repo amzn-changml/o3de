@@ -26,12 +26,9 @@ namespace AZ
         {
             using Base = RHI::ShaderResourceGroupPool;
         public:
-            AZ_CLASS_ALLOCATOR(ShaderResourceGroupPool, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(ShaderResourceGroupPool, AZ::SystemAllocator);
 
             static RHI::Ptr<ShaderResourceGroupPool> Create();
-
-            //! Re-Update the descriptor tables for all the cbv/srv/uav views (direct and via unbounded array)
-            RHI::ResultCode UpdateDescriptorTableAfterCompaction(RHI::ShaderResourceGroup& groupBase, const RHI::ShaderResourceGroupData& groupData);
 
         private:
             ShaderResourceGroupPool() = default;

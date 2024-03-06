@@ -30,11 +30,15 @@
 
 #include <Editor/View/Widgets/ScriptCanvasNodePaletteDockWidget.h>
 #include <Editor/View/Widgets/NodePalette/VariableNodePaletteTreeItemTypes.h>
+#include <ScriptCanvasContextIdentifiers.h>
 #include <ScriptCanvas/Asset/RuntimeAsset.h>
 #include <ScriptCanvas/Bus/RequestBus.h>
 #include <ScriptCanvas/Bus/EditorScriptCanvasBus.h>
 
+#include <AzToolsFramework/ActionManager/HotKey/HotKeyManagerInterface.h>
 #include <AzToolsFramework/API/ToolsApplicationAPI.h>
+#include <AzToolsFramework/Editor/ActionManagerUtils.h>
+#include <AzToolsFramework/UI/PropertyEditor/PropertyEditorAPI.h>
 #include <ScriptCanvas/Variable/GraphVariable.h>
 
 namespace ScriptCanvasEditor
@@ -1151,6 +1155,21 @@ namespace ScriptCanvasEditor
 
         setMinimumSize(0, 0);
         ResizeColumns();
+
+        if (auto hotKeyManagerInterface = AZ::Interface<AzToolsFramework::HotKeyManagerInterface>::Get())
+        {
+            hotKeyManagerInterface->AssignWidgetToActionContext(
+                ScriptCanvasIdentifiers::ScriptCanvasVariablesActionContextIdentifier, this);
+        }
+    }
+
+    GraphVariablesTableView::~GraphVariablesTableView()
+    {
+        if (auto hotKeyManagerInterface = AZ::Interface<AzToolsFramework::HotKeyManagerInterface>::Get())
+        {
+            hotKeyManagerInterface->RemoveWidgetFromActionContext(
+                ScriptCanvasIdentifiers::ScriptCanvasVariablesActionContextIdentifier, this);
+        }
     }
 
     void GraphVariablesTableView::SetActiveScene(const ScriptCanvas::ScriptCanvasId& scriptCanvasId)

@@ -22,7 +22,7 @@ namespace DebugDraw
     {
     public:
 
-        AZ_CLASS_ALLOCATOR(DebugDrawTextElement, AZ::SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(DebugDrawTextElement, AZ::SystemAllocator);
         AZ_TYPE_INFO(DebugDrawTextElement, "{A49413DB-0AFC-4D38-BD4B-EDC8FA83B640}");
         static void Reflect(AZ::ReflectContext* context);
 
@@ -34,7 +34,9 @@ namespace DebugDraw
 
         DrawMode m_drawMode = DrawMode::OnScreen;
         float m_duration = 0.0f;
+        float m_size = 1.4f;
         AZStd::string m_text = "";
+        bool m_centered = false;
         AZ::ScriptTimePoint m_activateTime;
         AZ::Color m_color = AZ::Color(1.0f, 1.0f, 1.0f, 1.0f);
         AZ::EntityId m_targetEntityId;

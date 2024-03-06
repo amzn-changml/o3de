@@ -6,6 +6,7 @@
  *
  */
 #include <Tests/Factory.h>
+#include <Atom/RHI/DispatchRaysIndirectBuffer.h>
 #include <Atom/RHI/Fence.h>
 #include <Atom/RHI/RayTracingAccelerationStructure.h>
 #include <Atom/RHI/RayTracingPipelineState.h>
@@ -49,6 +50,11 @@ namespace UnitTest
     RHI::APIType Factory::GetType()
     {
         return RHI::APIType(m_platformName.GetStringView());
+    }
+
+    bool Factory::SupportsXR() const
+    {
+        return false;
     }
 
     RHI::PhysicalDeviceList Factory::EnumeratePhysicalDevices()
@@ -158,12 +164,12 @@ namespace UnitTest
 
     AZ::RHI::Ptr<AZ::RHI::IndirectBufferSignature> Factory::CreateIndirectBufferSignature()
     {
-        return aznew IndirectBufferSignature;
+        return aznew NiceIndirectBufferSignature;
     }
 
     AZ::RHI::Ptr<AZ::RHI::IndirectBufferWriter> Factory::CreateIndirectBufferWriter()
     {
-        return aznew IndirectBufferWriter;
+        return aznew NiceIndirectBufferWriter;
     }
 
     AZ::RHI::Ptr<AZ::RHI::RayTracingBufferPools> Factory::CreateRayTracingBufferPools()
@@ -191,6 +197,12 @@ namespace UnitTest
     }
 
     AZ::RHI::Ptr<AZ::RHI::RayTracingShaderTable> Factory::CreateRayTracingShaderTable()
+    {
+        AZ_Assert(false, "Not implemented");
+        return nullptr;
+    }
+
+    RHI::Ptr<RHI::DispatchRaysIndirectBuffer> Factory::CreateDispatchRaysIndirectBuffer()
     {
         AZ_Assert(false, "Not implemented");
         return nullptr;

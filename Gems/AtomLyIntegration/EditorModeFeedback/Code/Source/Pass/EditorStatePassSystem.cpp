@@ -49,112 +49,131 @@ namespace AZ::Render
     void EditorStatePassSystem::AddPassesToRenderPipeline(RPI::RenderPipeline* renderPipeline)
     {
         const auto templateName = Name(MainPassParentTemplateName);
-        if (RPI::PassSystemInterface::Get()->GetPassTemplate(templateName))
+
+        // Early return if pass is already found in render pipeline or if the pipeline is not the default one (i.e it is an XR pipeline).
+        auto passFilter = AZ::RPI::PassFilter::CreateWithTemplateName(templateName, renderPipeline);
+        auto foundPass = AZ::RPI::PassSystemInterface::Get()->FindFirstPass(passFilter);
+        if (foundPass || renderPipeline->GetViewType() != RPI::ViewType::Default)
         {
-            // Template was created by another pipeline, do not to create again
             return;
         }
 
-        auto mainParentPassTemplate = AZStd::make_shared<RPI::PassTemplate>();
-        mainParentPassTemplate->m_name = templateName;
-        mainParentPassTemplate->m_passClass = Name(MainPassParentTemplatePassClassName);
-        
-        // Input depth slot
+        // check if the reference pass of insert position exist
+        Name postProcessPassName = Name("PostProcessPass");
+        if (renderPipeline->FindFirstPass(postProcessPassName) == nullptr)
         {
-            RPI::PassSlot slot;
-            slot.m_name = Name("InputDepth");
-            slot.m_slotType = RPI::PassSlotType::Input;
-            mainParentPassTemplate->AddSlot(slot);
-        }
-        
-        // Input/output color slot
-        {
-            RPI::PassSlot slot;
-            slot.m_name = Name("ColorInputOutput");
-            slot.m_slotType = RPI::PassSlotType::InputOutput;
-            mainParentPassTemplate->AddSlot(slot);
+            AZ_Warning("EditorModeFeedback", false, "Can't find %s in the render pipeline. Editor mode feedback is disabled", postProcessPassName.GetCStr());
+            return;
         }
 
-        // Entity mask passes
-        m_masks = CreateMaskPassTemplatesFromEditorStates(m_editorStates);
-        for (const auto& drawList : m_masks)
+        auto mainParentPassTemplate = RPI::PassSystemInterface::Get()->GetPassTemplate(templateName);
+        if (!mainParentPassTemplate)
         {
-            RPI::PassRequest pass;
-            pass.m_passName = GetMaskPassNameForDrawList(drawList);
-            pass.m_templateName = GetMaskPassTemplateNameForDrawList(drawList);
+            // Create the pass template and add it to the pass system.
+            auto newPassTemplate = AZStd::make_shared<RPI::PassTemplate>();
+            newPassTemplate->m_name = templateName;
+            newPassTemplate->m_passClass = Name(MainPassParentTemplatePassClassName);
 
-            // Input depth
+            // Input depth slot
             {
-                RPI::PassConnection connection;
-                connection.m_localSlot = Name("InputDepth");
-                connection.m_attachmentRef = { Name("Parent"), Name("InputDepth") };
-                pass.AddInputConnection(connection);
+                RPI::PassSlot slot;
+                slot.m_name = Name("InputDepth");
+                slot.m_slotType = RPI::PassSlotType::Input;
+                newPassTemplate->AddSlot(slot);
             }
 
-            mainParentPassTemplate->AddPassRequest(pass);
-        }
-        
-        // Editor state passes
-        auto previousOutput = AZStd::make_pair<Name, Name>(Name("Parent"), Name("ColorInputOutput"));
-        for (const auto& state : m_editorStates)
-        {
-            CreateAndAddStateParentPassTemplate(*state);
-            RPI::PassRequest pass;
-            pass.m_passName = state->GetPassName();
-            pass.m_templateName = state->GetPassTemplateName();
-        
-            // Input depth
+            // Input/output color slot
             {
-                RPI::PassConnection connection;
-                connection.m_localSlot = Name("InputDepth");
-                connection.m_attachmentRef = { Name("Parent"), Name("InputDepth") };
-                pass.AddInputConnection(connection);
+                RPI::PassSlot slot;
+                slot.m_name = Name("ColorInputOutput");
+                slot.m_slotType = RPI::PassSlotType::InputOutput;
+                newPassTemplate->AddSlot(slot);
             }
-        
-            // Input entity mask
+
+            // Entity mask passes
+            m_masks = CreateMaskPassTemplatesFromEditorStates(m_editorStates);
+            for (const auto& drawList : m_masks)
             {
-                RPI::PassConnection connection;
-                connection.m_localSlot = Name("InputEntityMask");
-                connection.m_attachmentRef = { GetMaskPassNameForDrawList(state->GetEntityMaskDrawList()), Name("OutputEntityMask") };
-                pass.AddInputConnection(connection);
+                RPI::PassRequest pass;
+                pass.m_passName = GetMaskPassNameForDrawList(drawList);
+                pass.m_templateName = GetMaskPassTemplateNameForDrawList(drawList);
+
+                // Input depth
+                {
+                    RPI::PassConnection connection;
+                    connection.m_localSlot = Name("InputDepth");
+                    connection.m_attachmentRef = { Name("Parent"), Name("InputDepth") };
+                    pass.AddInputConnection(connection);
+                }
+
+                newPassTemplate->AddPassRequest(pass);
             }
-        
-            // Input color
+
+            // Editor state passes
+            auto previousOutput = AZStd::make_pair(Name("Parent"), Name("ColorInputOutput"));
+            for (const auto& state : m_editorStates)
             {
-                RPI::PassConnection connection;
-                connection.m_localSlot = Name("InputColor");
-                connection.m_attachmentRef = { previousOutput.first, previousOutput.second };
-                pass.AddInputConnection(connection);
-            }
-        
-            mainParentPassTemplate->AddPassRequest(pass);
-        
-            // Buffer copy pass 
-            {
-                CreateAndAddBufferCopyPassTemplate(*state);
-                RPI::PassRequest buffercopy;
-                buffercopy.m_passName = GetBufferCopyPassNameForState(*state);
-                buffercopy.m_templateName = GetBufferCopyPassTemplateName(*state);
-                
+                CreateAndAddStateParentPassTemplate(*state);
+                RPI::PassRequest pass;
+                pass.m_passName = state->GetPassName();
+                pass.m_templateName = state->GetPassTemplateName();
+
+                // Input depth
+                {
+                    RPI::PassConnection connection;
+                    connection.m_localSlot = Name("InputDepth");
+                    connection.m_attachmentRef = { Name("Parent"), Name("InputDepth") };
+                    pass.AddInputConnection(connection);
+                }
+
+                // Input entity mask
+                {
+                    RPI::PassConnection connection;
+                    connection.m_localSlot = Name("InputEntityMask");
+                    connection.m_attachmentRef = { GetMaskPassNameForDrawList(state->GetEntityMaskDrawList()), Name("OutputEntityMask") };
+                    pass.AddInputConnection(connection);
+                }
+
                 // Input color
                 {
                     RPI::PassConnection connection;
                     connection.m_localSlot = Name("InputColor");
-                    connection.m_attachmentRef = { pass.m_passName, Name("OutputColor") };
-                    buffercopy.AddInputConnection(connection);
+                    connection.m_attachmentRef = { previousOutput.first, previousOutput.second };
+                    pass.AddInputConnection(connection);
                 }
-        
-                mainParentPassTemplate->AddPassRequest(buffercopy);
-                previousOutput = { buffercopy.m_passName, Name("OutputColor") };
+
+                newPassTemplate->AddPassRequest(pass);
+
+                // Buffer copy pass
+                {
+                    CreateAndAddBufferCopyPassTemplate(*state);
+                    RPI::PassRequest buffercopy;
+                    buffercopy.m_passName = GetBufferCopyPassNameForState(*state);
+                    buffercopy.m_templateName = GetBufferCopyPassTemplateName(*state);
+
+                    // Input color
+                    {
+                        RPI::PassConnection connection;
+                        connection.m_localSlot = Name("InputColor");
+                        connection.m_attachmentRef = { pass.m_passName, Name("OutputColor") };
+                        buffercopy.AddInputConnection(connection);
+                    }
+
+                    newPassTemplate->AddPassRequest(buffercopy);
+                    previousOutput = { buffercopy.m_passName, Name("OutputColor") };
+                }
             }
+
+            RPI::PassSystemInterface::Get()->AddPassTemplate(newPassTemplate->m_name, newPassTemplate);
+
+            mainParentPassTemplate = newPassTemplate;
         }
 
-        RPI::PassSystemInterface::Get()->AddPassTemplate(mainParentPassTemplate->m_name, mainParentPassTemplate);
         AZ::RPI::PassRequest passRequest;
         passRequest.m_passName = Name(MainPassParentPassName);
         passRequest.m_templateName = mainParentPassTemplate->m_name;
         passRequest.AddInputConnection(
-            RPI::PassConnection{ Name("ColorInputOutput"), RPI::PassAttachmentRef{ Name("PostProcessPass"), Name("Output") } });
+            RPI::PassConnection{ Name("ColorInputOutput"), RPI::PassAttachmentRef{ postProcessPassName, Name("Output") } });
         passRequest.AddInputConnection(
             RPI::PassConnection{ Name("InputDepth"), RPI::PassAttachmentRef{ Name("DepthPrePass"), Name("Depth") } });
 
@@ -166,7 +185,7 @@ namespace AZ::Render
         }
 
         // Inject the parent pass after the PostProcess pass
-        if (!renderPipeline->AddPassAfter(parentPass, Name("PostProcessPass")))
+        if (!renderPipeline->AddPassAfter(parentPass, postProcessPassName))
         {
             AZ_Error(
                 "EditorStatePassSystem", false, "Add editor mode feedback parent pass to render pipeline [%s] failed", renderPipeline->GetId().GetCStr());
@@ -184,7 +203,7 @@ namespace AZ::Render
             {
                 const auto entityIds = state->GetMaskedEntities();
                 auto& mask = entityMaskMap[state->GetEntityMaskDrawList()];
-                for (const auto entityId : entityIds)
+                for (const auto& entityId : entityIds)
                 {
                     mask.insert(entityId);
                 }
@@ -200,6 +219,11 @@ namespace AZ::Render
         {
             state->UpdatePassDataForPipelines();
         }
+    }
+    
+    const char* EditorStatePassSystem::GetParentPassTemplateName() const
+    {
+        return MainPassParentTemplateName;
     }
 
     void EditorStatePassSystem::ConfigureStatePassesForPipeline([[maybe_unused]]RPI::RenderPipeline* renderPipeline)

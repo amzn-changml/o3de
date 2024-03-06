@@ -47,7 +47,7 @@ namespace AZ
             friend class CommandPool;
 
         public:
-            AZ_CLASS_ALLOCATOR(CommandList, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(CommandList, AZ::SystemAllocator);
             AZ_RTTI(CommandList, "138BB654-124A-47F7-8426-9ED2204BCDBD", Base);
 
             struct InheritanceInfo
@@ -86,7 +86,12 @@ namespace AZ
             void BeginPredication(const RHI::Buffer& buffer, uint64_t offset, RHI::PredicationOp operation) override;
             void EndPredication() override;
             void BuildBottomLevelAccelerationStructure(const RHI::RayTracingBlas& rayTracingBlas) override;
-            void BuildTopLevelAccelerationStructure(const RHI::RayTracingTlas& rayTracingTlas) override;
+            void UpdateBottomLevelAccelerationStructure(const RHI::RayTracingBlas& rayTracingBlas) override;
+            void BuildTopLevelAccelerationStructure(
+                const RHI::RayTracingTlas& rayTracingTlas, const AZStd::vector<const RHI::RayTracingBlas*>& changedBlasList) override;
+            void SetFragmentShadingRate(
+                RHI::ShadingRate rate,
+                const RHI::ShadingRateCombinators& combinators = DefaultShadingRateCombinators) override;
             ////////////////////////////////////////////////////////////
 
             ///////////////////////////////////////////////////////////////////
@@ -127,6 +132,8 @@ namespace AZ
             {
                 const PipelineState* m_pipelineState = nullptr;
                 AZStd::array<const ShaderResourceGroup*, RHI::Limits::Pipeline::ShaderResourceGroupCountMax> m_SRGByAzslBindingSlot = { {} };
+                // Used for better debugging (VS Natvis)
+                AZStd::array<const ShaderResourceGroup*, RHI::Limits::Pipeline::ShaderResourceGroupCountMax> m_SRGByVulkanBindingIndex = { {} };
                 AZStd::array<VkDescriptorSet, RHI::Limits::Pipeline::ShaderResourceGroupCountMax> m_descriptorSets = { {VK_NULL_HANDLE} };
                 AZStd::bitset<RHI::Limits::Pipeline::ShaderResourceGroupCountMax> m_dirtyShaderResourceGroupFlags;
             };
@@ -143,6 +150,7 @@ namespace AZ
                 const Framebuffer* m_framebuffer = nullptr;
                 RHI::CommandListScissorState m_scissorState;
                 RHI::CommandListViewportState m_viewportState;
+                RHI::CommandListShadingRateState m_shadingRateState;
             };
 
             CommandList() = default;
@@ -160,6 +168,7 @@ namespace AZ
             void BindPipeline(const PipelineState* pipelineState);
             void CommitViewportState();
             void CommitScissorState();
+            void CommitShadingRateState();
 
             template <class Item>
             bool CommitShaderResource(const Item& item);

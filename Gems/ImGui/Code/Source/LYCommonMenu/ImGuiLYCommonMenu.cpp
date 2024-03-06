@@ -12,6 +12,7 @@
 #include <AzCore/std/string/conversions.h>
 #include <AzCore/std/sort.h>
 #include <AzCore/StringFunc/StringFunc.h>
+#include <AzCore/Console/IConsole.h>
 #include <AzFramework/Input/Buses/Requests/InputSystemCursorRequestBus.h>
 #include <AzFramework/Input/Devices/Mouse/InputDeviceMouse.h>
 #include <AzFramework/Spawnable/Spawnable.h>
@@ -20,6 +21,11 @@
 #include <ILevelSystem.h>
 #include "ImGuiColorDefines.h"
 #include "LYImGuiUtils/ImGuiDrawHelpers.h"
+
+// individual menus
+#include "ImGuiLYAssetExplorer.h"
+#include "ImGuiLYCameraMonitor.h"
+#include "ImGuiLYEntityOutliner.h"
 
 namespace ImGui
 {
@@ -47,6 +53,7 @@ namespace ImGui
         m_assetExplorer.Initialize();
         m_cameraMonitor.Initialize();
         m_entityOutliner.Initialize();
+        m_inputMonitor.Initialize();
 
         m_deltaTimeHistogram.Init("onTick Delta Time (Milliseconds)", 250, LYImGuiUtils::HistogramContainer::ViewType::Histogram, true, 0.0f, 60.0f);
         AZ::TickBus::Handler::BusConnect();
@@ -59,6 +66,7 @@ namespace ImGui
         ImGuiUpdateListenerBus::Handler::BusDisconnect();
 
         // shutdown sub menu objects
+        m_inputMonitor.Shutdown();
         m_assetExplorer.Shutdown();
         m_cameraMonitor.Shutdown();
         m_entityOutliner.Shutdown();
@@ -193,7 +201,7 @@ namespace ImGui
                 {
                     // Discrete Input - Control ImGui and Game independently.
                     ImGui::DisplayState state;
-                    ImGui::ImGuiManagerBus::BroadcastResult(state, &ImGui::IImGuiManager::GetClientMenuBarState);
+                    ImGui::ImGuiManagerBus::BroadcastResult(state, &ImGui::IImGuiManager::GetDisplayState);
                     if (state == DisplayState::Visible)
                     {
                         inputTitle.append("ImGui");
@@ -238,6 +246,23 @@ namespace ImGui
             // Main Open 3D Engine menu
             if (ImGui::BeginMenu("O3DE"))
             {
+                AZ::IConsole* console = AZ::Interface<AZ::IConsole>::Get();
+                if (console != nullptr)
+                {
+                    // Get the current console visibility status and cache it
+                    bool showConsole = true;
+                    console->GetCvarValue("bg_showDebugConsole", showConsole);
+                    const bool originalValue = showConsole;
+
+                    ImGui::Checkbox("Console", &showConsole);
+                    if (originalValue != showConsole)
+                    {
+                        // If the visibility state changed then update the console variable
+                        // Guard for edges so we don't continuously spam the console with commands
+                        console->PerformCommand(showConsole ? "bg_showDebugConsole true" : "bg_showDebugConsole false");
+                    }
+                }
+
                 if (ImGui::MenuItem("Delta Time Graph"))
                 {
                     m_showDeltaTimeGraphs = !m_showDeltaTimeGraphs;
@@ -252,6 +277,11 @@ namespace ImGui
                 if (ImGui::MenuItem("Camera Monitor"))
                 {
                     m_cameraMonitor.ToggleEnabled();
+                }
+
+                if (ImGui::MenuItem("Input Monitor"))
+                {
+                    m_inputMonitor.ToggleEnabled();
                 }
 
                 // LY Entity Outliner
@@ -437,7 +467,7 @@ namespace ImGui
                 if (ImGui::BeginMenu("Video Options"))
                 {
                     // VSync
-                    IMGUI_DRAW_CVAR_CHECKBOX("r_VSync", "VSync");
+                    IMGUI_DRAW_CVAR_CHECKBOX("vsync_interval", "VSync");
 
                     // Max Frame Rate
                     static ICVar* maxFPSCVar = gEnv->pConsole->GetCVar("sys_MaxFPS");
@@ -714,6 +744,7 @@ namespace ImGui
         // Update sub menus
         m_assetExplorer.ImGuiUpdate();
         m_cameraMonitor.ImGuiUpdate();
+        m_inputMonitor.ImGuiUpdate();
         m_entityOutliner.ImGuiUpdate();
         if (m_showDeltaTimeGraphs)
         {
@@ -854,10 +885,10 @@ namespace ImGui
         m_telemetryCaptureTimeRemaining = m_telemetryCaptureTime;
 
         // Get the current ImGui Display state to restore it later.
-        ImGuiManagerBus::BroadcastResult(m_telemetryCapturePreCaptureState, &IImGuiManager::GetClientMenuBarState);
+        ImGuiManagerBus::BroadcastResult(m_telemetryCapturePreCaptureState, &IImGuiManager::GetDisplayState);
 
         // Turn off the ImGui Manager
-        ImGuiManagerBus::Broadcast(&IImGuiManager::SetClientMenuBarState, DisplayState::Hidden);
+        ImGuiManagerBus::Broadcast(&IImGuiManager::SetDisplayState, DisplayState::Hidden);
     }
 
     void ImGuiLYCommonMenu::StopTelemetryCapture()
@@ -867,7 +898,7 @@ namespace ImGui
 
         // Restore ImGui State
         // Turn off the ImGui Manager
-        ImGuiManagerBus::Broadcast(&IImGuiManager::SetClientMenuBarState, m_telemetryCapturePreCaptureState);
+        ImGuiManagerBus::Broadcast(&IImGuiManager::SetDisplayState, m_telemetryCapturePreCaptureState);
 
         // Reset timer and disconnect tick bus
         m_telemetryCaptureTimeRemaining = 0.0f;

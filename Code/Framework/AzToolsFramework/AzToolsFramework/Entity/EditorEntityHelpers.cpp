@@ -22,6 +22,7 @@
 #include <AzToolsFramework/Entity/EditorEntityContextBus.h>
 #include <AzToolsFramework/Entity/SliceEditorEntityOwnershipServiceBus.h>
 #include <AzToolsFramework/FocusMode/FocusModeInterface.h>
+#include <AzToolsFramework/Prefab/PrefabPublicInterface.h>
 #include <AzToolsFramework/Slice/SliceMetadataEntityContextBus.h>
 #include <AzToolsFramework/Slice/SliceUtilities.h>
 #include <AzToolsFramework/ToolsComponents/EditorLockComponentBus.h>
@@ -178,12 +179,46 @@ namespace AzToolsFramework
         return entities;
     }
 
+    EntityCompositionRequests::RemoveComponentsOutcome RemoveComponents(AZStd::span<AZ::Component* const> components)
+    {
+        EntityCompositionRequests::RemoveComponentsOutcome outcome = AZ::Failure(AZStd::string(""));
+        EntityCompositionRequestBus::BroadcastResult(outcome, &EntityCompositionRequests::RemoveComponents, components);
+        return outcome;
+    }
+
+    EntityCompositionRequests::RemoveComponentsOutcome RemoveComponents(AZStd::initializer_list<AZ::Component* const> components)
+    {
+        EntityCompositionRequests::RemoveComponentsOutcome outcome = AZ::Failure(AZStd::string(""));
+        EntityCompositionRequestBus::BroadcastResult(outcome, &EntityCompositionRequests::RemoveComponents, components);
+        return outcome;
+    }
+
+    void EnableComponents(AZStd::span<AZ::Component* const> components)
+    {
+        EntityCompositionRequestBus::Broadcast(&EntityCompositionRequests::EnableComponents, components);
+    }
+
+    void EnableComponents(AZStd::initializer_list<AZ::Component* const> components)
+    {
+        EntityCompositionRequestBus::Broadcast(&EntityCompositionRequests::EnableComponents, components);
+    }
+
+    void DisableComponents(AZStd::span<AZ::Component* const> components)
+    {
+        EntityCompositionRequestBus::Broadcast(&EntityCompositionRequests::DisableComponents, components);
+    }
+
+    void DisableComponents(AZStd::initializer_list<AZ::Component* const> components)
+    {
+        EntityCompositionRequestBus::Broadcast(&EntityCompositionRequests::DisableComponents, components);
+    }
+
     void GetAllComponentsForEntity(const AZ::Entity* entity, AZ::Entity::ComponentArrayType& componentsOnEntity)
     {
         if (entity)
         {
             //build a set of all active and pending components associated with the entity
-            componentsOnEntity.insert(componentsOnEntity.end(), entity->GetComponents().begin(), entity->GetComponents().end());
+            componentsOnEntity.append_range(entity->GetComponents());
             EditorPendingCompositionRequestBus::Event(entity->GetId(), &EditorPendingCompositionRequests::GetPendingComponents, componentsOnEntity);
             EditorDisabledCompositionRequestBus::Event(entity->GetId(), &EditorDisabledCompositionRequests::GetDisabledComponents, componentsOnEntity);
         }
@@ -211,6 +246,19 @@ namespace AzToolsFramework
 
         const AZ::SerializeContext::ClassData* componentClassData = serializeContext->FindClassData(componentTypeId);
         return componentClassData;
+    }
+
+    AZStd::string GetNameFromComponentClassData(const AZ::Component* component)
+    {
+        const AZ::SerializeContext::ClassData* classData = GetComponentClassData(component);
+
+        // If the class data cannot be fetched for the underlying component type, return the typename of the actual component.
+        if (!classData)
+        {
+            return component->RTTI_GetTypeName();
+        }
+
+        return classData->m_name;
     }
 
     AZStd::string GetFriendlyComponentName(const AZ::Component* component)
@@ -274,8 +322,8 @@ namespace AzToolsFramework
 
     bool OffersRequiredServices(
         const AZ::SerializeContext::ClassData* componentClass,
-        const AZStd::vector<AZ::ComponentServiceType>& serviceFilter,
-        const AZStd::vector<AZ::ComponentServiceType>& incompatibleServiceFilter
+        const AZStd::span<const AZ::ComponentServiceType> serviceFilter,
+        const AZStd::span<const AZ::ComponentServiceType> incompatibleServiceFilter
     )
     {
         AZ_Assert(componentClass, "Component class must not be null");
@@ -327,10 +375,10 @@ namespace AzToolsFramework
 
     bool OffersRequiredServices(
         const AZ::SerializeContext::ClassData* componentClass,
-        const AZStd::vector<AZ::ComponentServiceType>& serviceFilter
+        const AZStd::span<const AZ::ComponentServiceType> serviceFilter
     )
     {
-        const AZStd::vector<AZ::ComponentServiceType> incompatibleServices;
+        const AZ::ComponentDescriptor::DependencyArrayType incompatibleServices;
         return OffersRequiredServices(componentClass, serviceFilter, incompatibleServices);
     }
 
@@ -619,7 +667,8 @@ namespace AzToolsFramework
                 (void)knownType;
 
                 AZ::ComponentDescriptor* componentDescriptor = nullptr;
-                EBUS_EVENT_ID_RESULT(componentDescriptor, componentClass->m_typeId, AZ::ComponentDescriptorBus, GetDescriptor);
+                AZ::ComponentDescriptorBus::EventResult(
+                    componentDescriptor, componentClass->m_typeId, &AZ::ComponentDescriptorBus::Events::GetDescriptor);
                 if (componentDescriptor)
                 {
                     AZ::ComponentDescriptor::DependencyArrayType providedServices;
@@ -653,11 +702,8 @@ namespace AzToolsFramework
 
     bool IsSelected(const AZ::EntityId entityId)
     {
-        AZ_PROFILE_FUNCTION(AzToolsFramework);
-
         bool selected = false;
-        EditorEntityInfoRequestBus::EventResult(
-            selected, entityId, &EditorEntityInfoRequestBus::Events::IsSelected);
+        EditorEntityInfoRequestBus::EventResult(selected, entityId, &EditorEntityInfoRequestBus::Events::IsSelected);
         return selected;
     }
 
@@ -667,8 +713,7 @@ namespace AzToolsFramework
 
         // Detect if the Entity is Visible
         bool visible = false;
-        EditorEntityInfoRequestBus::EventResult(
-            visible, entityId, &EditorEntityInfoRequestBus::Events::IsVisible);
+        EditorEntityInfoRequestBus::EventResult(visible, entityId, &EditorEntityInfoRequestBus::Events::IsVisible);
 
         if (!visible)
         {
@@ -1246,6 +1291,41 @@ namespace AzToolsFramework
         }
 
         return culledEntities;
+    }
+
+    bool EntitiesBelongToSamePrefab(const EntityIdList& selectedEntityIds, const AZ::EntityId newParentId)
+    {
+        auto prefabPublicInterface = AZ::Interface<Prefab::PrefabPublicInterface>::Get();
+        AZ_Assert(prefabPublicInterface, "EditorEntityHelpers::EntitiesBelongToSamePrefab - Could not get the prefab public interface.");
+
+        // Only allow reparenting the selected entities if they are all under the same instance.
+        // We check the parent entity separately because it may be a container entity and
+        // container entities consider their owning instance to be the parent instance.
+        if (!prefabPublicInterface->EntitiesBelongToSameInstance(selectedEntityIds))
+        {
+            return false;
+        }
+
+        // Prevent parenting to a different owning prefab instance.
+        AZ::EntityId selectedEntityId = selectedEntityIds.front();
+        AZ::EntityId selectedContainerId = prefabPublicInterface->GetInstanceContainerEntityId(selectedEntityId);
+        AZ::EntityId newParentContainerId = prefabPublicInterface->GetInstanceContainerEntityId(newParentId);
+
+        // If the selected entity id is a container entity id, then we need to get its parent owning instance.
+        // This is because a container entity is actually owned by the prefab instance itself.
+        if (selectedContainerId == selectedEntityId && !prefabPublicInterface->IsLevelInstanceContainerEntity(selectedEntityId))
+        {
+            AZ::EntityId parentOfSelectedContainer;
+            AZ::TransformBus::EventResult(parentOfSelectedContainer, selectedContainerId, &AZ::TransformBus::Events::GetParentId);
+            selectedContainerId = prefabPublicInterface->GetInstanceContainerEntityId(parentOfSelectedContainer);
+        }
+
+        if (selectedContainerId != newParentContainerId)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     namespace Internal

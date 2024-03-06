@@ -110,10 +110,6 @@ namespace AZ
 
         void FixedShapeProcessor::PrepareFrame()
         {
-            AZ_PROFILE_SCOPE(AzRender, "FixedShapeProcessor: PrepareFrame");
-            m_processSrgs.clear();
-            m_drawPackets.clear();
-
             if (m_needUpdatePipelineStates)
             {
                 // for created pipeline state, re-set their data from scene
@@ -124,6 +120,12 @@ namespace AZ
                 }
                 m_needUpdatePipelineStates = false;
             }
+        }
+        
+        void FixedShapeProcessor::FrameEnd()
+        {
+            m_processSrgs.clear();
+            m_drawPackets.clear();
         }
 
         void FixedShapeProcessor::ProcessObjects(const AuxGeomBufferData* bufferData, const RPI::FeatureProcessor::RenderPacket& fpPacket)
@@ -1430,15 +1432,15 @@ namespace AZ
         void FixedShapeProcessor::LoadShaders()
         {
             // load shaders for constant color and direction light
-            const char* unlitObjectShaderFilePath = "Shaders/auxgeom/auxgeomobject.azshader";
-            const char* litObjectShaderFilePath = "Shaders/auxgeom/auxgeomobjectlit.azshader";
+            constexpr const char* unlitObjectShaderFilePath = "Shaders/auxgeom/auxgeomobject.azshader";
+            constexpr const char* litObjectShaderFilePath = "Shaders/auxgeom/auxgeomobjectlit.azshader";
 
             // constant color shader
             m_unlitShader = RPI::LoadCriticalShader(unlitObjectShaderFilePath);
             // direction light shader
             m_litShader = RPI::LoadCriticalShader(litObjectShaderFilePath);
 
-            if (m_unlitShader.get() == nullptr || m_litShader == nullptr)
+            if (m_unlitShader == nullptr || m_litShader == nullptr)
             {
                 return;
             }

@@ -104,12 +104,22 @@ namespace EMotionFX
             m_animGraphComponent->OnAssetReady(motionSetAsset);
         }
 
+        void TearDown() override
+        {
+            m_entity.reset();
+            EntityComponentFixture::TearDown();
+        }
+
         void ActivateEntity()
         {
             // Set the actor asset and create the actor instance.
             m_actorComponent->SetActorAsset(m_actorComponent->GetActorAsset());
 
             m_entity->Activate();
+
+            // Run one tick so that the actor asset has time to finish activating.
+            // (Actor initialization is deferred to the next tick after the OnAssetReady call)
+            AZ::TickBus::Broadcast(&AZ::TickEvents::OnTick, 0.0f, AZ::ScriptTimePoint());
 
             m_animGraphInstance = m_animGraphComponent->GetAnimGraphInstance();
             EXPECT_NE(m_animGraphInstance, nullptr) << "Expecting valid anim graph instance.";

@@ -17,6 +17,8 @@ set(FILES
     Source/RHI/Buffer.h
     Source/RHI/BufferMemoryAllocator.cpp
     Source/RHI/BufferMemoryAllocator.h
+    Source/RHI/BufferD3D12MemoryAllocator.cpp
+    Source/RHI/BufferD3D12MemoryAllocator.h
     Source/RHI/BufferMemoryView.cpp
     Source/RHI/BufferMemoryView.h
     Source/RHI/BufferPool.cpp
@@ -43,6 +45,8 @@ set(FILES
     Source/RHI/DescriptorPool.h
     Source/RHI/Device.cpp
     Source/RHI/Device.h
+    Source/RHI/DispatchRaysIndirectBuffer.cpp
+    Source/RHI/DispatchRaysIndirectBuffer.h
     Source/RHI/DX12.cpp
     Source/RHI/DX12.h
     Source/RHI/Fence.cpp
@@ -107,7 +111,6 @@ set(FILES
     Source/RHI/SwapChain.h
     Source/RHI/SystemComponent.cpp
     Source/RHI/SystemComponent.h
-    Source/RHI/TileAllocator.cpp
     Source/RHI/TileAllocator.h
     Source/RHI/TransientAttachmentPool.cpp
     Source/RHI/TransientAttachmentPool.h

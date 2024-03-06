@@ -40,14 +40,28 @@ namespace AZ
             return pass;
         }
 
-        ComputePass::ComputePass(const PassDescriptor& descriptor)
+        ComputePass::ComputePass(const PassDescriptor& descriptor, AZ::Name supervariant)
             : RenderPass(descriptor)
             , m_passDescriptor(descriptor)
         {
-            LoadShader();
+            const ComputePassData* passData = PassUtils::GetPassData<ComputePassData>(m_passDescriptor);
+            if (passData == nullptr)
+            {
+                AZ_Error(
+                    "PassSystem", false, "[ComputePass '%s']: Trying to construct without valid ComputePassData!", GetPathName().GetCStr());
+                return;
+            }
+
+            RHI::DispatchDirect dispatchArgs;
+            dispatchArgs.m_totalNumberOfThreadsX = passData->m_totalNumberOfThreadsX;
+            dispatchArgs.m_totalNumberOfThreadsY = passData->m_totalNumberOfThreadsY;
+            dispatchArgs.m_totalNumberOfThreadsZ = passData->m_totalNumberOfThreadsZ;
+            m_dispatchItem.m_arguments = dispatchArgs;
+
+            LoadShader(supervariant);
         }
 
-        void ComputePass::LoadShader()
+        void ComputePass::LoadShader(AZ::Name supervariant)
         {
             // Load ComputePassData...
             const ComputePassData* passData = PassUtils::GetPassData<ComputePassData>(m_passDescriptor);
@@ -71,7 +85,7 @@ namespace AZ
                 shaderAsset = RPI::FindShaderAsset(passData->m_shaderReference.m_assetId, passData->m_shaderReference.m_filePath);
             }
 
-            if (!shaderAsset.GetId().IsValid())
+            if (!shaderAsset.IsReady())
             {
                 AZ_Error("PassSystem", false, "[ComputePass '%s']: Failed to load shader '%s'!",
                     GetPathName().GetCStr(),
@@ -79,10 +93,10 @@ namespace AZ
                 return;
             }
 
-            m_shader = Shader::FindOrCreate(shaderAsset);
+            m_shader = Shader::FindOrCreate(shaderAsset, supervariant);
             if (m_shader == nullptr)
             {
-                AZ_Error("PassSystem", false, "[ComputePass '%s']: Failed to load shader '%s'!",
+                AZ_Error("PassSystem", false, "[ComputePass '%s']: Failed to create shader instance from asset '%s'!",
                     GetPathName().GetCStr(),
                     passData->m_shaderReference.m_filePath.data());
                 return;
@@ -105,19 +119,21 @@ namespace AZ
             const bool compileDrawSrg = false; // The SRG will be compiled in CompileResources()
             m_drawSrg = m_shader->CreateDefaultDrawSrg(compileDrawSrg);
 
-            RHI::DispatchDirect dispatchArgs;
-            dispatchArgs.m_totalNumberOfThreadsX = passData->m_totalNumberOfThreadsX;
-            dispatchArgs.m_totalNumberOfThreadsY = passData->m_totalNumberOfThreadsY;
-            dispatchArgs.m_totalNumberOfThreadsZ = passData->m_totalNumberOfThreadsZ;
-
-            const auto outcome = RPI::GetComputeShaderNumThreads(m_shader->GetAsset(), dispatchArgs);
-            if (!outcome.IsSuccess())
+            if (m_dispatchItem.m_arguments.m_type == RHI::DispatchType::Direct)
             {
-                AZ_Error("PassSystem", false, "[ComputePass '%s']: Shader '%.*s' contains invalid numthreads arguments:\n%s",
-                        GetPathName().GetCStr(), passData->m_shaderReference.m_filePath.size(), passData->m_shaderReference.m_filePath.data(), outcome.GetError().c_str());
+                const auto outcome = RPI::GetComputeShaderNumThreads(m_shader->GetAsset(), m_dispatchItem.m_arguments.m_direct);
+                if (!outcome.IsSuccess())
+                {
+                    AZ_Error(
+                        "PassSystem",
+                        false,
+                        "[ComputePass '%s']: Shader '%.*s' contains invalid numthreads arguments:\n%s",
+                        GetPathName().GetCStr(),
+                        passData->m_shaderReference.m_filePath.size(),
+                        passData->m_shaderReference.m_filePath.data(),
+                        outcome.GetError().c_str());
+                }
             }
-
-            m_dispatchItem.m_arguments = dispatchArgs;
 
             m_isFullscreenPass = passData->m_makeFullscreenPass;
 
@@ -127,16 +143,13 @@ namespace AZ
 
             m_dispatchItem.m_pipelineState = m_shader->AcquirePipelineState(pipelineStateDescriptor);
 
+            OnShaderReloadedInternal();
+
             ShaderReloadNotificationBus::Handler::BusDisconnect();
             ShaderReloadNotificationBus::Handler::BusConnect(passData->m_shaderReference.m_assetId);
         }
 
         // Scope producer functions
-
-        void ComputePass::SetupFrameGraphDependencies(RHI::FrameGraphInterface frameGraph)
-        {
-            RenderPass::SetupFrameGraphDependencies(frameGraph);
-        }
 
         void ComputePass::CompileResources(const RHI::FrameGraphCompileContext& context)
         {
@@ -164,7 +177,7 @@ namespace AZ
         void ComputePass::MatchDimensionsToOutput()
         {
             PassAttachment* outputAttachment = nullptr;
-            
+
             if (GetOutputCount() > 0)
             {
                 outputAttachment = GetOutputBinding(0).GetAttachment().get();
@@ -229,6 +242,19 @@ namespace AZ
         void ComputePass::OnShaderVariantReinitialized(const ShaderVariant&)
         {
             LoadShader();
+        }
+
+        void ComputePass::SetComputeShaderReloadedCallback(ComputeShaderReloadedCallback callback)
+        {
+            m_shaderReloadedCallback = callback;
+        }
+
+        void ComputePass::OnShaderReloadedInternal()
+        {
+            if (m_shaderReloadedCallback)
+            {
+                m_shaderReloadedCallback(this);
+            }
         }
 
     }   // namespace RPI

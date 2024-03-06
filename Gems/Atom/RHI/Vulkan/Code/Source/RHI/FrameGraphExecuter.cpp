@@ -7,10 +7,10 @@
  */
 #include <Atom/RHI/FrameGraph.h>
 #include <AzCore/std/parallel/thread.h>
-#include <RHI/FrameGraphExecuteGroupHandler.h>
-#include <RHI/FrameGraphExecuteGroupMergedHandler.h>
-#include <RHI/FrameGraphExecuteGroup.h>
-#include <RHI/FrameGraphExecuteGroupMerged.h>
+#include <RHI/FrameGraphExecuteGroupSecondaryHandler.h>
+#include <RHI/FrameGraphExecuteGroupPrimaryHandler.h>
+#include <RHI/FrameGraphExecuteGroupSecondary.h>
+#include <RHI/FrameGraphExecuteGroupPrimary.h>
 #include <RHI/FrameGraphExecuter.h>
 #include <RHI/Device.h>
 #include <RHI/SwapChain.h>
@@ -60,15 +60,35 @@ namespace AZ
         {
             Device& device = GetDevice();
             AZStd::vector<const Scope*> mergedScopes;
+            const Scope* scopePrev = nullptr;
+            const Scope* scopeNext = nullptr;
+            const AZStd::vector<RHI::Scope*>& scopes = frameGraph.GetScopes();
+
 #if defined(AZ_FORCE_CPU_GPU_INSYNC)
             // Forces all scopes to issue a dedicated merged scope group with one command list.
             // This will ensure that the Execute is done on only one scope and if an error happens
             // we can be sure about the work gpu was working on before the crash.
-            for (const RHI::Scope* scopeBase : frameGraph.GetScopes())
+            for (auto it = scopes.begin(); it != scopes.end(); ++it)
             {
-                mergedScopes.push_back(static_cast<const Scope*>(scopeBase));
-                FrameGraphExecuteGroupMerged* multiScopeContextGroup = AddGroup<FrameGraphExecuteGroupMerged>();
-                multiScopeContextGroup->Init(device, AZStd::move(mergedScopes));           
+                const Scope& scope = *static_cast<const Scope*>(*it);
+                auto nextIter = it + 1;
+                scopeNext = nextIter != scopes.end() ? static_cast<const Scope*>(*nextIter) : nullptr;
+                const bool subpassGroup = (scopeNext && scopeNext->GetFrameGraphGroupId() == scope.GetFrameGraphGroupId()) ||
+                                          (scopePrev && scopePrev->GetFrameGraphGroupId() == scope.GetFrameGraphGroupId());
+                
+                if (subpassGroup)
+                {
+                    FrameGraphExecuteGroupSecondary* scopeContextGroup = AddGroup<FrameGraphExecuteGroupSecondary>();
+                    scopeContextGroup->Init(device, scope, 1, GetJobPolicy());
+                }
+                else
+                {
+                    mergedScopes.push_back(&scope);
+                    FrameGraphExecuteGroupPrimary* multiScopeContextGroup = AddGroup<FrameGraphExecuteGroupPrimary>();
+                    multiScopeContextGroup->SetName(scope.GetName());
+                    multiScopeContextGroup->Init(device, AZStd::move(mergedScopes));
+                }
+                scopePrev = &scope;
             }
 #else
             
@@ -76,9 +96,6 @@ namespace AZ
             uint32_t mergedGroupCost = 0;
             uint32_t mergedSwapchainCount = 0;
 
-            const Scope* scopePrev = nullptr;
-            const Scope* scopeNext = nullptr;
-            const AZStd::vector<RHI::Scope*>& scopes = frameGraph.GetScopes();
             for (auto it = scopes.begin(); it != scopes.end(); ++it)
             {
                 const Scope& scope = *static_cast<const Scope*>(*it);
@@ -132,10 +149,11 @@ namespace AZ
 
                     if (flushMergedScopes && mergedScopes.size())
                     {
+                        // All merged scopes use a single primary command list
                         mergedGroupCost = 0;
                         mergedSwapchainCount = 0;
                         mergedHardwareQueueClass = scope.GetHardwareQueueClass();
-                        FrameGraphExecuteGroupMerged* multiScopeContextGroup = AddGroup<FrameGraphExecuteGroupMerged>();
+                        FrameGraphExecuteGroupPrimary* multiScopeContextGroup = AddGroup<FrameGraphExecuteGroupPrimary>();
                         multiScopeContextGroup->Init(device, AZStd::move(mergedScopes));                    
                     }
                 }
@@ -150,39 +168,26 @@ namespace AZ
                 // Not mergeable, create a dedicated context group for it.
                 else
                 {
-                    // GHI-9465 - https://github.com/o3de/o3de/issues/9465
-                    // FrameGraphExecuteGroup assumes a renderpass with a non-null framebuffer,
-                    // as a workaround use a merged group (which doesn't assume a framebuffer) 
-                    // until we can add support for a null framebuffer to FrameGraphExecuteGroup.
-                    if (scope.UsesRenderpass())
-                    {
-                        // And then create a new group for the current scope with dedicated [1, N] command lists.
-                        const uint32_t commandListCount = AZStd::max(AZ::DivideAndRoundUp(totalScopeCost, CommandListCostThreshold), 1u);
-
-                        FrameGraphExecuteGroup* scopeContextGroup = AddGroup<FrameGraphExecuteGroup>();
-                        scopeContextGroup->Init(device, scope, commandListCount, GetJobPolicy());
-                    }
-                    else
-                    {
-                        // non-renderpass's are only supported through the merged group
-                        AZStd::vector<const Scope*> nonRenderPassScopes;
-                        nonRenderPassScopes.push_back(&scope);
-                        FrameGraphExecuteGroupMerged* multiScopeContextGroup = AddGroup<FrameGraphExecuteGroupMerged>();
-                        multiScopeContextGroup->Init(device, AZStd::move(nonRenderPassScopes));
-                    }
+                    // And then create a new group for the current scope with dedicated [1, N] secondary command lists
+                    const uint32_t commandListCount = AZStd::max(AZ::DivideAndRoundUp(totalScopeCost, CommandListCostThreshold), 1u);
+                    FrameGraphExecuteGroupSecondary* scopeContextGroup = AddGroup<FrameGraphExecuteGroupSecondary>();
+                    scopeContextGroup->Init(device, scope, commandListCount, GetJobPolicy());
                 }
                 scopePrev = &scope;
             }
 
+            // Merge all pending scopes
             if (mergedScopes.size())
             {
                 mergedGroupCost = 0;
                 mergedSwapchainCount = 0;
-                FrameGraphExecuteGroupMerged* multiScopeContextGroup = AddGroup<FrameGraphExecuteGroupMerged>();
+                FrameGraphExecuteGroupPrimary* multiScopeContextGroup = AddGroup<FrameGraphExecuteGroupPrimary>();
                 multiScopeContextGroup->Init(device, AZStd::move(mergedScopes));
             }
 #endif
             // Create the handlers to manage the execute groups.
+            // Handlers manage one or multiple execute groups by creating a shared renderpass/framebuffer
+            // or advancing the subpass if needed.
             auto groups = GetGroups();
             AZStd::vector<RHI::FrameGraphExecuteGroup*> groupRefs;
             groupRefs.reserve(groups.size());
@@ -190,7 +195,7 @@ namespace AZ
             uint32_t initGroupIndex = 0;
             for (uint32_t i = 0; i < groups.size(); ++i)
             {
-                const FrameGraphExecuteGroupBase* group = static_cast<const FrameGraphExecuteGroupBase*>(groups[i].get());
+                const FrameGraphExecuteGroup* group = static_cast<const FrameGraphExecuteGroup*>(groups[i].get());
                 if (groupId != group->GetGroupId())
                 {
                     groupRefs.clear();
@@ -215,10 +220,10 @@ namespace AZ
 
         void FrameGraphExecuter::ExecuteGroupInternal(RHI::FrameGraphExecuteGroup& groupBase)
         {
-            FrameGraphExecuteGroupBase& group = static_cast<FrameGraphExecuteGroupBase&>(groupBase);
+            FrameGraphExecuteGroup& group = static_cast<FrameGraphExecuteGroup&>(groupBase);
             auto findIter = m_groupHandlers.find(group.GetGroupId());
             AZ_Assert(findIter != m_groupHandlers.end(), "Could not find group handler for groupId %d", group.GetGroupId().GetIndex());
-            FrameGraphExecuteGroupHandlerBase* handler = findIter->second.get();
+            FrameGraphExecuteGroupHandler* handler = findIter->second.get();
             // Wait until all execute groups of the handler has finished and also make sure that the handler itself hasn't executed already (which is possible for parallel encoding).
             if (!handler->IsExecuted() && handler->IsComplete())
             {
@@ -240,9 +245,9 @@ namespace AZ
             }
 
             // Add the handler depending on the number of execute groups.
-            AZStd::unique_ptr<FrameGraphExecuteGroupHandlerBase> handler(groups.size() == 1 && azrtti_cast<FrameGraphExecuteGroupMerged*>(groups.front()) ?
-                static_cast<FrameGraphExecuteGroupHandlerBase*>(aznew FrameGraphExecuteGroupMergedHandler) :
-                static_cast<FrameGraphExecuteGroupHandlerBase*>(aznew FrameGraphExecuteGroupHandler));
+            AZStd::unique_ptr<FrameGraphExecuteGroupHandler> handler(groups.size() == 1 && azrtti_cast<FrameGraphExecuteGroupPrimary*>(groups.front()) ?
+                static_cast<FrameGraphExecuteGroupHandler*>(aznew FrameGraphExecuteGroupPrimaryHandler) :
+                static_cast<FrameGraphExecuteGroupHandler*>(aznew FrameGraphExecuteGroupSecondaryHandler));
 
             handler->Init(GetDevice(), groups);
             m_groupHandlers.insert({ groupId, AZStd::move(handler) });

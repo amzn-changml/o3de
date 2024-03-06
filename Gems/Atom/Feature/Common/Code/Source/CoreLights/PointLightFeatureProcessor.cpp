@@ -64,8 +64,8 @@ namespace AZ
             MeshFeatureProcessor* meshFeatureProcessor = GetParentScene()->GetFeatureProcessor<MeshFeatureProcessor>();
             if (meshFeatureProcessor)
             {
-                m_lightMeshFlag = meshFeatureProcessor->GetFlagRegistry()->AcquireTag(AZ::Name("o_enableSphereLights"));
-                m_shadowMeshFlag = meshFeatureProcessor->GetFlagRegistry()->AcquireTag(AZ::Name("o_enableSphereLightShadows"));
+                m_lightMeshFlag = meshFeatureProcessor->GetShaderOptionFlagRegistry()->AcquireTag(AZ::Name("o_enableSphereLights"));
+                m_shadowMeshFlag = meshFeatureProcessor->GetShaderOptionFlagRegistry()->AcquireTag(AZ::Name("o_enableSphereLightShadows"));
             }
         }
 
@@ -320,6 +320,11 @@ namespace AZ
             SetShadowSetting(handle, &ProjectedShadowFeatureProcessor::SetShadowBias, bias);
         }
 
+        void PointLightFeatureProcessor::SetUseCachedShadows(LightHandle handle, bool useCachedShadows)
+        {
+            SetShadowSetting(handle, &ProjectedShadowFeatureProcessor::SetUseCachedShadows, useCachedShadows);
+        }
+
         void PointLightFeatureProcessor::SetAffectsGI(LightHandle handle, bool affectsGI)
         {
             AZ_Assert(handle.IsValid(), "Invalid LightHandle passed to PointLightFeatureProcessor::SetAffectsGI().");
@@ -333,6 +338,14 @@ namespace AZ
             AZ_Assert(handle.IsValid(), "Invalid LightHandle passed to PointLightFeatureProcessor::SetAffectsGIFactor().");
 
             m_lightData.GetData<0>(handle.GetIndex()).m_affectsGIFactor = affectsGIFactor;
+            m_deviceBufferNeedsUpdate = true;
+        }
+
+        void PointLightFeatureProcessor::SetLightingChannelMask(LightHandle handle, uint32_t lightingChannelMask)
+        {
+            AZ_Assert(handle.IsValid(), "Invalid LightHandle passed to PointLightFeatureProcessor::SetLightingChannelMask().");
+
+            m_lightData.GetData<0>(handle.GetIndex()).m_lightingChannelMask = lightingChannelMask;
             m_deviceBufferNeedsUpdate = true;
         }
 

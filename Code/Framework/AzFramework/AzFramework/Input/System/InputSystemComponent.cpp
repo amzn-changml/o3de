@@ -99,7 +99,6 @@ namespace AzFramework
                     "Input System", "Controls which core input devices are made available")
                     ->ClassElement(AZ::Edit::ClassElements::EditorData, "")
                         ->Attribute(AZ::Edit::Attributes::Category, "Engine")
-                        ->Attribute(AZ::Edit::Attributes::AppearsInAddComponentMenu, AZ_CRC("System", 0xc94d118b))
                     ->DataElement(AZ::Edit::UIHandlers::SpinBox, &InputSystemComponent::m_mouseMovementSampleRateHertz,
                         "Mouse Movement Sample Rate", "The mouse movement sample rate in Hertz (cycles per second), which directly\n"
                                                       "correlates to the max number of mouse movement events dispatched each frame.\n"
@@ -162,6 +161,18 @@ namespace AzFramework
     {
         incompatible.push_back(AZ_CRC("InputSystemService", 0x5438d51a));
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    void InputSystemComponent::GetDependentServices(AZ::ComponentDescriptor::DependencyArrayType& dependent)
+    {
+        dependent.push_back(AZ_CRC_CE("NativeUIInputSystemService"));
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    void InputSystemComponent::GetRequiredServices([[maybe_unused]] AZ::ComponentDescriptor::DependencyArrayType& required)
+    {
+    }
+
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     InputSystemComponent::InputSystemComponent()
@@ -275,7 +286,8 @@ namespace AzFramework
     ////////////////////////////////////////////////////////////////////////////////////////////////
     void InputSystemComponent::CreateEnabledInputDevices()
     {
-        const AZ::u32 maxSupportedGamepads = InputDeviceGamepad::GetMaxSupportedGamepads();
+        auto deviceGamepadImplFactory = AZ::Interface<InputDeviceGamepad::ImplementationFactory>::Get();
+        const AZ::u32 maxSupportedGamepads = (deviceGamepadImplFactory != nullptr) ? deviceGamepadImplFactory->GetMaxSupportedGamepads() : 0;
         m_gamepadsEnabled = AZStd::clamp<AZ::u32>(m_gamepadsEnabled, 0, maxSupportedGamepads);
 
         DestroyEnabledInputDevices();

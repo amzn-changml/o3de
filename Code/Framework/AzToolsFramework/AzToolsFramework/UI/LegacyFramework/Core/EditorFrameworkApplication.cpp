@@ -20,7 +20,6 @@
 #include <AzCore/std/time.h>
 
 #include <AzCore/Component/ComponentApplication.h>
-#include <AzCore/Memory/MemoryComponent.h>
 #include <AzCore/Jobs/JobManagerComponent.h>
 #include <AzCore/Asset/AssetManagerComponent.h>
 #include <AzCore/Script/ScriptSystemComponent.h>
@@ -94,10 +93,18 @@ namespace LegacyFramework
     }
 
     Application::Application()
-        : Application(0, nullptr)
+        : Application(0, nullptr, {})
     {}
+
+    Application::Application(AZ::ComponentApplicationSettings componentAppSettings)
+        : Application(0, nullptr, AZStd::move(componentAppSettings))
+    {}
+
     Application::Application(int argc, char** argv)
-        : ComponentApplication(argc, argv)
+        : Application(argc, argv, {})
+    {}
+    Application::Application(int argc, char** argv, AZ::ComponentApplicationSettings componentAppSettings)
+        : ComponentApplication(argc, argv, AZStd::move(componentAppSettings))
     {
         m_isPrimary = true;
         m_desiredExitCode = 0;
@@ -132,7 +139,7 @@ namespace LegacyFramework
 #ifdef AZ_PLATFORM_WINDOWS
     BOOL CTRL_BREAK_HandlerRoutine(DWORD /*dwCtrlType*/)
     {
-        EBUS_EVENT(FrameworkApplicationMessages::Bus, SetAbortRequested);
+        FrameworkApplicationMessages::Bus::Broadcast(&FrameworkApplicationMessages::Bus::Events::SetAbortRequested);
         return TRUE;
     }
 #endif
@@ -157,11 +164,6 @@ namespace LegacyFramework
 
     int Application::Run(const ApplicationDesc& desc)
     {
-        if (!AZ::AllocatorInstance<AZ::OSAllocator>::IsReady())
-        {
-            AZ::AllocatorInstance<AZ::OSAllocator>::Create();
-        }
-
         QString appNameConcat = QStringLiteral("%1_GLOBALMUTEX").arg(desc.m_applicationName);
         {
             // If the application crashed before, it may have left behind shared memory
@@ -211,7 +213,7 @@ namespace LegacyFramework
 
             // if we're not the primary instance, what exactly do we do?  This is a generic framework - not a specific app
             // and what we do might depend on implementation specifics for each app.
-            EBUS_EVENT(LegacyFramework::CoreMessageBus, RunAsAnotherInstance);
+            LegacyFramework::CoreMessageBus::Broadcast(&LegacyFramework::CoreMessageBus::Events::RunAsAnotherInstance);
         }
         else
         {
@@ -221,7 +223,7 @@ namespace LegacyFramework
                 CreateApplicationComponent();
             }
 
-            EBUS_EVENT(LegacyFramework::CoreMessageBus, Run);
+            LegacyFramework::CoreMessageBus::Broadcast(&LegacyFramework::CoreMessageBus::Events::Run);
 
             // as a precaution here, we save our app and system entities BEFORE we destroy anything
             // so that we have the highest chance of storing the user's precious application state and preferences
@@ -473,8 +475,6 @@ namespace LegacyFramework
 
     void Application::CreateSystemComponents()
     {
-        EnsureComponentCreated(AZ::MemoryComponent::RTTI_Type());
-
         AZ_Assert(!m_desc.m_enableProjectManager || m_desc.m_enableGUI, "Enabling the project manager in the application settings requires enabling the GUI as well.");
 
         EnsureComponentCreated(AzToolsFramework::Framework::RTTI_Type());

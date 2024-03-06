@@ -23,7 +23,7 @@ namespace AZ
             : public RHI::RayTracingBlas
         {
         public:
-            AZ_CLASS_ALLOCATOR(RayTracingBlas, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(RayTracingBlas, AZ::SystemAllocator);
 
             static RHI::Ptr<RayTracingBlas> Create();
 
@@ -50,6 +50,8 @@ namespace AZ
 #ifdef AZ_DX12_DXR_SUPPORT
             AZStd::vector<D3D12_RAYTRACING_GEOMETRY_DESC> m_geometryDescs;
             D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS m_inputs;
+
+            static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS GetAccelerationStructureBuildFlags(const RHI::RayTracingAccelerationStructureBuildFlags &buildFlags);
 #endif
 
             // buffer list to keep buffers alive for several frames

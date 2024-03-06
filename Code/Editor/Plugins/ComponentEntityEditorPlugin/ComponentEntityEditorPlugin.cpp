@@ -27,16 +27,14 @@
 #include <AzToolsFramework/UI/Slice/SliceRelationshipWidget.hxx>
 
 #include "SandboxIntegration.h"
-#include "Objects/ComponentEntityObject.h"
 
 namespace ComponentEntityEditorPluginInternal
 {
     void RegisterSandboxObjects()
     {
-        GetIEditor()->GetClassFactory()->RegisterClass(new CTemplateObjectClassDesc<CComponentEntityObject>("ComponentEntity", "", "", OBJTYPE_AZENTITY, 201, "*.entity"));
 
         AZ::SerializeContext* serializeContext = nullptr;
-        EBUS_EVENT_RESULT(serializeContext, AZ::ComponentApplicationBus, GetSerializeContext);
+        AZ::ComponentApplicationBus::BroadcastResult(serializeContext, &AZ::ComponentApplicationBus::Events::GetSerializeContext);
         AZ_Assert(serializeContext, "Serialization context not available");
 
         if (serializeContext)
@@ -102,12 +100,24 @@ namespace ComponentEntityEditorPluginInternal
                 "\nMake sure the Reflect function is called for all base classes as well.");
 
             // this happens during startup, and its a programmer error - so during startup, make it an error, so it shows as a pretty noisy
-            // popup box.  Its important that programmers fix this, before they submit their code, so that data corruption / data loss does 
+            // popup box.  Its important that programmers fix this, before they submit their code, so that data corruption / data loss does
             // not occur.
             AZ_Error("Serialize", false, message.c_str());
         }
     }
 } // end namespace ComponentEntityEditorPluginInternal
+
+void ComponentPaletteSettings::Reflect(AZ::ReflectContext* context)
+{
+    AZ::SerializeContext* serializeContext = azrtti_cast<AZ::SerializeContext*>(context);
+    if (serializeContext)
+    {
+        serializeContext->Class<ComponentPaletteSettings>()
+            ->Version(1)
+            ->Field("m_favorites", &ComponentPaletteSettings::m_favorites)
+            ;
+    }
+}
 
 ComponentEntityEditorPlugin::ComponentEntityEditorPlugin([[maybe_unused]] IEditor* editor)
     : m_registered(false)
@@ -126,7 +136,7 @@ ComponentEntityEditorPlugin::ComponentEntityEditorPlugin([[maybe_unused]] IEdito
     inspectorOptions.isDisabledInImGuiMode = false;
 
     RegisterViewPane<QComponentEntityEditorInspectorWindow>(
-        LyViewPane::EntityInspector,
+        LyViewPane::Inspector,
         LyViewPane::CategoryTools,
         inspectorOptions);
 
@@ -210,7 +220,7 @@ void ComponentEntityEditorPlugin::Release()
     {
         using namespace AzToolsFramework;
 
-        UnregisterViewPane(LyViewPane::EntityInspector);
+        UnregisterViewPane(LyViewPane::Inspector);
         UnregisterViewPane(LyViewPane::EntityOutliner);
         UnregisterViewPane(LyViewPane::EntityInspectorPinned);
 

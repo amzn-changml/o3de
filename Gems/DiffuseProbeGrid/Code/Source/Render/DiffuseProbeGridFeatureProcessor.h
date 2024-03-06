@@ -18,12 +18,15 @@ namespace AZ
 {
     namespace Render
     {
+        class SpecularReflectionsFeatureProcessorInterface;
+
         //! This class manages DiffuseProbeGrids which generate diffuse global illumination
         class DiffuseProbeGridFeatureProcessor final
             : public DiffuseProbeGridFeatureProcessorInterface
             , private Data::AssetBus::MultiHandler
         {
         public:
+            AZ_CLASS_ALLOCATOR(DiffuseProbeGridFeatureProcessor, SystemAllocator)
             AZ_RTTI(AZ::Render::DiffuseProbeGridFeatureProcessor, "{BCD232F9-1EBF-4D0D-A5F4-84AEC933A93C}", AZ::Render::DiffuseProbeGridFeatureProcessorInterface);
 
             static void Reflect(AZ::ReflectContext* context);
@@ -52,11 +55,13 @@ namespace AZ
             void SetEdgeBlendIbl(const DiffuseProbeGridHandle& probeGrid, bool edgeBlendIbl) override;
             void SetFrameUpdateCount(const DiffuseProbeGridHandle& probeGrid, uint32_t frameUpdateCount) override;
             void SetTransparencyMode(const DiffuseProbeGridHandle& probeGrid, DiffuseProbeGridTransparencyMode transparencyMode) override;
+            void SetEmissiveMultiplier(const DiffuseProbeGridHandle& probeGrid, float emissiveMultiplier) override;
             void SetBakedTextures(const DiffuseProbeGridHandle& probeGrid, const DiffuseProbeGridBakedTextures& bakedTextures) override;
             void SetVisualizationEnabled(const DiffuseProbeGridHandle& probeGrid, bool visualizationEnabled) override;
             void SetVisualizationShowInactiveProbes(const DiffuseProbeGridHandle& probeGrid, bool visualizationShowInactiveProbes) override;
             void SetVisualizationSphereRadius(const DiffuseProbeGridHandle& probeGrid, float visualizationSphereRadius) override;
 
+            bool CanBakeTextures() override;
             void BakeTextures(
                 const DiffuseProbeGridHandle& probeGrid,
                 DiffuseProbeGridBakeTexturesCallback callback,
@@ -220,6 +225,10 @@ namespace AZ
             static const uint32_t BufferFrameCount = 3;
             Data::Instance<RPI::Buffer> m_queryBuffer[BufferFrameCount];
             uint32_t m_currentBufferIndex = 0;
+
+            // SSR state, for controlling the DiffuseProbeGridQueryPass in the SSR pipeline
+            SpecularReflectionsFeatureProcessorInterface* m_specularReflectionsFeatureProcessor = nullptr;
+            bool m_ssrRayTracingEnabled = false;
         };
     } // namespace Render
 } // namespace AZ

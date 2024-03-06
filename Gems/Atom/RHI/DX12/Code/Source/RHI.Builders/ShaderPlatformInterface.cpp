@@ -47,7 +47,7 @@ namespace AZ
             RHI::Ptr<ShaderStageFunction> newShaderStageFunction =  ShaderStageFunction::Create(RHI::ToRHIShaderStage(stageDescriptor.m_stageType));
 
             const DX12::ShaderByteCode& byteCode = stageDescriptor.m_byteCode;
-            const int byteCodeIndex = (stageDescriptor.m_stageType == RHI::ShaderHardwareStage::TessellationEvaluation) ? 1 : 0;
+            const int byteCodeIndex = 0;
             newShaderStageFunction->SetByteCode(byteCodeIndex, byteCode);
 
             newShaderStageFunction->Finalize();
@@ -61,8 +61,7 @@ namespace AZ
 
             hasRasterProgram |= shaderStageType == RHI::ShaderHardwareStage::Vertex;
             hasRasterProgram |= shaderStageType == RHI::ShaderHardwareStage::Fragment;
-            hasRasterProgram |= shaderStageType == RHI::ShaderHardwareStage::TessellationControl;
-            hasRasterProgram |= shaderStageType == RHI::ShaderHardwareStage::TessellationEvaluation;
+            hasRasterProgram |= shaderStageType == RHI::ShaderHardwareStage::Geometry;
 
             return hasRasterProgram;
         }
@@ -201,7 +200,7 @@ namespace AZ
             ByProducts& byProducts) const
         {
             // Shader compiler executable
-            static const char* dxcRelativePath = "Builders/DirectXShaderCompiler/dxc.exe";
+            const auto dxcRelativePath = RHI::GetDirectXShaderCompilerPath("Builders/DirectXShaderCompiler/dxc.exe");
 
             // NOTE:
             // Running DX12 on PC with DXIL shaders requires modern GPUs and at least Windows 10 Build 1803 or later for Shader Model 6.2
@@ -229,8 +228,6 @@ namespace AZ
                 {RHI::ShaderHardwareStage::Fragment,               "ps_" + shaderModelVersion},
                 {RHI::ShaderHardwareStage::Compute,                "cs_" + shaderModelVersion},
                 {RHI::ShaderHardwareStage::Geometry,               "gs_" + shaderModelVersion},
-                {RHI::ShaderHardwareStage::TessellationControl,    "hs_" + shaderModelVersion},
-                {RHI::ShaderHardwareStage::TessellationEvaluation, "ds_" + shaderModelVersion},
                 {RHI::ShaderHardwareStage::RayTracing,             "lib_6_3"}
             };
             auto profileIt = stageToProfileName.find(shaderStageType);
@@ -246,15 +243,15 @@ namespace AZ
             auto dxcArguments = shaderBuildArguments.m_dxcArguments;
             if (graphicsDevMode || BuildHasDebugInfo(shaderBuildArguments))
             {
-                RHI::ShaderBuildArguments::AppendArguments(dxcArguments, { "-Zi", "-Zss" });
+                RHI::ShaderBuildArguments::AppendArguments(dxcArguments, { "-Zi", "-Zss", "-Od" });
             }
 
-            unsigned char md5[RHI::Md5NumBytes];
+            unsigned char sha1[RHI::Sha1NumBytes];
             RHI::PrependArguments args;
             args.m_sourceFile = shaderSourceFile.c_str();
             args.m_prependFile = PlatformShaderHeader;
             args.m_destinationFolder = tempFolder.c_str();
-            args.m_digest = &md5;
+            args.m_digest = &sha1;
 
             const auto dxcInputFile = RHI::PrependFile(args);  // Prepend PAL header & obtain hash
             // -Fd "Write debug information to the given file, or automatically named file in directory when ending in '\\'"
@@ -264,9 +261,9 @@ namespace AZ
             if (graphicsDevMode || shaderBuildArguments.m_generateDebugInfo)
             {
                 // prepare .pdb filename:
-                AZStd::string md5hex = RHI::ByteToHexString(md5);
+                AZStd::string sha1hex = RHI::ByteToHexString(sha1);
                 AZStd::string symbolDatabaseFilePath = dxcInputFile.c_str();  // mutate from source
-                AZStd::string pdbFileName = md5hex + "-" + profileIt->second;   // concatenate the shader profile to disambiguate vs/ps...
+                AZStd::string pdbFileName = sha1hex + "-" + profileIt->second; // concatenate the shader profile to disambiguate vs/ps...
                 AzFramework::StringFunc::Path::ReplaceFullName(symbolDatabaseFilePath, pdbFileName.c_str(), "pdb");
                 // it is possible that another activated platform/profile, already exported that file. (since it's hashed on the source file)
                 // dxc returns an error in such case. we get less surprising effets by just not mentionning an -Fd argument
@@ -296,7 +293,7 @@ namespace AZ
                                                                  );
 
             // Run Shader Compiler
-            if (!RHI::ExecuteShaderCompiler(dxcRelativePath, dxcCommandOptions, shaderSourceFile, "DXC"))
+            if (!RHI::ExecuteShaderCompiler(dxcRelativePath, dxcCommandOptions, shaderSourceFile, tempFolder, "DXC"))
             {
                 return false;
             }

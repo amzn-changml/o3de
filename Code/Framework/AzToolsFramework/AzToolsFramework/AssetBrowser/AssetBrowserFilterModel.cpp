@@ -6,35 +6,52 @@
  *
  */
 #include <AzToolsFramework/AssetBrowser/Search/Filter.h>
+#include <AzToolsFramework/AssetBrowser/AssetBrowserEntry.h>
 #include <AzToolsFramework/AssetBrowser/Entries/FolderAssetBrowserEntry.h>
 #include <AzToolsFramework/AssetBrowser/Entries/SourceAssetBrowserEntry.h>
+
+#include <AzQtComponents/Components/Widgets/AssetFolderThumbnailView.h>
+
 #include <AzCore/Console/IConsole.h>
 
 AZ_PUSH_DISABLE_WARNING(4251, "-Wunknown-warning-option")
 #include <AzToolsFramework/AssetBrowser/AssetBrowserFilterModel.h>
 #include <AzToolsFramework/AssetBrowser/AssetBrowserModel.h>
+#include <AzToolsFramework/AssetBrowser/AssetBrowserTreeToTableProxyModel.h>
+#include <AzToolsFramework/AssetBrowser/Views/AssetBrowserViewUtils.h>
 
+#include <QCollator>
 #include <QSharedPointer>
 #include <QTimer>
-#include <QCollator>
 AZ_POP_DISABLE_WARNING
 
 AZ_CVAR(
-    bool, ed_useNewAssetBrowserTableView, true, nullptr, AZ::ConsoleFunctorFlags::Null,
-    "Use the new AssetBrowser TableView for searching assets.");
+    bool, ed_useNewAssetBrowserListView, true, nullptr, AZ::ConsoleFunctorFlags::Null,
+    "Use the new AssetBrowser ListView for searching assets.");
 namespace AzToolsFramework
 {
     namespace AssetBrowser
     {
         //////////////////////////////////////////////////////////////////////////
         //AssetBrowserFilterModel
-        AssetBrowserFilterModel::AssetBrowserFilterModel(QObject* parent)
+        AssetBrowserFilterModel::AssetBrowserFilterModel(QObject* parent, bool isTableView)
             : QSortFilterProxyModel(parent)
+            , m_isTableView(isTableView)
         {
+            setDynamicSortFilter(true);
             m_shownColumns.insert(aznumeric_cast<int>(AssetBrowserEntry::Column::DisplayName));
-            if (ed_useNewAssetBrowserTableView)
+            if (ed_useNewAssetBrowserListView)
             {
                 m_shownColumns.insert(aznumeric_cast<int>(AssetBrowserEntry::Column::Path));
+            }
+            if (isTableView)
+            {
+                m_shownColumns.insert(aznumeric_cast<int>(AssetBrowserEntry::Column::Type));
+                m_shownColumns.insert(aznumeric_cast<int>(AssetBrowserEntry::Column::DiskSize));
+                m_shownColumns.insert(aznumeric_cast<int>(AssetBrowserEntry::Column::Vertices));
+                m_shownColumns.insert(aznumeric_cast<int>(AssetBrowserEntry::Column::ApproxSize));
+                // The below isn't used at present but will be needed in future
+                // m_shownColumns.insert(aznumeric_cast<int>(AssetBrowserEntry::Column::SourceControlStatus));
             }
             m_collator.setNumericMode(true);
             AssetBrowserComponentNotificationBus::Handler::BusConnect();
@@ -47,9 +64,15 @@ namespace AzToolsFramework
 
         void AssetBrowserFilterModel::SetFilter(FilterConstType filter)
         {
+            if (m_filter.data())
+            {
+                disconnect(m_filter.data(), &AssetBrowserEntryFilter::updatedSignal, this, &AssetBrowserFilterModel::filterUpdatedSlot);
+            }
             connect(filter.data(), &AssetBrowserEntryFilter::updatedSignal, this, &AssetBrowserFilterModel::filterUpdatedSlot);
+
             m_filter = filter;
             m_invalidateFilter = true;
+
             // asset browser entries are not guaranteed to have populated when the filter is set, delay filtering until they are
             bool isAssetBrowserComponentReady = false;
             AssetBrowserComponentRequestBus::BroadcastResult(isAssetBrowserComponentReady, &AssetBrowserComponentRequests::AreEntriesReady);
@@ -73,18 +96,49 @@ namespace AzToolsFramework
             return m_stringFilter;
         }
 
+        QVariant AssetBrowserFilterModel::data(const QModelIndex& index, int role) const
+        {
+            auto assetBrowserEntry = mapToSource(index).data(AssetBrowserModel::Roles::EntryRole).value<const AssetBrowserEntry*>();
+            AZ_Assert(assetBrowserEntry, "Couldn't fetch asset entry for the given index.");
+            if (!assetBrowserEntry)
+            {
+                return tr(" No Data ");
+            }
+
+            if (role == Qt::DisplayRole)
+            {
+                if (index.column() == aznumeric_cast<int>(AssetBrowserEntry::Column::Name))
+                {
+                    return AssetBrowserViewUtils::GetAssetBrowserEntryNameWithHighlighting(assetBrowserEntry, m_searchString);
+                }
+                
+            }
+            else if (role == static_cast<int>(AzQtComponents::AssetFolderThumbnailView::Role::IsExactMatch))
+            {
+                auto entry = static_cast<AssetBrowserEntry*>(mapToSource(index).internalPointer());
+                return !m_filter || m_filter->MatchWithoutPropagation(entry);
+            }
+
+            return QSortFilterProxyModel::data(index, role);
+        }
+
+        void AssetBrowserFilterModel::SetSearchString(const QString& searchString)
+        {
+            m_searchString = searchString;
+        }
+
         bool AssetBrowserFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
         {
             //get the source idx, if invalid early out
             QModelIndex idx = sourceModel()->index(source_row, 0, source_parent);
+            if (m_isTableView && qobject_cast<AssetBrowserTreeToTableProxyModel*>(sourceModel()))
+            {
+                idx = static_cast<AssetBrowserTreeToTableProxyModel*>(sourceModel())->mapToSource(idx);
+            }
+
             if (!idx.isValid())
             {
                 return false;
-            }
-            // no filter present, every entry is visible
-            if (!m_filter)
-            {
-                return true;
             }
 
             //the entry is the internal pointer of the index
@@ -95,7 +149,8 @@ namespace AzToolsFramework
             {
                 return true;
             }
-            return m_filter->Match(entry);
+
+            return !m_filter || m_filter->Match(entry);
         }
 
         bool AssetBrowserFilterModel::filterAcceptsColumn(int source_column, const QModelIndex&) const
@@ -110,23 +165,13 @@ namespace AzToolsFramework
             {
                 QVariant leftData = sourceModel()->data(source_left, AssetBrowserModel::Roles::EntryRole);
                 QVariant rightData = sourceModel()->data(source_right, AssetBrowserModel::Roles::EntryRole);
+
                 if (leftData.canConvert<const AssetBrowserEntry*>() && rightData.canConvert<const AssetBrowserEntry*>())
                 {
                     auto leftEntry = qvariant_cast<const AssetBrowserEntry*>(leftData);
                     auto rightEntry = qvariant_cast<const AssetBrowserEntry*>(rightData);
 
-                    // folders should always come first
-                    if (azrtti_istypeof<const FolderAssetBrowserEntry*>(leftEntry) && azrtti_istypeof<const SourceAssetBrowserEntry*>(rightEntry))
-                    {
-                        return false;
-                    }
-                    if (azrtti_istypeof<const SourceAssetBrowserEntry*>(leftEntry) && azrtti_istypeof<const FolderAssetBrowserEntry*>(rightEntry))
-                    {
-                        return true;
-                    }
-
-                    // if both entries are of same type, sort alphabetically
-                    return m_collator.compare(leftEntry->GetDisplayName(), rightEntry->GetDisplayName()) > 0;
+                    return leftEntry->lessThan(rightEntry, m_sortMode, m_collator);
                 }
             }
             return QSortFilterProxyModel::lessThan(source_left, source_right);
@@ -138,18 +183,6 @@ namespace AzToolsFramework
             if (compFilter)
             {
                 const auto& subFilters = compFilter->GetSubFilters();
-                const auto& compFilterIter = AZStd::find_if(subFilters.cbegin(), subFilters.cend(),
-                    [](FilterConstType filter) -> bool
-                    {
-                        const auto assetTypeFilter = qobject_cast<QSharedPointer<const CompositeFilter>>(filter);
-                        return !assetTypeFilter.isNull();
-                    });
-
-                if (compFilterIter != subFilters.end())
-                {
-                    m_assetTypeFilter = qobject_cast<QSharedPointer<const CompositeFilter>>(*compFilterIter);
-                }
-
                 const auto& compositeStringFilterIter = AZStd::find_if(subFilters.cbegin(), subFilters.cend(),
                     [](FilterConstType filter) -> bool
                     {
@@ -190,8 +223,8 @@ namespace AzToolsFramework
                     }
                 }
             }
+
             invalidateFilter();
-            
             Q_EMIT filterChanged();
         }
 
@@ -208,6 +241,26 @@ namespace AzToolsFramework
                 }
                 );
             }
+        }
+
+        void AssetBrowserFilterModel::SetSortMode(const AssetBrowserEntry::AssetEntrySortMode sortMode)
+        {
+            m_sortMode = sortMode;
+        }
+
+        AssetBrowserEntry::AssetEntrySortMode AssetBrowserFilterModel::GetSortMode() const
+        {
+            return m_sortMode;
+        }
+
+        void AssetBrowserFilterModel::SetSortOrder(const Qt::SortOrder sortOrder)
+        {
+            m_sortOrder = sortOrder;
+        }
+
+        Qt::SortOrder AssetBrowserFilterModel::GetSortOrder() const
+        {
+            return m_sortOrder;
         }
 
     } // namespace AssetBrowser

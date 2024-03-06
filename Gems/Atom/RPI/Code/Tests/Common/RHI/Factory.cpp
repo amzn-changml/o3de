@@ -8,6 +8,7 @@
 
 #include <Common/RHI/Factory.h>
 #include <Common/RHI/Stubs.h>
+#include <Atom/RHI/DispatchRaysIndirectBuffer.h>
 #include <Atom/RHI/RayTracingAccelerationStructure.h>
 #include <Atom/RHI/RayTracingPipelineState.h>
 #include <Atom/RHI/RayTracingShaderTable.h>
@@ -46,7 +47,7 @@ namespace UnitTest
             AZ_Assert(physicalDevices.size() == 1, "Expected a single physical device.");
 
             RHI::Ptr<RHI::Device> device = Get().CreateDevice();
-            device->Init(*physicalDevices[0]);
+            device->Init(RHI::MultiDevice::DefaultDeviceIndex, *physicalDevices[0]);
 
             return device;
         }
@@ -64,6 +65,11 @@ namespace UnitTest
         RHI::APIType Factory::GetType()
         {
             return RHI::APIType(m_platformName.GetStringView());
+        }
+
+        bool Factory::SupportsXR() const
+        {
+            return false;
         }
 
         RHI::PhysicalDeviceList Factory::EnumeratePhysicalDevices()
@@ -206,6 +212,12 @@ namespace UnitTest
         }
 
         AZ::RHI::Ptr<AZ::RHI::RayTracingShaderTable> Factory::CreateRayTracingShaderTable()
+        {
+            AZ_Assert(false, "Not implemented");
+            return nullptr;
+        }
+
+        RHI::Ptr<RHI::DispatchRaysIndirectBuffer> Factory::CreateDispatchRaysIndirectBuffer()
         {
             AZ_Assert(false, "Not implemented");
             return nullptr;

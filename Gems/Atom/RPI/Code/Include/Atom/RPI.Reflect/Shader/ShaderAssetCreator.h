@@ -14,6 +14,11 @@
 
 namespace AZ
 {
+    namespace RHI
+    {
+        class ShaderPlatformInterface;
+    }
+
     namespace RPI
     {
         class ShaderAssetCreator
@@ -22,10 +27,6 @@ namespace AZ
         public:
             //! Begins creation of a shader asset.
             void Begin(const Data::AssetId& assetId);
-
-            //! [Optional] Set the timestamp for when the ShaderAsset build process began.
-            //! This is needed to synchronize between the ShaderAsset and ShaderVariantTreeAsset when hot-reloading shaders.
-            void SetShaderAssetBuildTimestamp(AZStd::sys_time_t shaderAssetBuildTimestamp);
 
             //! [Optional] Sets the name of the shader asset from content.
             void SetName(const Name& name);
@@ -91,7 +92,8 @@ namespace AZ
 
             void Clone(const Data::AssetId& assetId,
                        const ShaderAsset& sourceShaderAsset,
-                       const ShaderSupervariants& supervariants);
+                       const ShaderSupervariants& supervariants,
+                       const AZStd::vector<RHI::ShaderPlatformInterface*>& platformInterfaces);
 
         private:
 

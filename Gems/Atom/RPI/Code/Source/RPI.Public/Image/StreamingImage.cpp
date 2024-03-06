@@ -10,7 +10,6 @@
 #include <Atom/RPI.Public/Image/StreamingImage.h>
 #include <Atom/RPI.Public/Image/StreamingImagePool.h>
 #include <Atom/RPI.Public/Image/StreamingImageController.h>
-
 #include <Atom/RPI.Reflect/Image/ImageMipChainAssetCreator.h>
 #include <Atom/RPI.Reflect/Image/StreamingImageAssetCreator.h>
 
@@ -30,8 +29,7 @@ namespace AZ
         Data::Instance<StreamingImage> StreamingImage::FindOrCreate(const Data::Asset<StreamingImageAsset>& streamingImageAsset)
         {
             return Data::InstanceDatabase<StreamingImage>::Instance().FindOrCreate(
-                Data::InstanceId::CreateFromAssetId(streamingImageAsset.GetId()),
-                streamingImageAsset);
+                Data::InstanceId::CreateFromAsset(streamingImageAsset), streamingImageAsset);
         }
 
         Data::Instance<StreamingImage> StreamingImage::CreateFromCpuData(
@@ -43,7 +41,8 @@ namespace AZ
             size_t imageDataSize,
             Uuid id)
         {
-            Data::Instance<StreamingImage> existingImage = Data::InstanceDatabase<StreamingImage>::Instance().Find(Data::InstanceId::CreateFromAssetId(id));
+            const Data::InstanceId instanceId = Data::InstanceId::CreateUuid(id);
+            Data::Instance<StreamingImage> existingImage = Data::InstanceDatabase<StreamingImage>::Instance().Find(instanceId);
             AZ_Error("StreamingImage", !existingImage, "StreamingImage::CreateFromCpuData found an existing entry in the instance database for the provided id.");
 
             RHI::ImageDescriptor imageDescriptor;
@@ -94,20 +93,14 @@ namespace AZ
                 }
             }
 
-            return StreamingImage::FindOrCreate(streamingImageAsset);
+            return Data::InstanceDatabase<StreamingImage>::Instance().FindOrCreate(instanceId, streamingImageAsset);
         }
 
         Data::Instance<StreamingImage> StreamingImage::CreateInternal(StreamingImageAsset& streamingImageAsset)
         {
             Data::Instance<StreamingImage> streamingImage = aznew StreamingImage();
             const RHI::ResultCode resultCode = streamingImage->Init(streamingImageAsset);
-
-            if (resultCode == RHI::ResultCode::Success)
-            {
-                return streamingImage;
-            }
-
-            return nullptr;
+            return resultCode == RHI::ResultCode::Success ? streamingImage : nullptr;
         }
 
         RHI::ResultCode StreamingImage::Init(StreamingImageAsset& imageAsset)
@@ -199,7 +192,7 @@ namespace AZ
                 }
                         
 #ifdef AZ_RPI_STREAMING_IMAGE_DEBUG_LOG
-                AZ_TracePrintf("StreamingImage", "Init image [%s]\n", m_image->GetName().data());
+                AZ_TracePrintf("StreamingImage", "Init image [%s]\n", m_image->GetName().GetCStr());
 #endif
                                 
 #if defined (AZ_RPI_STREAMING_IMAGE_HOT_RELOADING)
@@ -353,6 +346,11 @@ namespace AZ
             QueueExpandToMipChainLevel(m_mipChainState.m_streamingTarget - 1);
         }
 
+        void StreamingImage::CancelExpanding()
+        {
+            TrimToMipChainLevel(m_mipChainState.m_residencyTarget);
+        }
+
         RHI::ResultCode StreamingImage::ExpandMipChain()
         {
             AZ_Assert(m_mipChainState.m_streamingTarget <= m_mipChainState.m_residencyTarget, "The target mip chain cannot be less detailed than the resident mip chain.")
@@ -362,7 +360,7 @@ namespace AZ
             if (m_mipChainState.m_streamingTarget < m_mipChainState.m_residencyTarget)
             {
 #ifdef AZ_RPI_STREAMING_IMAGE_DEBUG_LOG
-                AZ_TracePrintf("StreamingImage", "Expand image [%s]\n", GetImage()->GetName().data());
+                AZ_TracePrintf("StreamingImage", "Expand image [%s]\n", m_image->GetName().GetCStr());
 #endif
 
                 // Start by assuming we can expand residency to the full target range.

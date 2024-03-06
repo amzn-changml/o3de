@@ -23,6 +23,10 @@
 #include <AzCore/Settings/SettingsRegistryMergeUtils.h>
 #include <AzCore/Utils/Utils.h>
 
+#if defined(AZ_PLATFORM_MAC)
+#include <AzCore/Utils/SystemUtilsApple_Platform.h>
+#endif
+
 // AzFramework
 #include <AzFramework/Terrain/TerrainDataRequestBus.h>
 
@@ -36,26 +40,18 @@
 
 // Editor
 #include "CryEdit.h"
-#include "Dialogs/ErrorsDlg.h"
 #include "PluginManager.h"
-#include "IconManager.h"
 #include "ViewManager.h"
-#include "Objects/GizmoManager.h"
-#include "Objects/AxisGizmo.h"
 #include "DisplaySettings.h"
-#include "KeyboardCustomizationSettings.h"
-#include "Export/ExportManager.h"
 #include "LevelIndependentFileMan.h"
 #include "TrackView/TrackViewSequenceManager.h"
 #include "AnimationContext.h"
 #include "GameEngine.h"
 #include "ToolBox.h"
 #include "MainWindow.h"
-#include "RenderHelpers/AxisHelper.h"
 #include "Settings.h"
 #include "Include/IObjectManager.h"
 #include "Include/ISourceControl.h"
-#include "Objects/SelectionGroup.h"
 #include "Objects/ObjectManager.h"
 
 #include "EditorFileMonitor.h"
@@ -102,9 +98,7 @@ CEditorImpl::CEditorImpl()
     , m_bUpdates(true)
     , m_bTerrainAxisIgnoreObjects(false)
     , m_pDisplaySettings(nullptr)
-    , m_pIconManager(nullptr)
     , m_bSelectionLocked(true)
-    , m_pAxisGizmo(nullptr)
     , m_pGameEngine(nullptr)
     , m_pAnimationContext(nullptr)
     , m_pSequenceManager(nullptr)
@@ -112,14 +106,11 @@ CEditorImpl::CEditorImpl()
     , m_pMusicManager(nullptr)
     , m_pErrorReport(nullptr)
     , m_pLasLoadedLevelErrorReport(nullptr)
-    , m_pErrorsDlg(nullptr)
     , m_pSourceControl(nullptr)
     , m_pSelectionTreeManager(nullptr)
     , m_pConsoleSync(nullptr)
     , m_pSettingsManager(nullptr)
     , m_pLevelIndependentFileMan(nullptr)
-    , m_pExportManager(nullptr)
-    , m_bMatEditMode(false)
     , m_bShowStatusText(true)
     , m_bInitialized(false)
     , m_bExiting(false)
@@ -147,7 +138,6 @@ CEditorImpl::CEditorImpl()
 
     m_pObjectManager = new CObjectManager;
     m_pViewManager = new CViewManager;
-    m_pIconManager = new CIconManager;
     m_pUndoManager = new CUndoManager;
     m_pToolBoxManager = new CToolBoxManager;
     m_pSequenceManager = new CTrackViewSequenceManager;
@@ -239,30 +229,32 @@ void CEditorImpl::LoadPlugins()
 {
     AZStd::scoped_lock lock(m_pluginMutex);
 
-    static const QString editor_plugins_folder("EditorPlugins");
+    constexpr const char* editorPluginFolder = "EditorPlugins";
 
-    // Build, verify, and set the engine root's editor plugin folder
-    QString editorPluginPathStr;
+    AZ::IO::FixedMaxPath pluginsPath;
 
-    AZStd::string_view exeFolder;
-    AZ::ComponentApplicationBus::BroadcastResult(exeFolder, &AZ::ComponentApplicationRequests::GetExecutableFolder);
-
-    QDir testDir;
-    testDir.setPath(AZStd::string(exeFolder).c_str());
-    if (testDir.exists() && testDir.cd(editor_plugins_folder))
+#if defined(AZ_PLATFORM_MAC)
+    char maxPathBuffer[AZ::IO::MaxPathLength];
+    if (auto appBundlePathOutcome = AZ::SystemUtilsApple::GetPathToApplicationBundle(maxPathBuffer);
+       appBundlePathOutcome)
     {
-        editorPluginPathStr = testDir.absolutePath();
+        AZ::IO::FixedMaxPath bundleRootDirectory = appBundlePathOutcome.GetValue();
+
+        // the bundle directory includes Editor.app so we want the parent directory
+        bundleRootDirectory = (bundleRootDirectory / "..").LexicallyNormal();
+        pluginsPath = bundleRootDirectory / editorPluginFolder;
+    }
+#endif
+
+    if (pluginsPath.empty())
+    {
+        // Use the executable directory as the starting point for the EditorPlugins path
+        AZ::IO::FixedMaxPath executableDirectory = AZ::Utils::GetExecutableDirectory();
+        pluginsPath = executableDirectory / editorPluginFolder;
     }
 
-    // If no editor plugin path was found based on the root engine path, then fallback to the current editor.exe path
-    if (editorPluginPathStr.isEmpty())
-    {
-        editorPluginPathStr = QString("%1/%2").arg(qApp->applicationDirPath(), editor_plugins_folder);
-    }
-
-    QString pluginSearchPath = QDir::toNativeSeparators(QString("%1/*" AZ_DYNAMIC_LIBRARY_EXTENSION).arg(editorPluginPathStr));
-
-    GetPluginManager()->LoadPlugins(pluginSearchPath.toUtf8().data());
+    // error handling for invalid paths is handled in LoadPlugins
+    GetPluginManager()->LoadPlugins(pluginsPath.c_str());
 }
 
 CEditorImpl::~CEditorImpl()
@@ -271,12 +263,8 @@ CEditorImpl::~CEditorImpl()
     m_bExiting = true; // Can't save level after this point (while Crash)
     SAFE_RELEASE(m_pSourceControl);
 
-    SAFE_DELETE(m_pIconManager)
     SAFE_DELETE(m_pViewManager)
     SAFE_DELETE(m_pObjectManager) // relies on prefab manager
-
-    // some plugins may be exporter - this must be above plugin manager delete.
-    SAFE_DELETE(m_pExportManager);
 
     SAFE_DELETE(m_pPluginManager)
     SAFE_DELETE(m_pAnimationContext) // relies on undo manager
@@ -299,9 +287,7 @@ CEditorImpl::~CEditorImpl()
     SAFE_DELETE(m_pAssetBrowserRequestHandler);
     SAFE_DELETE(m_assetEditorRequestsHandler);
 
-    // Game engine should be among the last things to be destroyed, as it
-    // destroys the engine.
-    SAFE_DELETE(m_pErrorsDlg);
+    // Game engine should be among the last things to be destroyed.
     SAFE_DELETE(m_pLevelIndependentFileMan);
     SAFE_DELETE(m_pGameEngine);
     // The error report must be destroyed after the game, as the engine
@@ -506,7 +492,7 @@ void CEditorImpl::SetDataModified()
 
 void CEditorImpl::SetStatusText(const QString& pszString)
 {
-    if (m_bShowStatusText && !m_bMatEditMode && GetMainStatusBar())
+    if (m_bShowStatusText && GetMainStatusBar())
     {
         GetMainStatusBar()->SetStatusText(pszString);
     }
@@ -526,36 +512,6 @@ void CEditorImpl::SetOperationMode(EOperationMode mode)
 EOperationMode CEditorImpl::GetOperationMode()
 {
     return m_operationMode;
-}
-
-ITransformManipulator* CEditorImpl::ShowTransformManipulator(bool bShow)
-{
-    if (bShow)
-    {
-        if (!m_pAxisGizmo)
-        {
-            m_pAxisGizmo = new CAxisGizmo;
-            m_pAxisGizmo->AddRef();
-            GetObjectManager()->GetGizmoManager()->AddGizmo(m_pAxisGizmo);
-        }
-        return m_pAxisGizmo;
-    }
-    else
-    {
-        // Hide gizmo.
-        if (m_pAxisGizmo)
-        {
-            GetObjectManager()->GetGizmoManager()->RemoveGizmo(m_pAxisGizmo);
-            m_pAxisGizmo->Release();
-        }
-        m_pAxisGizmo = nullptr;
-    }
-    return nullptr;
-}
-
-ITransformManipulator* CEditorImpl::GetTransformManipulator()
-{
-    return m_pAxisGizmo;
 }
 
 void CEditorImpl::SetAxisConstraints(AxisConstrains axisFlags)
@@ -626,41 +582,12 @@ CBaseObject* CEditorImpl::NewObject(const char* typeName, const char* fileName, 
     return object;
 }
 
-const SGizmoParameters& CEditorImpl::GetGlobalGizmoParameters()
-{
-    if (!m_pGizmoParameters.get())
-    {
-        m_pGizmoParameters.reset(new SGizmoParameters());
-    }
-
-    m_pGizmoParameters->axisConstraint = m_selectedAxis;
-    m_pGizmoParameters->referenceCoordSys = m_refCoordsSys;
-    m_pGizmoParameters->axisGizmoScale = 1.0f;
-    m_pGizmoParameters->axisGizmoText = false;
-
-    return *m_pGizmoParameters;
-}
-
 //////////////////////////////////////////////////////////////////////////
 void CEditorImpl::DeleteObject(CBaseObject* obj)
 {
     SetModifiedFlag();
     GetIEditor()->SetModifiedModule(eModifiedBrushes);
     GetObjectManager()->DeleteObject(obj);
-}
-
-CBaseObject* CEditorImpl::GetSelectedObject()
-{
-    if (m_pObjectManager->GetSelection()->GetCount() != 1)
-    {
-        return nullptr;
-    }
-    return m_pObjectManager->GetSelection()->GetObject(0);
-}
-
-void CEditorImpl::SelectObject(CBaseObject* obj)
-{
-    GetObjectManager()->SelectObject(obj);
 }
 
 IObjectManager* CEditorImpl::GetObjectManager()
@@ -687,39 +614,6 @@ CSettingsManager* CEditorImpl::GetSettingsManager()
     }
 
     return m_pSettingsManager;
-}
-
-CSelectionGroup* CEditorImpl::GetSelection()
-{
-    return m_pObjectManager->GetSelection();
-}
-
-int CEditorImpl::ClearSelection()
-{
-    if (GetSelection()->IsEmpty())
-    {
-        return 0;
-    }
-    CUndo undo("Clear Selection");
-    return GetObjectManager()->ClearSelection();
-}
-
-void CEditorImpl::LockSelection(bool bLock)
-{
-    // Selection must be not empty to enable selection lock.
-    if (!GetSelection()->IsEmpty())
-    {
-        m_bSelectionLocked = bLock;
-    }
-    else
-    {
-        m_bSelectionLocked = false;
-    }
-}
-
-bool CEditorImpl::IsSelectionLocked()
-{
-    return m_bSelectionLocked;
 }
 
 CViewManager* CEditorImpl::GetViewManager()
@@ -770,11 +664,6 @@ void CEditorImpl::ResetViews()
     m_pViewManager->ResetViews();
 
     m_pDisplaySettings->SetRenderFlags(m_pDisplaySettings->GetRenderFlags());
-}
-
-IIconManager* CEditorImpl::GetIconManager()
-{
-    return m_pIconManager;
 }
 
 IEditorFileMonitor* CEditorImpl::GetFileMonitor()
@@ -906,11 +795,6 @@ bool CEditorImpl::IsInLevelLoadTestMode()
 bool CEditorImpl::IsInPreviewMode()
 {
     return CCryEditApp::instance()->IsInPreviewMode();
-}
-
-void CEditorImpl::EnableAcceleratos(bool bEnable)
-{
-    KeyboardCustomizationSettings::EnableShortcutsGlobally(bEnable);
 }
 
 static AZStd::string SafeGetStringFromDocument(rapidjson::Document& projectCfg, const char* memberName)
@@ -1085,10 +969,9 @@ bool CEditorImpl::ExecuteConsoleApp(const QString& CommandLine, QString& OutputT
 
     // Wait for the process to finish
     process.waitForFinished();
-    if (!bShowWindow)
-    {
-        OutputText = process.readAllStandardOutput();
-    }
+    
+    OutputText += process.readAllStandardOutput();
+    OutputText += process.readAllStandardError();
 
     return true;
 }
@@ -1331,15 +1214,6 @@ void CEditorImpl::NotifyExcept(EEditorNotifyEvent event, IEditorNotifyListener* 
         (*it++)->OnEditorNotifyEvent(event);
     }
 
-    if (event == eNotify_OnBeginNewScene)
-    {
-        if (m_pAxisGizmo)
-        {
-            m_pAxisGizmo->Release();
-        }
-        m_pAxisGizmo = nullptr;
-    }
-
     if (event == eNotify_OnInit)
     {
         REGISTER_COMMAND("py", CmdPy, 0, "Execute a Python code snippet.");
@@ -1411,11 +1285,6 @@ bool CEditorImpl::IsSourceControlConnected()
     return false;
 }
 
-void CEditorImpl::SetMatEditMode(bool bIsMatEditMode)
-{
-    m_bMatEditMode = bIsMatEditMode;
-}
-
 void CEditorImpl::ShowStatusText(bool bEnable)
 {
     m_bShowStatusText = bEnable;
@@ -1438,16 +1307,6 @@ void CEditorImpl::ReduceMemory()
 #endif
 }
 
-IExportManager* CEditorImpl::GetExportManager()
-{
-    if (!m_pExportManager)
-    {
-        m_pExportManager = new CExportManager();
-    }
-
-    return m_pExportManager;
-}
-
 ESystemConfigPlatform CEditorImpl::GetEditorConfigPlatform() const
 {
     return m_pSystem->GetConfigPlatform();
@@ -1468,17 +1327,6 @@ void CEditorImpl::InitFinished()
 void CEditorImpl::ReloadTemplates()
 {
     m_templateRegistry.LoadTemplates("Editor");
-}
-
-void CEditorImpl::AddErrorMessage(const QString& text, const QString& caption)
-{
-    if (!m_pErrorsDlg)
-    {
-        m_pErrorsDlg = new CErrorsDlg(GetEditorMainWindow());
-        m_pErrorsDlg->show();
-    }
-
-    m_pErrorsDlg->AddMessage(text, caption);
 }
 
 void CEditorImpl::CmdPy(IConsoleCmdArgs* pArgs)

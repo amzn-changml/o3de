@@ -12,6 +12,7 @@
 #include <AzCore/Settings/SettingsRegistry.h>
 #include <AzCore/std/smart_ptr/shared_ptr.h>
 
+#include <AzFramework/API/ApplicationAPI.h>
 #include <AzFramework/Scene/Scene.h>
 #include <AzFramework/Scene/SceneSystemInterface.h>
 #include <AzFramework/Windowing/NativeWindow.h>
@@ -38,6 +39,7 @@ namespace AZ
             class BootstrapSystemComponent
                 : public Component
                 , public TickBus::Handler
+                , public AzFramework::ApplicationLifecycleEvents::Bus::Handler
                 , public AzFramework::WindowNotificationBus::Handler
                 , public AzFramework::WindowSystemNotificationBus::Handler
                 , public AzFramework::WindowSystemRequestBus::Handler
@@ -67,6 +69,9 @@ namespace AZ
                 // Render::Bootstrap::RequestBus::Handler overrides ...
                 AZ::RPI::ScenePtr GetOrCreateAtomSceneFromAzScene(AzFramework::Scene* scene) override;
                 bool EnsureDefaultRenderPipelineInstalledForScene(AZ::RPI::ScenePtr scene, AZ::RPI::ViewportContextPtr viewportContext) override;
+                void SwitchRenderPipeline(const AZ::RPI::RenderPipelineDescriptor& newRenderPipelineDesc, AZ::RPI::ViewportContextPtr viewportContext) override;
+                void SwitchAntiAliasing(const AZStd::string& newAntiAliasing, AZ::RPI::ViewportContextPtr viewportContext) override;
+                void SwitchMultiSample(const uint16_t newSampleCount, AZ::RPI::ViewportContextPtr viewportContext) override;
 
             protected:
                 // Component overrides ...
@@ -83,6 +88,10 @@ namespace AZ
                 // AzFramework::WindowSystemNotificationBus::Handler overrides ...
                 void OnWindowCreated(AzFramework::NativeWindowHandle windowHandle) override;
 
+                // AzFramework::ApplicationLifecycleEvents::Bus::Handler overrides ...
+                void OnApplicationWindowCreated() override;
+                void OnApplicationWindowDestroy() override;
+
             private:
                 void Initialize();
 
@@ -92,10 +101,17 @@ namespace AZ
                 void RemoveRenderPipeline();
 
                 void CreateViewportContext();
+                void SetWindowResolution();
 
                 //! Load a render pipeline from disk and add it to the scene
-                bool LoadPipeline(const AZ::RPI::ScenePtr scene, const AZ::RPI::ViewportContextPtr viewportContext, AZStd::string_view xrPipelineName,
-                                    AZ::RPI::ViewType viewType, AZ::RHI::MultisampleState& multisampleState);
+                RPI::RenderPipelinePtr LoadPipeline(
+                    const AZ::RPI::ScenePtr scene,
+                    const AZ::RPI::ViewportContextPtr viewportContext,
+                    AZStd::string_view xrPipelineName,
+                    AZ::RPI::ViewType viewType,
+                    AZ::RHI::MultisampleState& multisampleState);
+
+                AzFramework::WindowSize GetWindowResolution() const;
 
                 AzFramework::Scene::RemovalEvent::Handler m_sceneRemovalHandler;
 

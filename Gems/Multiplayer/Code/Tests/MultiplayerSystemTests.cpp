@@ -9,6 +9,7 @@
 #include <CommonBenchmarkSetup.h>
 #include <CommonHierarchySetup.h>
 #include <MockInterfaces.h>
+#include <AzCore/Jobs/JobManagerComponent.h>
 #include <AzCore/UnitTest/TestTypes.h>
 #include <AzCore/UnitTest/UnitTest.h>
 #include <AzCore/Name/NameDictionary.h>
@@ -30,18 +31,23 @@
 
 namespace Multiplayer
 {
-    class MultiplayerSystemTests : public AllocatorsFixture
+    AZ_CVAR_EXTERNED(AZ::CVarFixedString, sv_map);
+    AZ_CVAR_EXTERNED(bool, sv_versionMismatch_autoDisconnect);
+    AZ_CVAR_EXTERNED(bool, sv_versionMismatch_sendManifestToClient);
+
+
+    class MultiplayerSystemTests : public LeakDetectionFixture
     {
     public:
         void SetUp() override
         {
-            SetupAllocator();
             AZ::NameDictionary::Create();
 
             m_ComponentApplicationRequests = AZStd::make_unique<BenchmarkComponentApplicationRequests>();
             AZ::Interface<AZ::ComponentApplicationRequests>::Register(m_ComponentApplicationRequests.get());
 
             m_mockTime = AZStd::make_unique<AZ::NiceTimeSystemMock>();
+            m_mockLevelSystem = AZStd::make_unique<MockLevelSystemLifecycle>();
 
             m_console.reset(aznew AZ::Console());
             AZ::Interface<AZ::IConsole>::Register(m_console.get());
@@ -53,24 +59,14 @@ namespace Multiplayer
             m_transformDescriptor->Reflect(m_serializeContext.get());
             m_netBindDescriptor.reset(NetBindComponent::CreateDescriptor());
             m_netBindDescriptor->Reflect(m_serializeContext.get());
+            m_jobComponentDescriptor.reset(AZ::JobManagerComponent::CreateDescriptor());
+            m_jobComponentDescriptor->Reflect(m_serializeContext.get());
 
             m_netComponent = new AzNetworking::NetworkingSystemComponent();
             m_mpComponent = new Multiplayer::MultiplayerSystemComponent();
             m_mpComponent->Reflect(m_serializeContext.get());
             m_mpComponent->Reflect(m_behaviorContext.get());
 
-            m_initHandler = Multiplayer::SessionInitEvent::Handler(
-                [this](AzNetworking::INetworkInterface* value)
-                {
-                    TestInitEvent(value);
-                });
-            m_mpComponent->AddSessionInitHandler(m_initHandler);
-            m_shutdownHandler = Multiplayer::SessionShutdownEvent::Handler(
-                [this](AzNetworking::INetworkInterface* value)
-                {
-                    TestShutdownEvent(value);
-                });
-            m_mpComponent->AddSessionShutdownHandler(m_shutdownHandler);
             m_connAcquiredHandler = Multiplayer::ConnectionAcquiredEvent::Handler(
                 [this](Multiplayer::MultiplayerAgentDatum value)
                 {
@@ -84,36 +80,34 @@ namespace Multiplayer
                 });
             m_mpComponent->AddEndpointDisconnectedHandler(m_endpointDisconnectedHandler);
             m_mpComponent->Activate();
+
+            m_systemEntity = AZStd::make_unique<AZ::Entity>(AZ::EntityId(0));
+            m_systemEntity->CreateComponent<AZ::JobManagerComponent>(); // Needed by Job system when @sv_multithreadedConnectionUpdates is on.
+            m_systemEntity->Init();
+            m_systemEntity->Activate();
         }
 
         void TearDown() override
         {
+            m_systemEntity->Deactivate();
+            m_systemEntity.reset();
+
             m_mpComponent->Deactivate();
             delete m_mpComponent;
             delete m_netComponent;
             AZ::Interface<AZ::IConsole>::Unregister(m_console.get());
             m_console.reset();
             m_mockTime.reset();
+            m_mockLevelSystem.reset();
             AZ::Interface<AZ::ComponentApplicationRequests>::Unregister(m_ComponentApplicationRequests.get());
             m_ComponentApplicationRequests.reset();
             AZ::NameDictionary::Destroy();
 
+            m_jobComponentDescriptor.reset();
             m_transformDescriptor.reset();
             m_netBindDescriptor.reset();
             m_serializeContext.reset();
             m_behaviorContext.reset();
-
-            TeardownAllocator();
-        }
-
-        void TestInitEvent([[maybe_unused]] AzNetworking::INetworkInterface* network)
-        {
-            ++m_initEventTriggerCount;
-        }
-
-        void TestShutdownEvent([[maybe_unused]] AzNetworking::INetworkInterface* network)
-        {
-            ++m_shutdownEventTriggerCount;
         }
 
         void TestConnectionAcquiredEvent(Multiplayer::MultiplayerAgentDatum& datum)
@@ -141,16 +135,42 @@ namespace Multiplayer
         AZStd::unique_ptr<AZ::BehaviorContext> m_behaviorContext;
         AZStd::unique_ptr<AZ::ComponentDescriptor> m_transformDescriptor;
         AZStd::unique_ptr<AZ::ComponentDescriptor> m_netBindDescriptor;
+        AZStd::unique_ptr<AZ::ComponentDescriptor> m_jobComponentDescriptor;
         AZStd::unique_ptr<AZ::IConsole> m_console;
         AZStd::unique_ptr<AZ::NiceTimeSystemMock> m_mockTime;
+        AZStd::unique_ptr<AZ::Entity> m_systemEntity;
 
-        uint32_t m_initEventTriggerCount = 0;
-        uint32_t m_shutdownEventTriggerCount = 0;
+        class MockLevelSystemLifecycle : public AzFramework::ILevelSystemLifecycle
+        {
+        public:
+            MockLevelSystemLifecycle()
+            {
+                AZ::Interface<AzFramework::ILevelSystemLifecycle>::Register(this);
+            }
+
+            ~MockLevelSystemLifecycle() override
+            {
+                AZ::Interface<AzFramework::ILevelSystemLifecycle>::Unregister(this);
+            }
+
+            const char* GetCurrentLevelName() const override
+            {
+                return m_levelName.c_str();
+            }
+
+            bool IsLevelLoaded() const override
+            {
+                return true;
+            }
+
+            AZStd::string m_levelName;
+        };
+
+        AZStd::unique_ptr<MockLevelSystemLifecycle> m_mockLevelSystem;
+
         uint32_t m_connectionAcquiredCount = 0;
         uint32_t m_endpointDisconnectedCount = 0;
 
-        Multiplayer::SessionInitEvent::Handler m_initHandler;
-        Multiplayer::SessionShutdownEvent::Handler m_shutdownHandler;
         Multiplayer::ConnectionAcquiredEvent::Handler m_connAcquiredHandler;
         Multiplayer::EndpointDisconnectedEvent::Handler m_endpointDisconnectedHandler;
 
@@ -161,20 +181,6 @@ namespace Multiplayer
 
         IMultiplayerSpawnerMock m_mpSpawnerMock;
     };
-
-    TEST_F(MultiplayerSystemTests, TestInitEvent)
-    {
-        m_mpComponent->InitializeMultiplayer(MultiplayerAgentType::DedicatedServer);
-        EXPECT_EQ(m_mpComponent->GetAgentType(), MultiplayerAgentType::DedicatedServer);
-
-        m_mpComponent->InitializeMultiplayer(MultiplayerAgentType::ClientServer);
-        EXPECT_EQ(m_mpComponent->GetAgentType(), MultiplayerAgentType::ClientServer);
-
-        m_mpComponent->InitializeMultiplayer(MultiplayerAgentType::Client);
-        EXPECT_EQ(m_mpComponent->GetAgentType(), MultiplayerAgentType::Client);
-
-        EXPECT_EQ(m_initEventTriggerCount, 1);
-    }
 
     TEST_F(MultiplayerSystemTests, TestShutdownEvent)
     {
@@ -187,7 +193,6 @@ namespace Multiplayer
         m_mpComponent->OnDisconnect(&connMock2, AzNetworking::DisconnectReason::None, AzNetworking::TerminationEndpoint::Local);
 
         EXPECT_EQ(m_endpointDisconnectedCount, 2);
-        EXPECT_EQ(m_shutdownEventTriggerCount, 1);
     }
 
     TEST_F(MultiplayerSystemTests, TestConnectionDatum)
@@ -268,7 +273,8 @@ namespace Multiplayer
         EXPECT_EQ(m_mpSpawnerMock.m_playerEntityRequestedCount, 1);
 
         // Send a connection request. This should cause another player to be spawned.
-        MultiplayerPackets::Connect connectPacket(0, 1, "connect_ticket");
+        MultiplayerPackets::Connect connectPacket(
+            0, 1, "connect_ticket", GetMultiplayerComponentRegistry()->GetSystemVersionHash());
         IMultiplayerConnectionMock connection(
             ConnectionId{ 1 }, IpAddress("127.0.0.1", DefaultServerPort, ProtocolType::Udp), ConnectionRole::Connector);
         ServerToClientConnectionData connectionUserData(&connection, *m_mpComponent);
@@ -446,6 +452,109 @@ namespace Multiplayer
         EXPECT_EQ(m_mpComponent->GetCurrentHostTimeMs(), AZ::Time::ZeroTimeMs);
 
         EXPECT_EQ(m_mpComponent->GetNetworkTime()->GetHostTimeMs(), AZ::Time::ZeroTimeMs);
+    }
+
+    // Useful matchers to help sniff packets
+    MATCHER_P(IsMultiplayerPacketType, packetType, "Checks an IPacket's packet type")
+    {
+        *result_listener << "where the packet type id is "
+                         << ToString(static_cast<MultiplayerPackets::PacketType>(arg.GetPacketType())).data();
+        return arg.GetPacketType() == packetType;
+    }
+
+    MATCHER_P(IsMismatchPacketWithComponentCount, totalComponentCount, "Checks how many multiplayer component versions are inside the VersionMismatch packet.")
+    {
+        if (arg.GetPacketType() != MultiplayerPackets::VersionMismatch::Type)
+        {
+            *result_listener << "where the packet is NOT a VersionMismatch packet";
+            return false;
+        }
+
+        const uint32_t packetComponentCount = aznumeric_cast<uint32_t>(static_cast<const MultiplayerPackets::VersionMismatch&>(arg).GetComponentVersions().size());
+        *result_listener << "where the packet is a VersionMismatch packet with component count " << packetComponentCount;
+        return packetComponentCount == totalComponentCount;
+    }
+
+    TEST_F(MultiplayerSystemTests, TestConnectingWithoutLevelLoaded)
+    {
+        m_mpComponent->InitializeMultiplayer(MultiplayerAgentType::DedicatedServer);
+
+        MultiplayerPackets::Connect connectPacket(
+            0, 1, "connect_ticket", GetMultiplayerComponentRegistry()->GetSystemVersionHash());
+        IMultiplayerConnectionMock connection(
+            ConnectionId{ 1 }, IpAddress("127.0.0.1", DefaultServerPort, ProtocolType::Udp), ConnectionRole::Acceptor);
+        ServerToClientConnectionData connectionUserData(&connection, *m_mpComponent);
+        connection.SetUserData(&connectionUserData);
+
+        // server doesn't have a level loaded, expect a disconnect
+        EXPECT_CALL(connection, Disconnect(DisconnectReason::ServerNoLevelLoaded, TerminationEndpoint::Local));
+        m_mockLevelSystem->m_levelName = "";
+        m_mpComponent->HandleRequest(&connection, UdpPacketHeader(), connectPacket);
+
+        AZ::Interface<IMultiplayerSpawner>::Unregister(&m_mpSpawnerMock);
+    }
+
+    TEST_F(MultiplayerSystemTests, TestConnectingWithMatchingComponentHash)
+    {
+        m_mpComponent->InitializeMultiplayer(MultiplayerAgentType::DedicatedServer);
+
+        MultiplayerPackets::Connect connectPacket(
+            0, 1, "connect_ticket", GetMultiplayerComponentRegistry()->GetSystemVersionHash());
+        IMultiplayerConnectionMock connection(
+            ConnectionId{ 1 }, IpAddress("127.0.0.1", DefaultServerPort, ProtocolType::Udp), ConnectionRole::Acceptor);
+        ServerToClientConnectionData connectionUserData(&connection, *m_mpComponent);
+        connection.SetUserData(&connectionUserData);
+
+        // no mismatch, expect an acceptance packet
+        m_mockLevelSystem->m_levelName = "dummylevel";
+        EXPECT_CALL(connection, SendReliablePacket(IsMultiplayerPacketType(MultiplayerPackets::Accept::Type)));
+        m_mpComponent->HandleRequest(&connection, UdpPacketHeader(), connectPacket);
+
+        AZ::Interface<IMultiplayerSpawner>::Unregister(&m_mpSpawnerMock);
+    }
+
+    TEST_F(MultiplayerSystemTests, TestConnectingWithMismatchComponentHash)
+    {
+        // cvars affecting mismatch behavior:
+        //   1. sv_versionMismatch_autoDisconnect
+        //   2. sv_versionMismatch_sendManifestToClient
+
+        m_mockLevelSystem->m_levelName = "dummylevel";
+        m_mpComponent->InitializeMultiplayer(MultiplayerAgentType::DedicatedServer);
+
+        // Send a connection request with a different component hash to trigger a mismatch
+        const AZ::HashValue64 differentMultiplayerComponentHash = AZ::HashValue64{ 42 };
+        MultiplayerPackets::Connect connectPacket(0, 1, "connect_ticket", differentMultiplayerComponentHash);
+        IMultiplayerConnectionMock connection(
+            ConnectionId{ 1 }, IpAddress("127.0.0.1", DefaultServerPort, ProtocolType::Udp), ConnectionRole::Acceptor);
+        ServerToClientConnectionData connectionUserData(&connection, *m_mpComponent);
+        connection.SetUserData(&connectionUserData);
+
+        // Mismatch, send client a mismatch packet will all our components
+        sv_versionMismatch_sendManifestToClient = true;
+        const auto ourMultiplayerComponentCount = aznumeric_cast<uint32_t>(GetMultiplayerComponentRegistry()->GetMultiplayerComponentVersionHashes().size());
+        EXPECT_CALL(connection, SendReliablePacket(IsMismatchPacketWithComponentCount(ourMultiplayerComponentCount))).Times(1);
+        m_mpComponent->HandleRequest(&connection, UdpPacketHeader(), connectPacket);
+
+        // Mismatch, send client a mismatch packet but don't send all our components to the client
+        sv_versionMismatch_sendManifestToClient = false;
+        EXPECT_CALL(connection, SendReliablePacket(IsMismatchPacketWithComponentCount(uint32_t{ 0 }))).Times(1);
+        m_mpComponent->HandleRequest(&connection, UdpPacketHeader(), connectPacket);
+
+        // Test the client sending components back to the server
+        // Receive a multiplayer version mismatch packet and disconnect
+        sv_versionMismatch_autoDisconnect = true;
+        MultiplayerPackets::VersionMismatch mismatchPacket;
+        EXPECT_CALL(connection, Disconnect(DisconnectReason::VersionMismatch, TerminationEndpoint::Local)).Times(1);
+        m_mpComponent->HandleRequest(&connection, UdpPacketHeader(), mismatchPacket);
+
+        // Receive a multiplayer version mismatch packet and but don't disconnect and instead accept
+        sv_versionMismatch_autoDisconnect = false;
+        EXPECT_CALL(connection, Disconnect).Times(0);
+        EXPECT_CALL(connection, SendReliablePacket(IsMultiplayerPacketType(MultiplayerPackets::Accept::Type))).Times(1);
+        m_mpComponent->HandleRequest(&connection, UdpPacketHeader(), mismatchPacket);
+
+        AZ::Interface<IMultiplayerSpawner>::Unregister(&m_mpSpawnerMock);
     }
 
     TEST_F(MultiplayerSystemTests, TestMiscellaneous)

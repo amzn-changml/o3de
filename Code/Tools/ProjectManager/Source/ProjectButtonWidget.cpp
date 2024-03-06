@@ -25,6 +25,7 @@
 #include <QMenu>
 #include <QSpacerItem>
 #include <QProgressBar>
+#include <QDebug>
 #include <QDir>
 #include <QFileInfo>
 #include <QDesktopServices>
@@ -186,6 +187,7 @@ namespace O3DE::ProjectManager
         // Seperate buttons are used to avoid stutter from reloading style after changing object name
         m_actionCancelButton = new QPushButton(tr("Cancel Project Action"), this);
         m_actionCancelButton->setObjectName("projectActionCancelButton");
+        m_actionCancelButton->setProperty("danger", true);
         m_actionCancelButton->setVisible(false);
         verticalButtonLayout->addWidget(m_actionCancelButton);
 
@@ -311,7 +313,12 @@ namespace O3DE::ProjectManager
             QHBoxLayout* hLayout = new QHBoxLayout();
             hLayout->setContentsMargins(0, 0, 0, 0);
 
-            m_projectNameLabel = new AzQtComponents::ElidingLabel(m_projectInfo.GetProjectDisplayName(), this);
+            QString projectName = m_projectInfo.GetProjectDisplayName();
+            if (!m_projectInfo.m_version.isEmpty())
+            {
+                projectName +=" " + m_projectInfo.m_version;
+            }
+            m_projectNameLabel = new AzQtComponents::ElidingLabel(projectName, this);
             m_projectNameLabel->setObjectName("projectNameLabel");
             m_projectNameLabel->setToolTip(m_projectInfo.m_path);
             m_projectNameLabel->refreshStyle();
@@ -355,6 +362,8 @@ namespace O3DE::ProjectManager
         menu->addAction(tr("Configure Gems..."), this, [this]() { emit EditProjectGems(m_projectInfo.m_path); });
         menu->addAction(tr("Build"), this, [this]() { emit BuildProject(m_projectInfo); });
         menu->addAction(tr("Open CMake GUI..."), this, [this]() { emit OpenCMakeGUI(m_projectInfo); });
+        menu->addAction(tr("Open Android Project Generator..."), this, [this]() { emit OpenAndroidProjectGenerator(m_projectInfo.m_path); });
+
         menu->addSeparator();
         menu->addAction(tr("Open Project folder..."), this, [this]()
         { 
@@ -397,12 +406,23 @@ namespace O3DE::ProjectManager
 
     void ProjectButton::ShowLogs()
     {
-        QDesktopServices::openUrl(m_projectInfo.m_logUrl);
+        if (!QDesktopServices::openUrl(m_projectInfo.m_logUrl))
+        {
+            qDebug() << "QDesktopServices::openUrl failed to open " << m_projectInfo.m_logUrl.toString() << "\n";
+        }
     }
 
     void ProjectButton::SetEngine(const EngineInfo& engine)
     {
         m_engineInfo = engine;
+
+        if (m_engineInfo.m_name.isEmpty() && !m_projectInfo.m_engineName.isEmpty())
+        {
+            // this project wants to use an engine that wasn't found, display the qualifier
+            m_engineInfo.m_name = m_projectInfo.m_engineName;
+            m_engineInfo.m_version = "";
+        }
+
         m_engineNameLabel->SetText(m_engineInfo.m_name + " " + m_engineInfo.m_version);
         m_engineNameLabel->update();
         m_engineNameLabel->setObjectName(m_engineInfo.m_thisEngine ? "thisEngineLabel" : "otherEngineLabel");
@@ -413,7 +433,14 @@ namespace O3DE::ProjectManager
     void ProjectButton::SetProject(const ProjectInfo& project)
     {
         m_projectInfo = project;
-        m_projectNameLabel->SetText(m_projectInfo.GetProjectDisplayName());
+        if (!m_projectInfo.m_version.isEmpty())
+        {
+            m_projectNameLabel->SetText(m_projectInfo.GetProjectDisplayName() + " " + m_projectInfo.m_version);
+        }
+        else
+        {
+            m_projectNameLabel->SetText(m_projectInfo.GetProjectDisplayName());
+        }
         m_projectNameLabel->update();
         m_projectNameLabel->setToolTip(m_projectInfo.m_path);
         m_projectNameLabel->refreshStyle(); // important for styles to work correctly

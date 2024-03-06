@@ -47,6 +47,8 @@ namespace AZ
             SetDrawListTag(rasterData->m_drawListTag);
             m_drawListSortType = rasterData->m_drawListSortType;
 
+            RHI::RHISystemInterface::Get()->SetDrawListTagEnabledByDefault(m_drawListTag, rasterData->m_enableDrawItemsByDefault);
+
             // Get the shader asset that contains the SRG Layout.
             Data::Asset<ShaderAsset> shaderAsset;
             if (rasterData->m_passSrgShaderReference.m_assetId.IsValid())
@@ -85,6 +87,7 @@ namespace AZ
                 m_viewportState = rasterData->m_overrideViewport;
                 m_overrideViewportState = true;
             }
+            m_viewportAndScissorTargetOutputIndex = rasterData->m_viewportAndScissorTargetOutputIndex;
         }
 
         RasterPass::~RasterPass()
@@ -130,15 +133,44 @@ namespace AZ
 
         void RasterPass::FrameBeginInternal(FramePrepareParams params)
         {
-            if (!m_overrideScissorSate)
-            {
-                m_scissorState = params.m_scissorState;
-            }
-            if (!m_overrideViewportState)
-            {
-                m_viewportState = params.m_viewportState;
-            }
+            // Binding to use for viewport and scissor calculations
+            PassAttachmentBinding* viewportTarget = nullptr;
 
+            // If a target binding for viewport calculation is specified
+            if (m_viewportAndScissorTargetOutputIndex >= 0)
+            {
+                u32 idx = u32(m_viewportAndScissorTargetOutputIndex);
+                // First check outputs
+                if (GetOutputCount() > idx)
+                {
+                    viewportTarget = &GetOutputBinding(idx);
+                }
+                // If not an output, check input/outputs
+                else if (GetInputOutputCount() > idx)
+                {
+                    viewportTarget = &GetInputOutputBinding(idx);
+                }
+            }
+            // Build viewport and scissor from target binding if specified
+            if (viewportTarget)
+            {
+                u32 targetWidth = viewportTarget->GetAttachment()->m_descriptor.m_image.m_size.m_width;
+                u32 targetHeight = viewportTarget->GetAttachment()->m_descriptor.m_image.m_size.m_height;
+                m_scissorState = RHI::Scissor(0, 0, targetWidth, targetHeight);
+                m_viewportState = RHI::Viewport(0, static_cast<float>(targetWidth), 0, static_cast<float>(targetHeight));
+            }
+            // Otherwise check whether viewport/scissor overrides were manually provided
+            else
+            {
+                if (!m_overrideScissorSate)
+                {
+                    m_scissorState = params.m_scissorState;
+                }
+                if (!m_overrideViewportState)
+                {
+                    m_viewportState = params.m_viewportState;
+                }
+            }
             UpdateDrawList();
 
             RenderPass::FrameBeginInternal(params);
@@ -226,24 +258,31 @@ namespace AZ
             m_shaderResourceGroup->Compile();
         }
 
+        void RasterPass::SubmitDrawItems(const RHI::FrameGraphExecuteContext& context, uint32_t startIndex, uint32_t endIndex, uint32_t indexOffset) const
+        {
+            RHI::CommandList* commandList = context.GetCommandList();
+
+            uint32_t clampedEndIndex = AZStd::GetMin<uint32_t>(endIndex, static_cast<uint32_t>(m_drawListView.size()));
+            for (uint32_t index = startIndex; index < clampedEndIndex; ++index)
+            {
+                const RHI::DrawItemProperties& drawItemProperties = m_drawListView[index];
+                if (drawItemProperties.m_drawFilterMask & m_pipeline->GetDrawFilterMask())
+                {
+                    commandList->Submit(*drawItemProperties.m_item, index + indexOffset);
+                }
+            }
+        }
+
         void RasterPass::BuildCommandListInternal(const RHI::FrameGraphExecuteContext& context)
         {
             RHI::CommandList* commandList = context.GetCommandList();
 
-            if (!m_drawListView.empty())
+            if (context.GetSubmitRange().m_startIndex != context.GetSubmitRange().m_endIndex)
             {
                 commandList->SetViewport(m_viewportState);
                 commandList->SetScissor(m_scissorState);
                 SetSrgsForDraw(commandList);
-
-                for (uint32_t index = context.GetSubmitRange().m_startIndex; index < context.GetSubmitRange().m_endIndex; ++index)
-                {
-                    const RHI::DrawItemProperties& drawItemProperties = m_drawListView[index];
-                    if (drawItemProperties.m_drawFilterMask & m_pipeline->GetDrawFilterMask())
-                    {
-                        commandList->Submit(*drawItemProperties.m_item, index);
-                    }
-                }
+                SubmitDrawItems(context, context.GetSubmitRange().m_startIndex, context.GetSubmitRange().m_endIndex, 0);
             }
         }
 

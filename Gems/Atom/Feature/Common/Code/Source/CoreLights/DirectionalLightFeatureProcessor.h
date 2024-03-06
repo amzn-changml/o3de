@@ -18,6 +18,7 @@
 #include <AzCore/Math/Aabb.h>
 #include <AzCore/std/containers/vector.h>
 #include <AzCore/std/containers/unordered_map.h>
+#include <CoreLights/DirectionalLightShadowNotificationBus.h>
 
 namespace AZ
 {
@@ -75,9 +76,9 @@ namespace AZ
             float m_affectsGIFactor = 1.0f;
 
             bool m_affectsGI = true;
+            uint32_t m_lightingChannelMask = 1;
             float m_padding0 = 0.0f;
             float m_padding1 = 0.0f;
-            float m_padding2 = 0.0f;
         };
 
         // [GFX TODO][ATOM-15172] Look into compacting struct DirectionalLightShadowData
@@ -119,6 +120,7 @@ namespace AZ
             : public DirectionalLightFeatureProcessorInterface
         {
         public:
+            AZ_CLASS_ALLOCATOR(DirectionalLightFeatureProcessor, AZ::SystemAllocator)
             AZ_RTTI(AZ::Render::DirectionalLightFeatureProcessor, "61610178-8DAA-4BF2-AF17-597F20D527DD", AZ::Render::DirectionalLightFeatureProcessorInterface);
 
             struct CascadeSegment
@@ -188,7 +190,7 @@ namespace AZ
                 // with the ddx/ddy functions. 
                 bool m_isReceiverPlaneBiasEnabled = true;
 
-                bool m_blendBetwenCascades = false;
+                bool m_blendBetweenCascades = false;
 
                 // Fullscreen Blur...
 
@@ -220,6 +222,7 @@ namespace AZ
             void SetRgbIntensity(LightHandle handle, const PhotometricColor<PhotometricUnit::Lux>& lightColor) override;
             void SetDirection(LightHandle handle, const Vector3& lightDirection) override;
             void SetAngularDiameter(LightHandle handle, float angularDiameter) override;
+            void SetShadowEnabled(LightHandle handle, bool enable) override;
             void SetShadowmapSize(LightHandle handle, ShadowmapSize size) override;
             void SetCascadeCount(LightHandle handle, uint16_t cascadeCount) override;
             void SetShadowmapFrustumSplitSchemeRatio(LightHandle handle, float ratio) override;
@@ -247,12 +250,18 @@ namespace AZ
             void SetFullscreenBlurDepthFalloffStrength(LightHandle handle, float blurDepthFalloffStrength) override;
             void SetAffectsGI(LightHandle handle, bool affectsGI) override;
             void SetAffectsGIFactor(LightHandle handle, float affectsGIFactor) override;
+            void SetLightingChannelMask(LightHandle handle, uint32_t lightingChannelMask) override;
 
             const Data::Instance<RPI::Buffer> GetLightBuffer() const { return m_lightBufferHandler.GetBuffer(); }
             uint32_t GetLightCount() const { return m_lightBufferHandler.GetElementCount(); }
             ShadowProperty& GetShadowProperty(LightHandle handle) { return m_shadowProperties.GetData(handle.GetIndex()); }
 
         private:
+
+            // This is currently fixed, but could be exposed to allow for user configuration
+            // See DirectionalLightShadowCalculator.azsli : DirectionalShadowCalculator::CalculateCascadeBlendAmount()
+            static constexpr const float CascadeBlendArea = 0.015;
+
             // RPI::SceneNotificationBus::Handler overrides...
             void OnRenderPipelineChanged(AZ::RPI::RenderPipeline* pipeline, RPI::SceneNotification::RenderPipelineChangeType changeType) override;
             void OnRenderPipelinePersistentViewChanged(RPI::RenderPipeline* renderPipeline, RPI::PipelineViewTag viewTag, RPI::ViewPtr newView, RPI::ViewPtr previousView) override;
@@ -395,6 +404,7 @@ namespace AZ
 
             bool m_lightBufferNeedsUpdate = false;
             bool m_shadowBufferNeedsUpdate = false;
+            bool m_previousExcludeCvarValue = false;
             uint32_t m_shadowBufferNameIndex = 0;
             uint32_t m_shadowmapIndexTableBufferNameIndex = 0;
 

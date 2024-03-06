@@ -42,8 +42,8 @@ namespace AZ
 
             float m_affectsGIFactor = 1.0f;
             bool m_affectsGI = true;
+            uint32_t m_lightingChannelMask = 1;
             float m_padding0 = 0.0f;
-            float m_padding1 = 0.0f;
         };
 
         //! DiskLightFeatureProcessorInterface provides an interface to acquire, release, and update a disk light. This is necessary for code outside of
@@ -100,10 +100,18 @@ namespace AZ
             virtual void SetFilteringSampleCount(LightHandle handle, uint16_t count) = 0;
             //! Sets the Esm exponent to use. Higher values produce a steeper falloff in the border areas between light and shadow.
             virtual void SetEsmExponent(LightHandle handle, float exponent) = 0;
+            //! Sets if this shadow should be rendered every frame (not cached) or only when it detects a change (cached).
+            virtual void SetUseCachedShadows(LightHandle handle, bool useCachedShadows) = 0;
+
+            // GI Settings
+
             //! Specifies if this light affects the diffuse global illumination in the scene.
             virtual void SetAffectsGI(LightHandle handle, bool affectsGI) = 0;
             //! Specifies the contribution of this light to the diffuse global illumination in the scene.
             virtual void SetAffectsGIFactor(LightHandle handle, float affectsGIFactor) = 0;
+
+            //! Sets the lighting channel mask
+            virtual void SetLightingChannelMask(LightHandle handle, uint32_t lightingChannelMask) = 0;
 
             //! Sets all of the the disk data for the provided LightHandle.
             virtual void SetDiskData(LightHandle handle, const DiskLightData& data) = 0;

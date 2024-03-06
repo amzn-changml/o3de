@@ -87,12 +87,12 @@ public:
     
     void OpenFile(const AZStd::string& filePath);
     
-    void closeEvent(QCloseEvent* ev) override;
+    bool CanClose();
 
 public slots:
+    void OnClearUnsavedChangesRequested();
     void OnSceneResetRequested();
     void OnAssignScript();
-    void OnOpenDocumentation();
     void OnInspect();
     void SceneSettingsCardDestroyed();
     void SceneSettingsCardProcessingCompleted();
@@ -101,22 +101,18 @@ private:
     void Init();
     void OpenFileInternal(const AZStd::string& filePath);
     bool IsAllowedToChangeSourceFile();
-    
-    enum class WindowState
-    {
-        InitialNothingLoaded,
-        FileLoaded,
-        OverlayShowing
-    };
+    bool ShouldSaveBeforeClose();
 
-    void ResetMenuAccess(WindowState state);
-    void SetTitle(const char* filePath);
     void HandleAssetLoadingCompleted();
 
     SceneSettingsCard* CreateSceneSettingsCard(
         QString fileName,
         SceneSettingsCard::Layout layout,
         SceneSettingsCard::State state);
+
+    /// Reloads the currently loaded scene.
+    /// warnUser: if true, always warns the user this operation is occuring. If false, only warn if there's a problem.
+    void ReloadCurrentScene(bool warnUser);
 
 private slots:
     void SaveClicked();
@@ -128,6 +124,7 @@ private slots:
     void FileChanged(QString path);
 
 private:
+
     static const AZ::Uuid s_browseTag;
     static const char* s_documentationWebAddress;
 

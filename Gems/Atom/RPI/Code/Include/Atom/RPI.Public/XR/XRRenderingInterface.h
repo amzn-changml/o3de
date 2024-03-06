@@ -12,6 +12,9 @@
 #include <AzCore/Math/Quaternion.h>
 #include <AzCore/Math/Vector3.h>
 #include <Atom/RHI.Reflect/Format.h>
+#include <Atom/RHI/XRRenderingInterface.h>
+#include <Atom/RPI.Public/Image/AttachmentImage.h>
+#include <AtomCore/Instance/Instance.h>
 
 namespace AZ::RHI
 {
@@ -22,6 +25,8 @@ namespace AZ::RPI
 {
     static const int XRMaxNumControllers = 2;
     static const int XRMaxNumViews = 2;
+    class PassTemplate;
+    class AttachmentImage;
 
     //! XR View specific Fov data (in radians).
     struct FovData
@@ -47,7 +52,7 @@ namespace AZ::RPI
     class XRRenderingInterface
     {
     public:
-        AZ_CLASS_ALLOCATOR(XRRenderingInterface, AZ::SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(XRRenderingInterface, AZ::SystemAllocator);
         AZ_RTTI(XRRenderingInterface, "{18177EAF-3014-4349-A28F-BF58442FFC2B}");
 
         XRRenderingInterface() = default;
@@ -82,6 +87,9 @@ namespace AZ::RPI
 
         //! Return the controller Pose data associated with provided hand Index.
         virtual RHI::ResultCode GetControllerPose(const AZ::u32 handIndex, PoseData& outPoseData) const = 0;
+
+        //! Same as above, but conveniently returns a transform.
+        virtual RHI::ResultCode GetControllerTransform(const AZ::u32 handIndex, AZ::Transform& outTransform) const = 0;
 
         //! Return the Pose data associated with front view.
         virtual RHI::ResultCode GetViewFrontPose(PoseData& outPoseData) const = 0;
@@ -133,7 +141,7 @@ namespace AZ::RPI
     class IXRRegisterInterface
     {
     public:
-        AZ_CLASS_ALLOCATOR(IXRRegisterInterface, AZ::SystemAllocator, 0);
+        AZ_CLASS_ALLOCATOR(IXRRegisterInterface, AZ::SystemAllocator);
         AZ_RTTI(IXRRegisterInterface, "{89FA72F6-EA61-43AA-B129-7DC63959D5EA}");
 
         IXRRegisterInterface() = default;

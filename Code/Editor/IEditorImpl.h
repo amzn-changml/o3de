@@ -36,9 +36,7 @@ class QMenu;
 class CObjectManager;
 class CUndoManager;
 class CGameEngine;
-class CExportManager;
 class CErrorsDlg;
-class CIconManager;
 class CTrackViewSequenceManager;
 class CEditorFileMonitor;
 class AzAssetWindow;
@@ -72,7 +70,6 @@ public:
     void OnEarlyExitShutdownSequence();
     void Uninitialize();
 
-
     void SetGameEngine(CGameEngine* ge);
     void DeleteThis() override { delete this; };
     IEditorClassFactory* GetClassFactory() override;
@@ -91,7 +88,7 @@ public:
     bool IsModified() override;
     bool IsInitialized() const override{ return m_bInitialized; }
     bool SaveDocument() override;
-    ISystem*    GetSystem() override;
+    ISystem* GetSystem() override;
     void WriteToConsole(const char* string) override { CLogFile::WriteLine(string); };
     void WriteToConsole(const QString& string) override { CLogFile::WriteLine(string); };
     // Change the message in the status bar
@@ -125,15 +122,11 @@ public:
     bool IsInPreviewMode() override;
     bool IsInConsolewMode() override;
     bool IsInLevelLoadTestMode() override;
-    bool IsInMatEditMode() override { return m_bMatEditMode; }
 
     //! Enables/Disable updates of editor.
     void EnableUpdate(bool enable) override { m_bUpdates = enable; };
-    //! Enable/Disable accelerator table, (Enabled by default).
-    void EnableAcceleratos(bool bEnable) override;
     CGameEngine* GetGameEngine() override { return m_pGameEngine; };
-    CDisplaySettings*   GetDisplaySettings() override { return m_pDisplaySettings; };
-    const SGizmoParameters& GetGlobalGizmoParameters() override;
+    CDisplaySettings* GetDisplaySettings() override { return m_pDisplaySettings; };
     CBaseObject* NewObject(const char* typeName, const char* fileName = "", const char* name = "", float x = 0.0f, float y = 0.0f, float z = 0.0f, bool modifyDoc = true) override;
     void DeleteObject(CBaseObject* obj) override;
     IObjectManager* GetObjectManager() override;
@@ -145,17 +138,10 @@ public:
     // to feed memory node with all necessary data needed for export
     // (gSettings.Load() and CXTPDockingPaneManager/CXTPDockingPaneLayout Sandbox layout management)
     CSettingsManager* GetSettingsManager() override;
-    CSelectionGroup*    GetSelection() override;
-    int ClearSelection() override;
-    CBaseObject* GetSelectedObject() override;
-    void SelectObject(CBaseObject* obj) override;
-    void LockSelection(bool bLock) override;
-    bool IsSelectionLocked() override;
 
     CMusicManager* GetMusicManager() override { return m_pMusicManager; };
 
     IEditorFileMonitor* GetFileMonitor() override;
-    IIconManager* GetIconManager() override;
     float GetTerrainElevation(float x, float y) override;
     Editor::EditorQtApplication* GetEditorQtApplication() override { return m_QtApplication; }
     const QColor& GetColorByName(const QString& name) override;
@@ -189,8 +175,6 @@ public:
     void SetOperationMode(EOperationMode mode) override;
     EOperationMode GetOperationMode() override;
 
-    ITransformManipulator* ShowTransformManipulator(bool bShow) override;
-    ITransformManipulator* GetTransformManipulator() override;
     void SetAxisConstraints(AxisConstrains axis) override;
     AxisConstrains GetAxisConstrains() override;
     void SetAxisVectorLock(bool bAxisVectorLock) override { m_bAxisVectorLock = bAxisVectorLock; }
@@ -264,14 +248,9 @@ public:
     bool IsSourceControlAvailable() override;
     //! Only returns true if source control is both available AND currently connected and functioning
     bool IsSourceControlConnected() override;
-    //! Setup Material Editor mode
-    void SetMatEditMode(bool bIsMatEditMode);
     void ReduceMemory() override;
-    // Get Export manager
-    IExportManager* GetExportManager() override;
     ESystemConfigPlatform GetEditorConfigPlatform() const override;
     void ReloadTemplates() override;
-    void AddErrorMessage(const QString& text, const QString& caption);
     void ShowStatusText(bool bEnable) override;
 
     void OnObjectContextMenuOpened(QMenu* pMenu, const CBaseObject* pObject);
@@ -319,12 +298,9 @@ protected:
     SFileVersion m_productVersion;
     CXmlTemplateRegistry m_templateRegistry;
     CDisplaySettings* m_pDisplaySettings;
-    CIconManager* m_pIconManager;
-    std::unique_ptr<SGizmoParameters> m_pGizmoParameters;
     QString m_primaryCDFolder;
     QString m_userFolder;
     bool m_bSelectionLocked;
-    class CAxisGizmo* m_pAxisGizmo;
     CGameEngine* m_pGameEngine;
     CAnimationContext* m_pAnimationContext;
     CTrackViewSequenceManager* m_pSequenceManager;
@@ -333,8 +309,6 @@ protected:
     CErrorReport* m_pErrorReport;
     //! Contains the error reports for the last loaded level.
     CErrorReport* m_pLasLoadedLevelErrorReport;
-    //! Global instance of error report class.
-    CErrorsDlg* m_pErrorsDlg;
     //! Source control interface.
     ISourceControl* m_pSourceControl;
 
@@ -347,16 +321,10 @@ protected:
 
     CLevelIndependentFileMan* m_pLevelIndependentFileMan;
 
-    //! Export manager for exporting objects and a terrain from the game to DCC tools
-    CExportManager* m_pExportManager;
     std::unique_ptr<CEditorFileMonitor> m_pEditorFileMonitor;
     QString m_selectFileBuffer;
     QString m_levelNameBuffer;
 
-
-    //! True if the editor is in material edit mode. Fast preview of materials.
-    //! In this mode only very limited functionality is available.
-    bool m_bMatEditMode;
     bool m_bShowStatusText;
     bool m_bInitialized;
     bool m_bExiting;

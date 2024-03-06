@@ -23,7 +23,7 @@ namespace AZ
 
         public:
             AZ_TYPE_INFO(ShaderOptionGroup, "{906F69F5-52F0-4095-9562-0E91DDDE6E2F}");
-            AZ_CLASS_ALLOCATOR(ShaderOptionGroup, AZ::ThreadPoolAllocator, 0);
+            AZ_CLASS_ALLOCATOR(ShaderOptionGroup, AZ::ThreadPoolAllocator);
 
             static void Reflect(AZ::ReflectContext* context);
 
@@ -97,7 +97,7 @@ namespace AZ
             const ShaderVariantKey& GetShaderVariantMask() const;
 
             //! Returns the constructed id, which contains both the shader variant key and mask
-            const ShaderVariantId& GetShaderVariantId() const;            
+            const ShaderVariantId& GetShaderVariantId() const;
 
             //! Returns the shader option layout used to build the key.
             const ShaderOptionGroupLayout* GetShaderOptionLayout() const;

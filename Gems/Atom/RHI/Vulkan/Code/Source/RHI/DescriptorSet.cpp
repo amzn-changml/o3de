@@ -64,7 +64,7 @@ namespace AZ
                         else
                         {
                             auto& device = static_cast<Device&>(GetDevice());
-                            vkBufferView = device.GetNullDescriptorManager().GetTexelBufferView();
+                            vkBufferView = device.GetNullDescriptorManager().GetTexelBufferView().GetNativeTexelBufferView();
                         }
                     }
                     else
@@ -85,16 +85,17 @@ namespace AZ
                     const RHI::ConstPtr<RHI::BufferView>& bufferView = bufViews[i];
                     if (!bufferView || bufferView->IsStale())
                     {
+                        bufferInfo.offset = 0;
+                        bufferInfo.range = VK_WHOLE_SIZE;
                         if (m_nullDescriptorSupported)
                         {
                             bufferInfo.buffer = VK_NULL_HANDLE;
-                            bufferInfo.offset = 0;
-                            bufferInfo.range = VK_WHOLE_SIZE;
                         }
                         else
                         {
                             auto& device = static_cast<Device&>(GetDevice());
-                            bufferInfo = device.GetNullDescriptorManager().GetBuffer();
+                            const BufferMemoryView* bufferMemoryView = static_cast<const Buffer&>(device.GetNullDescriptorManager().GetBuffer()).GetBufferMemoryView();
+                            bufferInfo.buffer = bufferMemoryView->GetNativeBuffer();
                         }
                     }
                     else
@@ -102,7 +103,8 @@ namespace AZ
                         auto& bufferViewDescriptor = bufferView->GetDescriptor();
                         const BufferMemoryView* bufferMemoryView = static_cast<const Buffer&>(bufferView->GetBuffer()).GetBufferMemoryView();
                         bufferInfo.buffer = bufferMemoryView->GetNativeBuffer();
-                        bufferInfo.offset = bufferMemoryView->GetOffset() + bufferViewDescriptor.m_elementOffset * bufferViewDescriptor.m_elementSize;
+                        bufferInfo.offset =
+                            bufferMemoryView->GetOffset() + bufferViewDescriptor.m_elementOffset * bufferViewDescriptor.m_elementSize;
                         bufferInfo.range = bufferViewDescriptor.m_elementCount * bufferViewDescriptor.m_elementSize;
                     }
 
@@ -142,7 +144,8 @@ namespace AZ
                         auto& device = static_cast<Device&>(GetDevice());
                         NullDescriptorManager& nullDescriptorManager = device.GetNullDescriptorManager();
                         bool storageImage = (layout.GetDescriptorType(layoutIndex) == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-                        imageInfo = nullDescriptorManager.GetDescriptorImageInfo(imageType, storageImage);
+                        imageInfo =
+                            nullDescriptorManager.GetDescriptorImageInfo(imageType, storageImage, layout.UsesDepthFormat(layoutIndex));
                     }
                 }
                 else
@@ -372,7 +375,7 @@ namespace AZ
                         // acceleration structure descriptor is added as the pNext in the VkWriteDescriptorSet
                         VkWriteDescriptorSetAccelerationStructureKHR writeAccelerationStructure = {};
                         writeAccelerationStructure.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
-                        writeAccelerationStructure.accelerationStructureCount = 1;
+                        writeAccelerationStructure.accelerationStructureCount = interval.m_max - interval.m_min;
                         writeAccelerationStructure.pAccelerationStructures = updateData.m_accelerationStructures.data() + interval.m_min;
                         writeAccelerationStructureDescs.push_back(AZStd::move(writeAccelerationStructure));
 
@@ -416,6 +419,7 @@ namespace AZ
                     case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
                     case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
                     case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                    case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
                         unboundedArraySize = aznumeric_cast<uint32_t>(updateData.m_bufferViewsInfo.size());
                         break;
                     case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:

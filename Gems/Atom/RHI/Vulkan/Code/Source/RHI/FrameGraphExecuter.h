@@ -10,7 +10,7 @@
 #include <Atom/RHI/FrameGraph.h>
 #include <Atom/RHI/FrameGraphExecuter.h>
 #include <RHI/CommandQueue.h>
-#include <RHI/FrameGraphExecuteGroupHandlerBase.h>
+#include <RHI/FrameGraphExecuteGroupHandler.h>
 
 #include <AzCore/std/containers/unordered_map.h>
 #include <Atom/RHI.Reflect/Vulkan/PlatformLimitsDescriptor.h>
@@ -27,7 +27,7 @@ namespace AZ
             using Base = RHI::FrameGraphExecuter;
 
         public:
-            AZ_CLASS_ALLOCATOR(FrameGraphExecuter, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(FrameGraphExecuter, AZ::SystemAllocator);
             AZ_RTTI(FrameGraphExecuter, "22B6E224-9469-4D8B-828F-A81C83B6EEEC", Base);
 
             static RHI::Ptr<FrameGraphExecuter> Create();
@@ -50,7 +50,7 @@ namespace AZ
             void AddExecuteGroupHandler(const RHI::GraphGroupId& groupId, const AZStd::vector<RHI::FrameGraphExecuteGroup*>& groups);
 
             // List of handlers for execute groups.
-            AZStd::unordered_map<RHI::GraphGroupId, AZStd::unique_ptr<FrameGraphExecuteGroupHandlerBase>> m_groupHandlers;
+            AZStd::unordered_map<RHI::GraphGroupId, AZStd::unique_ptr<FrameGraphExecuteGroupHandler>> m_groupHandlers;
             FrameGraphExecuterData m_frameGraphExecuterData;
         };
     }

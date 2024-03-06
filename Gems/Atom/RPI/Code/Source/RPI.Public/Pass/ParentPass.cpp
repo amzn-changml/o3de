@@ -55,7 +55,10 @@ namespace AZ
         void ParentPass::AddChild(const Ptr<Pass>& child, [[maybe_unused]] bool skipStateCheckWhenRunningTests)
         {
             // Todo: investigate if there's a way for this to not trigger on edge cases such as testing, then turn back into an Error instead of Warning.
-            AZ_Warning("PassSystem", GetPassState() == PassState::Building || IsRootPass() || skipStateCheckWhenRunningTests, "Do not add child passes outside of build phase");
+            if (!(GetPassState() == PassState::Building || IsRootPass() || skipStateCheckWhenRunningTests))
+            {
+                AZ_Warning("PassSystem", false, "Do not add child passes outside of build phase");
+            }
 
             if (child->m_parent != nullptr)
             {
@@ -393,6 +396,18 @@ namespace AZ
             }
         }
 
+        void ParentPass::UpdateConnectedBindings()
+        {
+            Pass::UpdateConnectedBindings();
+            if (IsEnabled())
+            {
+                for (const Ptr<Pass>& child : m_children)
+                {
+                    child->UpdateConnectedBindings();
+                }
+            }
+        }
+
         void ParentPass::FrameBeginInternal(FramePrepareParams params)
         {
             for (const Ptr<Pass>& child : m_children)
@@ -440,7 +455,7 @@ namespace AZ
             }
         }
 
-        void ParentPass::GetPipelineViewTags(SortedPipelineViewTags& outTags) const
+        void ParentPass::GetPipelineViewTags(PipelineViewTags& outTags) const
         {
             // Call base implementation
             Pass::GetPipelineViewTags(outTags);

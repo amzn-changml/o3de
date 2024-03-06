@@ -56,6 +56,7 @@ namespace AZ::Render
                 ->Event("SetUseFastApproximation", &AreaLightRequestBus::Events::SetUseFastApproximation)
                 ->Event("GetIntensity", &AreaLightRequestBus::Events::GetIntensity)
                 ->Event("SetIntensity", static_cast<void(AreaLightRequestBus::Events::*)(float)>(&AreaLightRequestBus::Events::SetIntensity))
+                ->Event("SetIntensityAndMode", &AreaLightRequestBus::Events::SetIntensityAndMode)
                 ->Event("GetIntensityMode", &AreaLightRequestBus::Events::GetIntensityMode)
                 ->Event("ConvertToIntensityMode", &AreaLightRequestBus::Events::ConvertToIntensityMode)
 
@@ -80,12 +81,16 @@ namespace AZ::Render
                 ->Event("SetFilteringSampleCount", &AreaLightRequestBus::Events::SetFilteringSampleCount)
                 ->Event("GetEsmExponent", &AreaLightRequestBus::Events::GetEsmExponent)
                 ->Event("SetEsmExponent", &AreaLightRequestBus::Events::SetEsmExponent)
+                ->Event("GetShadowCachingMode", &AreaLightRequestBus::Events::GetShadowCachingMode)
+                ->Event("SetShadowCachingMode", &AreaLightRequestBus::Events::SetShadowCachingMode)
 
                 ->Event("GetAffectsGI", &AreaLightRequestBus::Events::GetAffectsGI)
                 ->Event("SetAffectsGI", &AreaLightRequestBus::Events::SetAffectsGI)
                 ->Event("GetAffectsGIFactor", &AreaLightRequestBus::Events::GetAffectsGIFactor)
                 ->Event("SetAffectsGIFactor", &AreaLightRequestBus::Events::SetAffectsGIFactor)
 
+                ->Event("GetLightingChannelMask", &AreaLightRequestBus::Events::GetLightingChannelMask)
+                ->Event("SetLightingChannelMask", &AreaLightRequestBus::Events::SetLightingChannelMask)
                 ->VirtualProperty("AttenuationRadius", "GetAttenuationRadius", "SetAttenuationRadius")
                 ->VirtualProperty("Color", "GetColor", "SetColor")
                 ->VirtualProperty("EmitsLightBothDirections", "GetEmitsLightBothDirections", "SetEmitsLightBothDirections")
@@ -103,9 +108,11 @@ namespace AZ::Render
                 ->VirtualProperty("ShadowFilterMethod", "GetShadowFilterMethod", "SetShadowFilterMethod")
                 ->VirtualProperty("FilteringSampleCount", "GetFilteringSampleCount", "SetFilteringSampleCount")
                 ->VirtualProperty("EsmExponent", "GetEsmExponent", "SetEsmExponent")
+                ->VirtualProperty("ShadowCachingMode", "GetShadowCachingMode", "SetShadowCachingMode")
 
                 ->VirtualProperty("AffectsGI", "GetAffectsGI", "SetAffectsGI")
-                ->VirtualProperty("AffectsGIFactor", "GetAffectsGIFactor", "SetAffectsGIFactor");
+                ->VirtualProperty("AffectsGIFactor", "GetAffectsGIFactor", "SetAffectsGIFactor")
+                ->VirtualProperty("LightingChannelMask", "GetLightingChannelMask", "SetLightingChannelMask");
         }
     }
 
@@ -159,12 +166,14 @@ namespace AZ::Render
     void AreaLightComponentController::SetConfiguration(const AreaLightComponentConfig& config)
     {
         m_configuration = config;
+
         VerifyLightTypeAndShapeComponent();
         ConfigurationChanged();
     }
 
     const AreaLightComponentConfig& AreaLightComponentController::GetConfiguration() const
     {
+        m_configuration.m_cacheShadows = m_configuration.m_shadowCachingMode == AreaLightComponentConfig::ShadowCachingMode::UpdateOnChange;
         return m_configuration;
     }
 
@@ -246,11 +255,16 @@ namespace AZ::Render
 
     void AreaLightComponentController::ConfigurationChanged()
     {
+        m_configuration.m_shadowCachingMode = m_configuration.m_cacheShadows
+            ? AreaLightComponentConfig::ShadowCachingMode::UpdateOnChange
+            : AreaLightComponentConfig::ShadowCachingMode::NoCaching;
+
         ChromaChanged();
         IntensityChanged();
         AttenuationRadiusChanged();
         ShuttersChanged();
         ShadowsChanged();
+        LightingChannelMaskChanged();
 
         if (m_lightShapeDelegate)
         {
@@ -324,9 +338,18 @@ namespace AZ::Render
                 m_lightShapeDelegate->SetShadowFilterMethod(m_configuration.m_shadowFilterMethod);
                 m_lightShapeDelegate->SetFilteringSampleCount(m_configuration.m_filteringSampleCount);
                 m_lightShapeDelegate->SetEsmExponent(m_configuration.m_esmExponent);
+                m_lightShapeDelegate->SetShadowCachingMode(m_configuration.m_shadowCachingMode);
             }
         }
     }
+
+    void AreaLightComponentController::LightingChannelMaskChanged()
+    {
+        if (m_lightShapeDelegate)
+        {
+            m_lightShapeDelegate->SetLightingChannelMask(m_configuration.m_lightingChannelConfig.GetLightingChannelMask());
+        }
+    }    
 
     void AreaLightComponentController::AutoCalculateAttenuationRadius()
     {
@@ -378,8 +401,19 @@ namespace AZ::Render
         return m_configuration.m_intensity;
     }
 
+    void AreaLightComponentController::SetIntensityAndMode(float intensity, PhotometricUnit intensityMode)
+    {
+        m_configuration.m_intensityMode = intensityMode;
+        m_configuration.m_intensity = intensity;
+
+        AreaLightNotificationBus::Event(m_entityId, &AreaLightNotifications::OnIntensityChanged, intensity, intensityMode);
+        IntensityChanged();
+    }
+
     void AreaLightComponentController::SetIntensity(float intensity, PhotometricUnit intensityMode)
     {
+        AZ_Warning("Main Window", false, "This verion of SetIntensity() is deprecated. Use SetIntensityMode() instead.");
+
         m_configuration.m_intensityMode = intensityMode;
         m_configuration.m_intensity = intensity;
 
@@ -560,9 +594,15 @@ namespace AZ::Render
     {
         Transform transform = Transform::CreateIdentity();
         TransformBus::EventResult(transform, m_entityId, &TransformBus::Events::GetWorldTM);
+
+        AZ::Vector3 translationOffset = AZ::Vector3::CreateZero();
+        LmbrCentral::ShapeComponentRequestsBus::EventResult(
+            translationOffset, m_entityId, &LmbrCentral::ShapeComponentRequests::GetTranslationOffset);
+
         if (m_lightShapeDelegate)
         {
-            m_lightShapeDelegate->DrawDebugDisplay(transform, m_configuration.m_color, debugDisplay, isSelected);
+            m_lightShapeDelegate->DrawDebugDisplay(
+                transform * AZ::Transform::CreateTranslation(translationOffset), m_configuration.m_color, debugDisplay, isSelected);
         }
     }
 
@@ -577,6 +617,22 @@ namespace AZ::Render
         if (m_lightShapeDelegate)
         {
             m_lightShapeDelegate->SetEsmExponent(esmExponent);
+        }
+    }
+
+    AreaLightComponentConfig::ShadowCachingMode AreaLightComponentController::GetShadowCachingMode() const
+    {
+        return m_configuration.m_shadowCachingMode;
+    }
+
+    void AreaLightComponentController::SetShadowCachingMode(AreaLightComponentConfig::ShadowCachingMode cachingMode)
+    {
+        m_configuration.m_shadowCachingMode = cachingMode;
+        m_configuration.m_cacheShadows = m_configuration.m_shadowCachingMode == AreaLightComponentConfig::ShadowCachingMode::UpdateOnChange;
+
+        if (m_lightShapeDelegate)
+        {
+            m_lightShapeDelegate->SetShadowCachingMode(cachingMode);
         }
     }
 
@@ -603,6 +659,20 @@ namespace AZ::Render
         if (m_lightShapeDelegate)
         {
             m_lightShapeDelegate->SetAffectsGIFactor(affectsGIFactor);
+        }
+    }
+
+    uint32_t AreaLightComponentController::GetLightingChannelMask() const
+    {
+        return m_configuration.m_lightingChannelConfig.GetLightingChannelMask();
+    }
+
+    void AreaLightComponentController::SetLightingChannelMask(const uint32_t lightingChannelMask)
+    {
+        m_configuration.m_lightingChannelConfig.SetLightingChannelMask(lightingChannelMask);
+        if (m_lightShapeDelegate)
+        {
+            m_lightShapeDelegate->SetLightingChannelMask(m_configuration.m_lightingChannelConfig.GetLightingChannelMask());
         }
     }
 

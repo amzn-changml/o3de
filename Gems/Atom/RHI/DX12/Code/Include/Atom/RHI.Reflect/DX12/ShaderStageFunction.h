@@ -12,10 +12,22 @@
 #include <AzCore/Memory/SystemAllocator.h>
 #include <AzCore/std/containers/array.h>
 #include <AzCore/std/containers/vector.h>
-#include <AzCore/Serialization/SerializeContext.h>
+
+namespace AZ::Serialize
+{
+    template<class T, bool U, bool A>
+    struct InstanceFactory;
+}
+namespace AZ
+{
+    template<typename ValueType, typename>
+    struct AnyTypeInfoConcept;
+}
 
 namespace AZ
 {
+    class ReflectContext;
+
     namespace DX12
     {
         using ShaderByteCode = AZStd::vector<uint8_t>;
@@ -28,10 +40,6 @@ namespace AZ
         {
             /// Used when the sub-stage is 1-to-1 with the virtual stage.
             const uint32_t Default = 0;
-
-            /// Tessellation is composed of two physical stages in HLSL.
-            const uint32_t TessellationHull = 0;
-            const uint32_t TessellationDomain = 1;
         }
 
         const uint32_t ShaderSubStageCountMax = 2;
@@ -41,7 +49,7 @@ namespace AZ
         {
         public:
             AZ_RTTI(ShaderStageFunction, "{1BAEE536-96CA-4AEB-BA73-D5D72EE35B45}", RHI::ShaderStageFunction);
-            AZ_CLASS_ALLOCATOR(ShaderStageFunction, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(ShaderStageFunction, AZ::SystemAllocator);
             static void Reflect(AZ::ReflectContext* context);
 
             static RHI::Ptr<ShaderStageFunction> Create(RHI::ShaderStage shaderStage);
@@ -55,7 +63,10 @@ namespace AZ
         private:
             ShaderStageFunction() = default;
             ShaderStageFunction(RHI::ShaderStage shaderStage);
-            AZ_SERIALIZE_FRIEND();
+            template <typename, typename>
+            friend struct AnyTypeInfoConcept;
+            template <typename, bool, bool>
+            friend struct Serialize::InstanceFactory;
 
             ///////////////////////////////////////////////////////////////////
             // RHI::ShaderStageFunction

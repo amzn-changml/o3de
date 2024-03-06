@@ -73,25 +73,14 @@ namespace AzToolsFramework
         }
     };
 
-    template <typename... ComponentType>
-    EntityCompositionRequests::RemoveComponentsOutcome RemoveComponents(ComponentType... components)
-    {
-        EntityCompositionRequests::RemoveComponentsOutcome outcome = AZ::Failure(AZStd::string(""));
-        EntityCompositionRequestBus::BroadcastResult(outcome, &EntityCompositionRequests::RemoveComponents, AZ::Entity::ComponentArrayType{ components... });
-        return outcome;
-    }
+    EntityCompositionRequests::RemoveComponentsOutcome RemoveComponents(AZStd::span<AZ::Component* const> components);
+    EntityCompositionRequests::RemoveComponentsOutcome RemoveComponents(AZStd::initializer_list<AZ::Component* const> components);
 
-    template <typename... ComponentType>
-    void EnableComponents(ComponentType... components)
-    {
-        EntityCompositionRequestBus::Broadcast(&EntityCompositionRequests::EnableComponents, AZ::Entity::ComponentArrayType{ components... });
-    }
+    void EnableComponents(AZStd::span<AZ::Component* const> components);
 
-    template <typename... ComponentType>
-    void DisableComponents(ComponentType... components)
-    {
-        EntityCompositionRequestBus::Broadcast(&EntityCompositionRequests::DisableComponents, AZ::Entity::ComponentArrayType{ components... });
-    }
+    void EnableComponents(AZStd::initializer_list<AZ::Component* const> components);
+    void DisableComponents(AZStd::span<AZ::Component* const> components);
+    void DisableComponents(AZStd::initializer_list<AZ::Component* const> components);
 
     void GetAllComponentsForEntity(const AZ::Entity* entity, AZ::Entity::ComponentArrayType& componentsOnEntity);
     void GetAllComponentsForEntity(const AZ::EntityId& entityId, AZ::Entity::ComponentArrayType& componentsOnEntity);
@@ -100,6 +89,7 @@ namespace AzToolsFramework
     AZ::Uuid GetComponentTypeId(const AZ::Component* component);
     const AZ::SerializeContext::ClassData* GetComponentClassData(const AZ::Component* component);
     const AZ::SerializeContext::ClassData* GetComponentClassDataForType(const AZ::Uuid& componentTypeId);
+    AZStd::string GetNameFromComponentClassData(const AZ::Component* component);
     AZStd::string GetFriendlyComponentName(const AZ::Component* component);
     const char* GetFriendlyComponentDescription(const AZ::Component* component);
     AZ::ComponentDescriptor* GetComponentDescriptor(const AZ::Component* component);
@@ -108,12 +98,12 @@ namespace AzToolsFramework
     // Returns true if the given component provides at least one of the services specified or no services are provided
     bool OffersRequiredServices(
         const AZ::SerializeContext::ClassData* componentClass,
-        const AZStd::vector<AZ::ComponentServiceType>& serviceFilter,
-        const AZStd::vector<AZ::ComponentServiceType>& incompatibleServiceFilter
+        AZStd::span<const AZ::ComponentServiceType> serviceFilter,
+        AZStd::span<const AZ::ComponentServiceType> incompatibleServiceFilter
     );
     bool OffersRequiredServices(
         const AZ::SerializeContext::ClassData* componentClass,
-        const AZStd::vector<AZ::ComponentServiceType>& serviceFilter
+        AZStd::span<const AZ::ComponentServiceType> serviceFilter
     );
 
     /// Return true if the editor should show this component to users,
@@ -214,5 +204,8 @@ namespace AzToolsFramework
     /// Return a set of entities, culling any that have an ancestor in the list.
     /// e.g. This is useful for getting a concise set of entities that need to be duplicated.
     EntityIdSet GetCulledEntityHierarchy(const EntityIdList& entities);
+
+    /// Checks if the selected entities and the new parent entity belong to the same prefab.
+    bool EntitiesBelongToSamePrefab(const EntityIdList& selectedEntities, const AZ::EntityId newParentId);
 
 }; // namespace AzToolsFramework

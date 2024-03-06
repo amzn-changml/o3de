@@ -36,8 +36,6 @@
 #include "DirectorNodeAnimator.h"
 #include "ViewManager.h"
 #include "Include/IObjectManager.h"
-#include "Objects/GizmoManager.h"
-#include "Objects/SelectionGroup.h"
 #include "TrackView/TrackViewDialog.h"
 #include "TrackView/TrackViewSequence.h"
 #include "TrackView/TrackViewUndo.h"
@@ -195,7 +193,6 @@ CTrackViewAnimNode::CTrackViewAnimNode(IAnimSequence* pSequence, IAnimNode* anim
     , m_animSequence(pSequence)
     , m_animNode(animNode)
     , m_pNodeAnimator(nullptr)
-    , m_trackGizmo(nullptr)
 {
     if (animNode)
     {
@@ -256,12 +253,6 @@ CTrackViewAnimNode::CTrackViewAnimNode(IAnimSequence* pSequence, IAnimNode* anim
 //////////////////////////////////////////////////////////////////////////
 CTrackViewAnimNode::~CTrackViewAnimNode()
 {
-    if (m_trackGizmo.get())
-    {
-        GetIEditor()->GetObjectManager()->GetGizmoManager()->RemoveGizmo(m_trackGizmo);
-        m_trackGizmo = nullptr;
-    }
-
     UnRegisterEditorObjectListeners();
 
     AzToolsFramework::EditorEntityContextNotificationBus::Handler::BusDisconnect();
@@ -323,8 +314,6 @@ void CTrackViewAnimNode::BindToEditorObjects()
             }
         }
     }
-
-    UpdateTrackGizmo();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -355,9 +344,6 @@ void CTrackViewAnimNode::UnBindFromEditorObjects()
             pChildAnimNode->UnBindFromEditorObjects();
         }
     }
-
-    GetIEditor()->GetObjectManager()->GetGizmoManager()->RemoveGizmo(m_trackGizmo);
-    m_trackGizmo = nullptr;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -992,8 +978,6 @@ void CTrackViewAnimNode::Animate(const SAnimContext& animContext)
             pChildAnimNode->Animate(animContext);
         }
     }
-
-    UpdateTrackGizmo();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -2018,47 +2002,6 @@ void CTrackViewAnimNode::SetPosRotScaleTracksDefaultValues(bool positionAllowed,
 }
 
 //////////////////////////////////////////////////////////////////////////
-void CTrackViewAnimNode::UpdateTrackGizmo()
-{
-    if (IsActive() && m_nodeEntityId.IsValid() && AzToolsFramework::IsEntityVisible(m_nodeEntityId))
-    {
-        if (!m_trackGizmo)
-        {
-            CTrackGizmo* pTrackGizmo = new CTrackGizmo;
-            pTrackGizmo->SetAnimNode(this);
-            m_trackGizmo = pTrackGizmo;
-            GetIEditor()->GetObjectManager()->GetGizmoManager()->AddGizmo(m_trackGizmo);
-        }
-    }
-    else
-    {
-        GetIEditor()->GetObjectManager()->GetGizmoManager()->RemoveGizmo(m_trackGizmo);
-        m_trackGizmo = nullptr;
-    }
-
-    if (m_nodeEntityId.IsValid() && m_trackGizmo)
-    {
-        Matrix34 gizmoMatrix;
-        gizmoMatrix.SetIdentity();
-
-        if (GetType() == AnimNodeType::AzEntity)
-        {
-            // Key data are always relative to the parent (or world if there is no parent). So get the parent
-            // entity id if there is one.
-            AZ::EntityId parentId;
-            AZ::TransformBus::EventResult(parentId, GetAzEntityId(), &AZ::TransformBus::Events::GetParentId);
-            if (parentId.IsValid())
-            {
-                AZ::Transform azWorldTM = GetEntityWorldTM(parentId);
-                gizmoMatrix = AZTransformToLYTransform(azWorldTM);
-            }
-        }
-
-        m_trackGizmo->SetMatrix(gizmoMatrix);
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////
 bool CTrackViewAnimNode::CheckTrackAnimated(const CAnimParamType& paramType) const
 {
     if (!m_animNode)
@@ -2086,8 +2029,6 @@ void CTrackViewAnimNode::OnNodeVisibilityChanged([[maybe_unused]] IAnimNode* nod
                 &AzToolsFramework::ToolsApplicationRequests::Bus::Events::SetSelectedEntities,
                 AzToolsFramework::EntityIdList{m_nodeEntityId});
         }
-
-        UpdateTrackGizmo();
     }
 }
 
@@ -2441,7 +2382,6 @@ CTrackViewAnimNode* CTrackViewAnimNode::AddComponent(const AZ::Component* compon
 //////////////////////////////////////////////////////////////////////////
 void CTrackViewAnimNode::MatrixInvalidated()
 {
-    UpdateTrackGizmo();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -2532,7 +2472,6 @@ void CTrackViewAnimNode::OnEntityDestruction([[maybe_unused]] const AZ::EntityId
     UnRegisterEditorObjectListeners();
 
     SetNodeEntityId(AZ::EntityId());
-    UpdateTrackGizmo();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -2574,12 +2513,6 @@ void CTrackViewAnimNode::UpdateKeyDataAfterParentChanged(const AZ::Transform& ol
     {
         sequence->OnKeysChanged();
     }
-}
-
-void CTrackViewAnimNode::OnTransformChanged(
-    [[maybe_unused]] const AZ::Transform& local, [[maybe_unused]] const AZ::Transform& world)
-{
-    UpdateTrackGizmo();
 }
 
 //////////////////////////////////////////////////////////////////////////

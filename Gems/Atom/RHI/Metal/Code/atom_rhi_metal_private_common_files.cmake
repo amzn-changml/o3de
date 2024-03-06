@@ -34,6 +34,7 @@ set(FILES
     Source/RHI/MetalCopyShaders.h
     Source/RHI/Device.cpp
     Source/RHI/Device.h
+    Source/RHI/DispatchRaysIndirectBuffer.h
     Source/RHI/CommandQueue.cpp
     Source/RHI/CommandQueue.h
     Source/RHI/CommandQueueContext.cpp
@@ -110,4 +111,6 @@ set(FILES
     Source/RHI/MetalView.mm
     Source/RHI/MetalViewController.h
     Source/RHI/MetalViewController.mm
+    Source/RHI/BindlessArgumentBuffer.cpp
+    Source/RHI/BindlessArgumentBuffer.h
 )

@@ -12,6 +12,7 @@
 #include <RHI/BufferPool.h>
 #include <RHI/BufferView.h>
 #include <RHI/Conversions.h>
+#include <RHI/DispatchRaysIndirectBuffer.h>
 #include <RHI/Fence.h>
 #include <RHI/FrameGraphCompiler.h>
 #include <RHI/FrameGraphExecuter.h>
@@ -94,6 +95,12 @@ namespace AZ
         {
             // We want dx12 to be default RHI (unless the user choose otherwise).
             return RHI::APITopPriority;
+        }
+
+        bool SystemComponent::SupportsXR() const
+        {
+            //DX12 RHI does not support XR api
+            return false;
         }
 
         RHI::PhysicalDeviceList SystemComponent::EnumeratePhysicalDevices()
@@ -234,6 +241,11 @@ namespace AZ
         RHI::Ptr<RHI::RayTracingShaderTable> SystemComponent::CreateRayTracingShaderTable()
         {
             return RayTracingShaderTable::Create();
+        }
+
+        RHI::Ptr<RHI::DispatchRaysIndirectBuffer> SystemComponent::CreateDispatchRaysIndirectBuffer()
+        {
+            return DispatchRaysIndirectBuffer::Create();
         }
     }
 }

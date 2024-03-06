@@ -64,6 +64,14 @@ set(FILES
     Source/PostProcess/Bloom/EditorBloomComponent.h
     Source/PostProcess/ChromaticAberration/EditorChromaticAberrationComponent.cpp
     Source/PostProcess/ChromaticAberration/EditorChromaticAberrationComponent.h
+    Source/PostProcess/PaniniProjection/EditorPaniniProjectionComponent.cpp
+    Source/PostProcess/PaniniProjection/EditorPaniniProjectionComponent.h
+    Source/PostProcess/FilmGrain/EditorFilmGrainComponent.cpp
+    Source/PostProcess/FilmGrain/EditorFilmGrainComponent.h
+    Source/PostProcess/WhiteBalance/EditorWhiteBalanceComponent.cpp
+    Source/PostProcess/WhiteBalance/EditorWhiteBalanceComponent.h
+    Source/PostProcess/Vignette/EditorVignetteComponent.cpp
+    Source/PostProcess/Vignette/EditorVignetteComponent.h
     Source/PostProcess/ColorGrading/EditorHDRColorGradingComponent.cpp
     Source/PostProcess/ColorGrading/EditorHDRColorGradingComponent.h
     Source/PostProcess/DepthOfField/EditorDepthOfFieldComponent.cpp
@@ -90,6 +98,8 @@ set(FILES
     Source/ScreenSpace/EditorDeferredFogComponent.cpp
     Source/ReflectionProbe/EditorReflectionProbeComponent.h
     Source/ReflectionProbe/EditorReflectionProbeComponent.cpp
+    Source/SpecularReflections/EditorSpecularReflectionsComponent.h
+    Source/SpecularReflections/EditorSpecularReflectionsComponent.cpp
     Source/SkinnedMesh/SkinnedMeshDebugDisplay.h
     Source/SkinnedMesh/SkinnedMeshDebugDisplay.cpp
     Source/SkyAtmosphere/EditorSkyAtmosphereComponent.cpp

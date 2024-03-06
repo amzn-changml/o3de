@@ -33,7 +33,7 @@ namespace AZ
             using Base = ShaderResourceGroupPool;
 
         public:
-            AZ_CLASS_ALLOCATOR(MergedShaderResourceGroupPool, AZ::SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(MergedShaderResourceGroupPool, AZ::SystemAllocator);
             AZ_RTTI(MergedShaderResourceGroupPool, "{9CBCF750-0BE7-410E-9828-ACA55ED828AD}", Base);
 
             static RHI::Ptr<MergedShaderResourceGroupPool> Create();
@@ -50,7 +50,7 @@ namespace AZ
             void ShutdownInternal() override;
             //////////////////////////////////////////////////////////////////////////
 
-            AZStd::shared_mutex m_databaseMutex;
+            AZStd::mutex m_databaseMutex;
             static const uint32_t CacheDatabaseCapacity = 1000;
             RHI::ObjectCache<MergedShaderResourceGroup, MergedShaderResourceGroup::ShaderResourceGroupArray> m_cacheDatabase;
         };

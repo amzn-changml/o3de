@@ -7,17 +7,23 @@
  */
 
 #include <AWSClientAuthSystemComponent.h>
+#include <AWSClientAuthResourceMappingConstants.h>
+
 #include <Authentication/AuthenticationProviderTypes.h>
 #include <Authentication/AuthenticationNotificationBusBehaviorHandler.h>
-#include <UserManagement/UserManagementNotificationBusBehaviorHandler.h>
 #include <Authorization/AWSCognitoAuthorizationNotificationBusBehaviorHandler.h>
 #include <Authorization/AWSCognitoAuthorizationController.h>
-#include <AWSClientAuthResourceMappingConstants.h>
-#include <ResourceMapping/AWSResourceMappingBus.h>
+
 #include <Framework/AWSApiJobConfig.h>
+
 #include <ResourceMapping/AWSResourceMappingBus.h>
+#include <ResourceMapping/AWSResourceMappingBus.h>
+#include <UserManagement/UserManagementNotificationBusBehaviorHandler.h>
+
 #include <aws/cognito-identity/CognitoIdentityClient.h>
 #include <aws/cognito-idp/CognitoIdentityProviderClient.h>
+
+#include <AWSCoreBus.h>
 
 namespace AZ
 {
@@ -39,7 +45,6 @@ namespace AWSClientAuth
             {
                 ec->Class<AWSClientAuthSystemComponent>("AWSClientAuth", "Provides Client Authentication and Authorization implementations")
                     ->ClassElement(AZ::Edit::ClassElements::EditorData, "")
-                    ->Attribute(AZ::Edit::Attributes::AppearsInAddComponentMenu, AZ_CRC("System"))
                     ->Attribute(AZ::Edit::Attributes::AutoExpand, true);
             }
             AWSClientAuth::LWAProviderSetting::Reflect(*serialize);
@@ -173,27 +178,29 @@ namespace AWSClientAuth
 
         // Sanity check if code should setup Cognito user and autorization controllers.
         // Only set up if Cognito settings appear to be provided in resource mapping file.
-        AZStd::string userPoolId;
+        // Cognito User Pools and Cognito Identity Pools are not dependent on one another, but we need at least one.
+        // Create a controller for user pools and identity pools.
+        bool awsCognitoUserPoolDefined = false;
         AWSCore::AWSResourceMappingRequestBus::BroadcastResult(
-            userPoolId, &AWSCore::AWSResourceMappingRequests::GetResourceNameId, CognitoUserPoolIdResourceMappingKey);
+            awsCognitoUserPoolDefined, &AWSCore::AWSResourceMappingRequests::HasResource, CognitoUserPoolIdResourceMappingKey);
+        if (awsCognitoUserPoolDefined)
+        {
+            m_awsCognitoUserManagementController = AZStd::make_unique<AWSCognitoUserManagementController>();
+        }
 
-        AZStd::string cognitoIdentityPoolId;
-         AWSCore::AWSResourceMappingRequestBus::BroadcastResult(
-            cognitoIdentityPoolId, &AWSCore::AWSResourceMappingRequests::GetResourceNameId, CognitoIdentityPoolIdResourceMappingKey);
+        bool awsCognitoIdentityPoolDefined = false;
+        AWSCore::AWSResourceMappingRequestBus::BroadcastResult(
+            awsCognitoIdentityPoolDefined, &AWSCore::AWSResourceMappingRequests::HasResource, CognitoIdentityPoolIdResourceMappingKey);
+        if (awsCognitoIdentityPoolDefined)
+        {
+            m_awsCognitoAuthorizationController = AZStd::make_unique<AWSCognitoAuthorizationController>();
+        }
 
-        if (userPoolId.empty() && cognitoIdentityPoolId.empty())
+        if (!awsCognitoUserPoolDefined && !awsCognitoIdentityPoolDefined)
         {
             AZ_Warning("AWSClientAuthSystemComponent",  false,
                 "Missing Cognito settings in resource mappings. Skipping set up of Cognito controllers.");
         }
-        else
-        {
-            // Objects below depend on bus above.
-            m_awsCognitoUserManagementController = AZStd::make_unique<AWSCognitoUserManagementController>();
-            m_awsCognitoAuthorizationController = AZStd::make_unique<AWSCognitoAuthorizationController>();
-        }
-
-        AWSCore::AWSCoreEditorRequestBus::Broadcast(&AWSCore::AWSCoreEditorRequests::SetAWSClientAuthEnabled);
     }
 
     void AWSClientAuthSystemComponent::Deactivate()

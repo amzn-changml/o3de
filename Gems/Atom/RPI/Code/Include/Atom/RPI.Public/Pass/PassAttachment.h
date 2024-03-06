@@ -26,7 +26,7 @@ namespace AZ
         struct PassAttachment final
             : AZStd::intrusive_refcount<AZStd::atomic_uint, AZStd::intrusive_default_delete>
         {
-            AZ_CLASS_ALLOCATOR(PassAttachment, SystemAllocator, 0);
+            AZ_CLASS_ALLOCATOR(PassAttachment, SystemAllocator);
 
             PassAttachment() = default;
             PassAttachment(const PassImageAttachmentDesc& attachmentDesc);
@@ -112,9 +112,19 @@ namespace AZ
                     u8 m_getSizeFromPipeline : 1;
                     u8 m_getFormatFromPipeline : 1;
                     u8 m_getMultisampleStateFromPipeline : 1;
+                    u8 m_updatingImageFormat : 1;
+                    u8 m_updatingMultisampleState : 1;
+                    u8 m_updatingSize : 1;
+                    u8 m_updatingArraySize : 1;
                 };
                 u8 m_allFlags = 0;
             };
+
+        protected:
+            void UpdateImageFormat();
+            void UpdateImageMultisampleState();
+            void UpdateImageSize();
+            void UpdateImageArraySize();
         };
 
         //! An attachment binding points to a PassAttachment and specifies how the pass uses that attachment.

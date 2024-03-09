@@ -1,6 +1,7 @@
 name: MacOS
 
 on:
+  push:
   workflow_dispatch: {}
 
 jobs:
@@ -40,10 +41,11 @@ jobs:
           key: O3DE-mac-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
           max-size: 2048M
           variant: ccache
+
+      - uses: lukka/get-cmake@latest
         
       - name: Configure environment
         run: |
-          brew install openssl
           echo "Getting python..."
           ./python/get_python.sh
          

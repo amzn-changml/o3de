@@ -11,7 +11,7 @@ jobs:
       matrix:
         compiler: [clang]
         config: [profile]
-        image: [ubuntu-20.04]
+        image: [ubuntu-22.04]
 
     runs-on: ${{ matrix.image }}
 
@@ -35,7 +35,8 @@ jobs:
           remove-haskell: 'true'
           remove-android: 'true'     
             
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: recursive
@@ -43,7 +44,7 @@ jobs:
           ref: development
           
       - name: Cache 3p
-        uses: actions/cache@v3.0.11
+        uses: actions/cache@v4
         continue-on-error: true
         with:
           path: |
@@ -51,7 +52,8 @@ jobs:
             ./python
           key: O3DE-linux-3p-${{ matrix.image }}
 
-      - uses: hendrikmuhs/ccache-action@v1.2.3
+      - name: Use ccache
+        uses: hendrikmuhs/ccache-action@v1.2.12
         with:
           key: O3DE-linux-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
           max-size: 2048M

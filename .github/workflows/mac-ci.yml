@@ -11,7 +11,7 @@ jobs:
       matrix:
         compiler: [xcode]
         config: [profile]
-        image: [macos-12]
+        image: [macos-13]
 
     runs-on: ${{ matrix.image }}
 
@@ -20,13 +20,15 @@ jobs:
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
 
     steps:    
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: recursive
+          ref: development
           
       - name: Cache 3p
-        uses: actions/cache@v3.0.11
+        uses: actions/cache@v4
         continue-on-error: true
         with:
           path: |
@@ -34,7 +36,7 @@ jobs:
             ./python
           key: O3DE-mac-3p-${{ matrix.image }}
 
-      - uses: hendrikmuhs/ccache-action@v1.2.3
+      - uses: hendrikmuhs/ccache-action@v1.2.12
         with:
           key: O3DE-mac-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
           max-size: 2048M
@@ -48,7 +50,7 @@ jobs:
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B build -D CMAKE_CXX_COMPILER_LAUNCHER=ccache -D CMAKE_C_COMPILER_LAUNCHER=ccache -DLY_3RDPARTY_PATH=./3rdParty
+          cmake -B build -DUSE_CCACHE=YES -DCCACHE_OPTIONS="CCACHE_CPP2=true;CCACHE_SLOPPINESS=clang_index_store" -DLY_3RDPARTY_PATH=./3rdParty
           
       - name: Build
         run: |

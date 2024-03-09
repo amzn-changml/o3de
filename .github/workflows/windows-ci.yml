@@ -1,6 +1,7 @@
 name: Windows
 
 on:
+  push:
   workflow_dispatch: {}
 
 jobs:
@@ -26,7 +27,8 @@ jobs:
       - name: Git LFS fetch
         run: |
           git lfs install
-          git lfs fetch
+          git lfs fetch --include="*.ico"
+          git lfs checkout
       
       - name: Create binary folders
         run: |

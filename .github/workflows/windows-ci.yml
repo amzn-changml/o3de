@@ -36,19 +36,29 @@ jobs:
           "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
                      
       - name: Cache 3p
-        uses: actions/cache@v3.0.11
+        uses: actions/cache@v4
         continue-on-error: true
         with:
           path: |
             ${{ github.workspace }}\3rdParty\downloaded_packages
             ${{ github.workspace }}\python
           key: O3DE-windows-3p-${{ matrix.image }}
-
-      - uses: hendrikmuhs/ccache-action@v1.2.3
+      
+      - name: Cache build
+        uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: |
+            ${{ github.workspace }}\build
+          key: O3DE-windows-build-${{ matrix.image }}
+          
+      - uses: hendrikmuhs/ccache-action@v1.2.12
         with:
           key: O3DE-windows-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
           max-size: 2048M
           variant: sccache
+
+      - uses: lukka/get-cmake@latest
         
       - name: Configure environment
         run: |
@@ -66,4 +76,4 @@ jobs:
           
       - name: Build
         run: 
-          cmake --build build --target Editor --config ${{ matrix.config }} -j1
+          cmake --build build --target Editor --config ${{ matrix.config }}

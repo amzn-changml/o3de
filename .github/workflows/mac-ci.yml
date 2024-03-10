@@ -26,6 +26,12 @@ jobs:
           fetch-depth: 1
           submodules: recursive
           ref: development
+
+      - name: Git LFS fetch
+        run: |
+          git lfs install
+          git lfs fetch --include="*.ico"
+          git lfs checkout
           
       - name: Cache 3p
         uses: actions/cache@v4
@@ -52,7 +58,7 @@ jobs:
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B build -DUSE_CCACHE=YES -DCCACHE_OPTIONS="CCACHE_CPP2=true;CCACHE_SLOPPINESS=clang_index_store" -DLY_3RDPARTY_PATH=./3rdParty
+          cmake -B build -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DLY_3RDPARTY_PATH=./3rdParty
           
       - name: Build
         run: |

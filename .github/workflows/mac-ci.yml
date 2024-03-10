@@ -41,7 +41,7 @@ jobs:
             ./3rdParty/downloaded_packages
             ./python
           key: O3DE-mac-3p-${{ matrix.image }}
-          save-always: false
+          save-always: true
 
       - uses: hendrikmuhs/ccache-action@v1.2.12
         with:

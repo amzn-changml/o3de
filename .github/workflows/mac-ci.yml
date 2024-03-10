@@ -40,9 +40,9 @@ jobs:
           path: |
             ./3rdParty/downloaded_packages
             ./python
-          key: O3DE-mac-3p-${{ matrix.image }}
           save-always: true
-
+          key: O3DE-mac-3p-${{ matrix.image }}
+          
       - uses: hendrikmuhs/ccache-action@v1.2.12
         with:
           key: O3DE-mac-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
@@ -59,7 +59,7 @@ jobs:
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B build -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DLY_3RDPARTY_PATH=./3rdParty
+          cmake -B build -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DLY_3RDPARTY_PATH=./3rdParty
           
       - name: Build
         run: |

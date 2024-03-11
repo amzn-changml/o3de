@@ -42,7 +42,7 @@ jobs:
           path: |
             ${{ github.workspace }}\3rdParty\downloaded_packages
             ${{ github.workspace }}\python\
-          key: O3DE-windows-3p-${{ matrix.image }}
+          key: O3DE-windows-3p-windows-2022
           save-always: true
       
       - name: Cache build
@@ -51,7 +51,7 @@ jobs:
         with:
           path: |
             ${{ github.workspace }}\build\
-          key: O3DE-windows-build-${{ matrix.image }}
+          key: O3DE-windows-build-windows-2022
           save-always: true
           
       - uses: hendrikmuhs/ccache-action@v1.2.12
@@ -78,4 +78,4 @@ jobs:
           
       - name: Build
         run: 
-          cmake --build build --target Editor --config ${{ matrix.config }} -j2
+          cmake --build build --target Editor --config ${{ matrix.config }} -j1

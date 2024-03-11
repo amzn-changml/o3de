@@ -38,8 +38,8 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            ./3rdParty/downloaded_packages
-            ./python
+            ${{ github.workspace }}/3rdParty/downloaded_packages
+            ${{ github.workspace }}/python
           key: O3DE-mac-3p-${{ matrix.image }}
           save-always: true
       
@@ -48,7 +48,7 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            ${{ github.workspace }}\build
+            ${{ github.workspace }}/build
           key: O3DE-mac-build-${{ matrix.image }}
           save-always: true
           

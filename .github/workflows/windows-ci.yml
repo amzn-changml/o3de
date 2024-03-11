@@ -36,7 +36,7 @@ jobs:
           "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
                      
       - name: Cache 3p
-        uses: actions/cache@v3.3.3
+        uses: actions/cache@v3.0.11
         continue-on-error: true
         with:
           path: |
@@ -46,7 +46,7 @@ jobs:
           save-always: true
       
       - name: Cache build
-        uses: actions/cache@v3.3.3
+        uses: actions/cache@v3.0.11
         continue-on-error: true
         with:
           path: |

@@ -20,7 +20,7 @@ jobs:
       CMAKE_CXX_COMPILER_LAUNCHER: sccache
 
     steps:               
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4.1.1
         with:
           fetch-depth: 0
       
@@ -36,23 +36,25 @@ jobs:
           "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
                      
       - name: Cache 3p
-        uses: actions/cache@v3.0.11
+        uses: actions/cache@v4.0.1
         continue-on-error: true
         with:
           path: |
             ${{ github.workspace }}\3rdParty\downloaded_packages
             ${{ github.workspace }}\python\
           key: O3DE-windows-3p-${{ matrix.image }}
-          save-always: true
+          restore-keys: |
+            O3DE-windows-3p-
       
       - name: Cache build
-        uses: actions/cache@v3.0.11
+        uses: actions/cache@v4.0.1
         continue-on-error: true
         with:
           path: |
             ${{ github.workspace }}\build\
           key: O3DE-windows-build-${{ matrix.image }}
-          save-always: true
+          restore-keys: |
+            O3DE-windows-build-
           
       - uses: hendrikmuhs/ccache-action@v1.2.12
         with:
@@ -79,3 +81,22 @@ jobs:
       - name: Build
         run: 
           cmake --build build --target Editor --config ${{ matrix.config }} -j1
+
+      - name: Save cache 3p
+        uses: actions/cache/save@v4.0.1
+        continue-on-error: true
+        if: always()
+        with:
+          path: |
+            ${{ github.workspace }}\3rdParty\downloaded_packages
+            ${{ github.workspace }}\python
+          key: O3DE-windows-3p-${{ matrix.image }}
+      
+      - name: Save cache build
+        uses: actions/cache/save@v4.0.1
+        continue-on-error: true
+        if: always()
+        with:
+          path: |
+            ${{ github.workspace }}\build
+          key: O3DE-windows-build-${{ matrix.image }}

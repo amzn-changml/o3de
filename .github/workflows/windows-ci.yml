@@ -36,22 +36,22 @@ jobs:
           "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
                      
       - name: Cache 3p
-        uses: actions/cache@v4
+        uses: actions/cache@v3.3.3
         continue-on-error: true
         with:
           path: |
             ${{ github.workspace }}\3rdParty\downloaded_packages
             ${{ github.workspace }}\python\
-          key: O3DE-windows-3p-windows-2022
+          key: O3DE-windows-3p-${{ matrix.image }}
           save-always: true
       
       - name: Cache build
-        uses: actions/cache@v4
+        uses: actions/cache@v3.3.3
         continue-on-error: true
         with:
           path: |
             ${{ github.workspace }}\build\
-          key: O3DE-windows-build-windows-2022
+          key: O3DE-windows-build-${{ matrix.image }}
           save-always: true
           
       - uses: hendrikmuhs/ccache-action@v1.2.12

@@ -34,14 +34,23 @@ jobs:
           git lfs checkout
           
       - name: Cache 3p
-        uses: actions/cache@v4
+        uses: actions/cache@v4.0.1
         continue-on-error: true
         with:
           path: |
             ./3rdParty/downloaded_packages
             ./python
-          save-always: true
           key: O3DE-mac-3p-${{ matrix.image }}
+          save-always: true
+      
+      - name: Cache build
+        uses: actions/cache@v4.0.1
+        continue-on-error: true
+        with:
+          path: |
+            ${{ github.workspace }}\build
+          key: O3DE-mac-build-${{ matrix.image }}
+          save-always: true
           
       - uses: hendrikmuhs/ccache-action@v1.2.12
         with:

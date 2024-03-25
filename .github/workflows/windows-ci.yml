@@ -15,10 +15,6 @@ jobs:
 
     runs-on: ${{ matrix.image }}
 
-    env:
-      CMAKE_C_COMPILER_LAUNCHER: sccache
-      CMAKE_CXX_COMPILER_LAUNCHER: sccache
-
     steps:               
       - uses: actions/checkout@v4.1.1
         with:
@@ -79,7 +75,7 @@ jobs:
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B build -G "Ninja" -DLY_3RDPARTY_PATH=3rdParty -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          cmake -B build -G "Ninja" -DLY_3RDPARTY_PATH=3rdParty -j3
           
       - name: Build
         run: 

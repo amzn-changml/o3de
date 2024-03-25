@@ -55,11 +55,11 @@ jobs:
           restore-keys: |
             O3DE-windows-build-
           
-      - uses: hendrikmuhs/ccache-action@v1.2.12
-        with:
-          key: O3DE-windows-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
-          max-size: 2048M
-          variant: sccache
+#      - uses: hendrikmuhs/ccache-action@v1.2.12
+#        with:
+#          key: O3DE-windows-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
+#          max-size: 2048M
+#          variant: sccache
 
       - uses: lukka/get-cmake@latest
         

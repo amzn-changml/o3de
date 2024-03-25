@@ -83,7 +83,7 @@ jobs:
           
       - name: Build
         run: 
-          cmake --build build --target Editor --config ${{ matrix.config }} -j3
+          cmake --build build --target Editor --config ${{ matrix.config }}
 
       - name: Save cache 3p
         uses: actions/cache/save@v4.0.1

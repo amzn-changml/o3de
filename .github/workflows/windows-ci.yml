@@ -75,11 +75,11 @@ jobs:
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B build -G "Ninja" -DLY_3RDPARTY_PATH=3rdParty -j3
+          cmake -B build -G "Ninja" -DLY_3RDPARTY_PATH=3rdParty
           
       - name: Build
         run: 
-          cmake --build build --target Editor --config ${{ matrix.config }}
+          cmake --build build --target Editor --config ${{ matrix.config }} -j3
 
       - name: Save cache 3p
         uses: actions/cache/save@v4.0.1

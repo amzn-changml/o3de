@@ -11,6 +11,7 @@ jobs:
       matrix:
         compiler: [msvc]
         config: [profile]
+        target: [editor]
         image: [windows-2022]
 
     runs-on: ${{ matrix.image }}
@@ -32,7 +33,7 @@ jobs:
           "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
                      
       - name: Cache 3p
-        uses: actions/cache@v4.0.1
+        uses: actions/cache/restore@v4.0.2
         continue-on-error: true
         with:
           path: |
@@ -41,15 +42,17 @@ jobs:
           key: O3DE-windows-3p-${{ matrix.image }}
           restore-keys: |
             O3DE-windows-3p-
+            O3DE-${{ matrix.image }}-3p
       
       - name: Cache build
-        uses: actions/cache@v4.0.1
+        uses: actions/cache/restore@v4.0.2
         continue-on-error: true
         with:
           path: c:\o3de\build
           key: O3DE-windows-build-${{ matrix.image }}
           restore-keys: |
             O3DE-windows-build-
+            O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
 
       - uses: lukka/get-cmake@latest
         
@@ -65,26 +68,26 @@ jobs:
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B build -G "Ninja" -DLY_3RDPARTY_PATH=3rdParty
+          cmake -B build -G "Visual Studio 17 2022" -DLY_3RDPARTY_PATH=3rdParty
           
       - name: Build
         run: 
-          cmake --build build --target Editor --config ${{ matrix.config }} -j3
+          cmake --build build --target ${{ matrix.target }} --config ${{ matrix.config }} -j3
 
       - name: Save cache 3p
-        uses: actions/cache/save@v4.0.1
+        uses: actions/cache/save@v4.0.2
         continue-on-error: true
         if: always()
         with:
           path: |
             ${{ github.workspace }}\3rdParty\downloaded_packages
             ${{ github.workspace }}\python
-          key: O3DE-windows-3p-${{ matrix.image }}
+          key: O3DE-${{ matrix.image }}-3p
       
       - name: Save cache build
-        uses: actions/cache/save@v4.0.1
+        uses: actions/cache/save@v4.0.2
         continue-on-error: true
         if: always()
         with:
           path: c:\o3de\build
-          key: O3DE-windows-build-${{ matrix.image }}
+          key: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}

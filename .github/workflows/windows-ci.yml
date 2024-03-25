@@ -11,7 +11,7 @@ jobs:
       matrix:
         compiler: [msvc]
         config: [profile]
-        target: [editor]
+        target: [ALL_BUILD]
         image: [windows-2022]
 
     runs-on: ${{ matrix.image }}
@@ -51,7 +51,6 @@ jobs:
           key: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
           restore-keys: |
             O3DE-windows-build-
-            O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
 
       - uses: lukka/get-cmake@latest
         
@@ -67,7 +66,7 @@ jobs:
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B c\o3de\build build -G "Visual Studio 17 2022" -DLY_3RDPARTY_PATH=3rdParty
+          cmake -B c:\o3de\build -G "Visual Studio 17 2022" -DLY_3RDPARTY_PATH=3rdParty
           
       - name: Build
         run: 

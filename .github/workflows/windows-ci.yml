@@ -41,7 +41,7 @@ jobs:
         with:
           path: |
             ${{ github.workspace }}\3rdParty\downloaded_packages
-            ${{ github.workspace }}\python\
+            ${{ github.workspace }}\python
           key: O3DE-windows-3p-${{ matrix.image }}
           restore-keys: |
             O3DE-windows-3p-
@@ -50,7 +50,7 @@ jobs:
         uses: actions/cache@v4.0.1
         continue-on-error: true
         with:
-          path: ${{ github.workspace }}\build\
+          path: c:\o3de\build
           key: O3DE-windows-build-${{ matrix.image }}
           restore-keys: |
             O3DE-windows-build-
@@ -96,5 +96,5 @@ jobs:
         continue-on-error: true
         if: always()
         with:
-          path: ${{ github.workspace }}\build
+          path: c:\o3de\build
           key: O3DE-windows-build-${{ matrix.image }}

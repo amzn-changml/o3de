@@ -40,12 +40,8 @@ RUN apt-get -y install tar sudo less vim lsof firewalld net-tools pciutils \
                    software-properties-common
  
 # Install build and development tools
-RUN git clone --no-checkout https://github.com/o3de/o3de.git .o3de && \
-    cd .o3de && \
-    git sparse-checkout init --cone && \
-    git sparse-checkout set scripts/build/build_node && \
-    cd scripts/build/build_node/Platform/Linux && \
-    ./install-ubuntu.sh
+COPY . /
+RUN ./install-ubuntu.sh
 
 # Install supported version of cmake if build tool installation runs into issues
 ENV CMAKE_VER=3.21.1-0kitware1ubuntu20.04.1

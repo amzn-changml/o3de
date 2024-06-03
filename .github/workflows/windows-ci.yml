@@ -43,14 +43,13 @@ jobs:
           restore-keys: |
             O3DE-windows-3p-
       
-      - name: Cache build
-        uses: actions/cache/restore@v4.0.2
+      - name: Restore build
+        uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           path: c:\o3de\build
-          key: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
-          restore-keys: |
-            O3DE-windows-build-
+          name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: lukka/get-cmake@latest
         
@@ -82,10 +81,11 @@ jobs:
             ${{ github.workspace }}\python
           key: O3DE-${{ matrix.image }}-3p
       
-      - name: Save cache build
-        uses: actions/cache/save@v4.0.2
+      - name: Save build
+        uses: actions/download-artifact@v4
         continue-on-error: true
         if: always()
         with:
           path: c:\o3de\build
-          key: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
+          name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

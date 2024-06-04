@@ -69,7 +69,7 @@ jobs:
           
       - name: Build
         run: 
-          cmake --build c:\o3de\build --target ${{ matrix.target }} --config ${{ matrix.config }} -j3
+          cmake --build c:\o3de\build --target ${{ matrix.target }} --config ${{ matrix.config }} -j4
 
       - name: Save cache 3p
         uses: actions/cache/save@v4.0.2
@@ -82,7 +82,7 @@ jobs:
           key: O3DE-${{ matrix.image }}-3p
       
       - name: Save build
-        uses: actions/download-artifact@v4
+        uses: actions/upload-artifact@v4
         continue-on-error: true
         if: always()
         with:

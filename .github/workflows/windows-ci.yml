@@ -17,23 +17,24 @@ jobs:
     runs-on: ${{ matrix.image }}
 
     steps:               
-      - uses: actions/checkout@v4.1.1
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
       - name: Git LFS fetch
         run: |
           git lfs install
-          git lfs fetch --include "*.ico"
+          git lfs fetch --include "*.ico" --exclude "*.*"
+          git lfs checkout
       
       - name: Create binary folders
         run: |
-          "build","3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-          "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
-          Get-Volume
+          # "build","3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
+          # "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
+          Get-Volume -DriveLetter C,D
                      
       - name: Cache 3p
-        uses: actions/cache/restore@v4.0.2
+        uses: actions/cache/restore@v4
         continue-on-error: true
         with:
           path: |
@@ -76,7 +77,7 @@ jobs:
           cmake --build c:\o3de\build --target ${{ matrix.target }} --config ${{ matrix.config }} -j4
 
       - name: Save cache 3p
-        uses: actions/cache/save@v4.0.2
+        uses: actions/cache/save@v4
         continue-on-error: true
         if: always()
         with:

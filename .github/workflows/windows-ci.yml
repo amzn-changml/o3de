@@ -24,13 +24,13 @@ jobs:
       - name: Git LFS fetch
         run: |
           git lfs install
-          git lfs fetch --include="*.ico"
-          git lfs checkout
+          git lfs fetch --include "*.ico"
       
       - name: Create binary folders
         run: |
           "build","3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
           "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
+          Get-Volume
                      
       - name: Cache 3p
         uses: actions/cache/restore@v4.0.2
@@ -87,6 +87,7 @@ jobs:
 
       - name: Compress Build
         continue-on-error: true
+        if: always()
         run: tar -a -cf c:\o3de\build.zip c:\o3de\build
       
       - name: Save build
@@ -96,4 +97,3 @@ jobs:
         with:
           path: c:\o3de\build.zip
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}

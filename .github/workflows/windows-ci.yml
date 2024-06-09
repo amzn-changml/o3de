@@ -24,13 +24,14 @@ jobs:
       - name: Git LFS fetch
         run: |
           git lfs install
-          git lfs fetch --include "*.ico" --exclude "*.*"
+          git lfs fetch --include "*.ico"
           git lfs checkout
       
       - name: Create binary folders
         run: |
           # "build","3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-          # "build","3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
+          "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
+          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
           Get-Volume -DriveLetter C,D
                      
       - name: Cache 3p
@@ -48,13 +49,15 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          path: c:\o3de\build.zip
+          path: ${{ github.workspace }}\build.zip
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Decompress Build
         continue-on-error: true
-        run: tar -m -xf c:\o3de\build.zip 
+        run: |
+          tar -m -xf ${{ github.workspace }}\build.zip
+          rm ${{ github.workspace }}\build.zip
 
       - uses: lukka/get-cmake@latest
         
@@ -70,11 +73,11 @@ jobs:
       - name: Configure
         run: |
           echo "Generating project..."
-          cmake -B c:\o3de\build -G "Visual Studio 17 2022" -DLY_3RDPARTY_PATH=3rdParty
+          cmake -B ${{ github.workspace }}\build -G "Visual Studio 17 2022" -DLY_3RDPARTY_PATH=3rdParty
           
       - name: Build
         run: 
-          cmake --build c:\o3de\build --target ${{ matrix.target }} --config ${{ matrix.config }} -j4
+          cmake --build ${{ github.workspace }}\build --target ${{ matrix.target }} --config ${{ matrix.config }} -j4
 
       - name: Save cache 3p
         uses: actions/cache/save@v4
@@ -89,7 +92,7 @@ jobs:
       - name: Compress Build
         continue-on-error: true
         if: always()
-        run: tar -a -cf c:\o3de\build.zip c:\o3de\build
+        run: tar -a -cf ${{ github.workspace }}\build.zip ${{ github.workspace }}\build
       
       - name: Save build
         uses: actions/upload-artifact@v4

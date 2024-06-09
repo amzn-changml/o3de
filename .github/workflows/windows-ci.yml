@@ -56,8 +56,8 @@ jobs:
       - name: Decompress Build
         continue-on-error: true
         run: |
-          tar -m -xf ${{ github.workspace }}\build.zip
-          rm ${{ github.workspace }}\build.zip
+          tar -m -xf ${{ github.workspace }}\build.tar
+          rm ${{ github.workspace }}\build.tar
 
       - uses: lukka/get-cmake@latest
         
@@ -92,12 +92,12 @@ jobs:
       - name: Compress Build
         continue-on-error: true
         if: always()
-        run: tar -a -cf ${{ github.workspace }}\build.zip ${{ github.workspace }}\build
+        run: tar -cf c:\o3de\build.tar ${{ github.workspace }}\build
       
       - name: Save build
         uses: actions/upload-artifact@v4
         continue-on-error: true
         if: always()
         with:
-          path: c:\o3de\build.zip
+          path: c:\o3de\build.tar
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}

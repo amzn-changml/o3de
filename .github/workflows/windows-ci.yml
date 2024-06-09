@@ -52,6 +52,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Decompress Build
+        continue-on-error: true
         run: tar -m -xf c:\o3de\build.zip 
 
       - uses: lukka/get-cmake@latest
@@ -85,6 +86,7 @@ jobs:
           key: O3DE-${{ matrix.image }}-3p
 
       - name: Compress Build
+        continue-on-error: true
         run: tar -a -cf c:\o3de\build.zip c:\o3de\build
       
       - name: Save build

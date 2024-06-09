@@ -47,9 +47,12 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          path: c:\o3de\build
+          path: c:\o3de\build.zip
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decompress Build
+        run: tar -m -xf c:\o3de\build.zip 
 
       - uses: lukka/get-cmake@latest
         
@@ -80,12 +83,15 @@ jobs:
             ${{ github.workspace }}\3rdParty\downloaded_packages
             ${{ github.workspace }}\python
           key: O3DE-${{ matrix.image }}-3p
+
+      - name: Compress Build
+        run: tar -a -cf c:\o3de\build.zip c:\o3de\build
       
       - name: Save build
         uses: actions/upload-artifact@v4
         continue-on-error: true
         if: always()
         with:
-          path: c:\o3de\build
+          path: c:\o3de\build.zip
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

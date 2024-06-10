@@ -56,7 +56,7 @@ jobs:
       - name: Decompress Build
         continue-on-error: true
         run: |
-          7z.exe x -ttar ${{ github.workspace }}\build.tar ${{ github.workspace }}\
+          7z.exe x ${{ github.workspace }}\build.tar ${{ github.workspace }}\
           del ${{ github.workspace }}\build.tar
 
       - uses: lukka/get-cmake@latest
@@ -93,12 +93,12 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          7z.exe a -ttar c:\o3de\build.tar ${{ github.workspace }}\build
+          7z.exe a -tzip c:\o3de\build.zip ${{ github.workspace }}\build
       
       - name: Save build
         uses: actions/upload-artifact@v4
         continue-on-error: true
         if: always()
         with:
-          path: c:\o3de\build.tar
+          path: c:\o3de\build.zip
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}

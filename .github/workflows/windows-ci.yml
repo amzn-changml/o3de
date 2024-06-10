@@ -48,7 +48,7 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          run-id: 9447019273
+          run-id: 9447278841
           path: ${{ github.workspace }}\
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -56,7 +56,7 @@ jobs:
       - name: Decompress Build
         continue-on-error: true
         run: |
-          7z.exe x ${{ github.workspace }}\build.zip
+          7z.exe x -mmt=4 ${{ github.workspace }}\build.zip
           del ${{ github.workspace }}\build.zip
 
       - uses: lukka/get-cmake@latest
@@ -93,7 +93,7 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          7z.exe a -tzip c:\o3de\build.zip ${{ github.workspace }}\build
+          7z.exe a -tzip -mmt=4 -mx=1 -mm=BZip2 c:\o3de\build.zip ${{ github.workspace }}\build
       
       - name: Save build
         uses: actions/upload-artifact@v4
@@ -102,3 +102,4 @@ jobs:
         with:
           path: c:\o3de\build.zip
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
+          compression-level: 0

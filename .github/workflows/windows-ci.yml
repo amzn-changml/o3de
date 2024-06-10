@@ -56,7 +56,7 @@ jobs:
       - name: Decompress Build
         continue-on-error: true
         run: |
-          7z.exe x ${{ github.workspace }}\build.zip ${{ github.workspace }}\
+          7z.exe x ${{ github.workspace }}\build.zip
           del ${{ github.workspace }}\build.zip
 
       - uses: lukka/get-cmake@latest

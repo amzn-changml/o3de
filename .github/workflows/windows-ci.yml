@@ -32,7 +32,6 @@ jobs:
           # "build","3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
           "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
           "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
-          Get-Volume -DriveLetter C,D
                      
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4
@@ -50,15 +49,15 @@ jobs:
         continue-on-error: true
         with:
           run-id: 9442565432
-          path: ${{ github.workspace }}\build.zip
+          path: ${{ github.workspace }}\
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Decompress Build
         continue-on-error: true
         run: |
-          7z.exe x -tzip ${{ github.workspace }}\build.zip ${{ github.workspace }}\
-          del ${{ github.workspace }}\build.zip
+          7z.exe x -ttar ${{ github.workspace }}\build.tar ${{ github.workspace }}\
+          del ${{ github.workspace }}\build.tar
 
       - uses: lukka/get-cmake@latest
         
@@ -94,12 +93,12 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          7z.exe a -tzip c:\o3de\build.zip ${{ github.workspace }}\build
+          7z.exe a -ttar c:\o3de\build.tar ${{ github.workspace }}\build
       
       - name: Save build
         uses: actions/upload-artifact@v4
         continue-on-error: true
         if: always()
         with:
-          path: c:\o3de\build.zip
+          path: c:\o3de\build.tar
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}

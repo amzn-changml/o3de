@@ -34,7 +34,7 @@ jobs:
           "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
           Get-Volume -DriveLetter C,D
                      
-      - name: Cache 3p
+      - name: Restore 3P Cache
         uses: actions/cache/restore@v4
         continue-on-error: true
         with:
@@ -79,7 +79,7 @@ jobs:
         run: 
           cmake --build ${{ github.workspace }}\build --target ${{ matrix.target }} --config ${{ matrix.config }} -j4
 
-      - name: Save cache 3p
+      - name: Save 3P Cache
         uses: actions/cache/save@v4
         continue-on-error: true
         if: always()

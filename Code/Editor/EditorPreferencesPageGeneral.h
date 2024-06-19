@@ -58,13 +58,15 @@ private:
         bool m_stylusMode;
         bool m_restoreViewportCamera;
         bool m_bShowNews;
+        
         bool m_enableSceneInspector;
     };
 
-    struct LevelSaveSettings
+    struct LevelSaveSettings // do not change the name or the UUID of this struct for backward settings compat.
     {
         AZ_TYPE_INFO(LevelSaveSettings, "{E297DAE3-3985-4BC2-8B43-45F3B1522F6B}");
         AzToolsFramework::Prefab::SaveAllPrefabsPreference m_saveAllPrefabsPreference;
+        bool m_bDetachPrefabRemovesContainer;
     };
 
     struct Messaging
@@ -72,7 +74,6 @@ private:
         AZ_TYPE_INFO(Messaging, "{A6AD87CB-E905-409B-A2BF-C43CDCE63B0C}")
 
         bool m_showDashboard;
-        bool m_showCircularDependencyError;
     };
 
     struct Undo
@@ -80,21 +81,12 @@ private:
         AZ_TYPE_INFO(Undo, "{A3AC0728-F132-4BF2-B122-8A631B636E81}")
 
         int m_undoLevels;
-        bool m_undoSliceOverrideSaveValue;
-    };
-
-    struct SliceSettings
-    {
-        AZ_TYPE_INFO(SliceSettings, "{8505CCC1-874C-4389-B51A-B9E5FF70CFDA}")
-
-        bool m_slicesDynamicByDefault;
     };
 
     GeneralSettings m_generalSettings;
     LevelSaveSettings m_levelSaveSettings;
     Messaging m_messaging;
     Undo m_undo;
-    SliceSettings m_sliceSettings;
     QIcon m_icon;
 };
 

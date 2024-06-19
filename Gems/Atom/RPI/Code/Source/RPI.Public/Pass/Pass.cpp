@@ -63,6 +63,10 @@ namespace AZ
             m_flags.m_pipelineStatisticsQueryEnabled = false;
 
             m_template = descriptor.m_passTemplate;
+            if (m_template)
+            {
+                m_defaultShaderAttachmentStage = m_template->m_defaultShaderAttachmentStage;
+            }
 
             if (descriptor.m_passRequest != nullptr)
             {
@@ -96,7 +100,15 @@ namespace AZ
             PassDescriptor desc;
             desc.m_passName = m_name;
             desc.m_passTemplate = m_template ? PassSystemInterface::Get()->GetPassTemplate(m_template->m_name) : nullptr;
-            desc.m_passRequest = m_flags.m_createdByPassRequest ? &m_request : nullptr;
+            if (m_flags.m_createdByPassRequest)
+            {
+                desc.m_passRequest = AZStd::make_shared<PassRequest>(m_request);
+            }
+            else
+            {
+                desc.m_passRequest.reset();
+            }
+            
             desc.m_passData = m_passData;
             return desc;
         }
@@ -215,6 +227,13 @@ namespace AZ
         void Pass::AddAttachmentBinding(PassAttachmentBinding attachmentBinding)
         {
             auto index = static_cast<uint8_t>(m_attachmentBindings.size());
+            if (attachmentBinding.m_scopeAttachmentStage == RHI::ScopeAttachmentStage::Uninitialized)
+            {
+                attachmentBinding.m_scopeAttachmentStage = attachmentBinding.m_scopeAttachmentUsage == RHI::ScopeAttachmentUsage::Shader
+                    ? m_defaultShaderAttachmentStage
+                    : RHI::ScopeAttachmentStage::Any;
+            }
+
             // Add the binding. This will assert if the fixed size array is full.
             m_attachmentBindings.push_back(attachmentBinding);
 
@@ -1030,6 +1049,26 @@ namespace AZ
             for (PassAttachmentBinding& binding : m_attachmentBindings)
             {
                 UpdateConnectedBinding(binding);
+            }
+        }
+
+        void Pass::UpdateConnectedInputBindings()
+        {
+            for (uint8_t idx : m_inputBindingIndices)
+            {
+                UpdateConnectedBinding(m_attachmentBindings[idx]);
+            }
+            for (uint8_t idx : m_inputOutputBindingIndices)
+            {
+                UpdateConnectedBinding(m_attachmentBindings[idx]);
+            }
+        }
+
+        void Pass::UpdateConnectedOutputBindings()
+        {
+            for (uint8_t idx : m_outputBindingIndices)
+            {
+                UpdateConnectedBinding(m_attachmentBindings[idx]);
             }
         }
 

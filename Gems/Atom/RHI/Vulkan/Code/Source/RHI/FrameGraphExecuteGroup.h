@@ -7,11 +7,10 @@
  */
 #pragma once
 
+#include <Atom/RHI/FrameGraphExecuteGroup.h>
 #include <RHI/CommandList.h>
 #include <RHI/CommandQueue.h>
 #include <RHI/Scope.h>
-#include <RHI/CommandQueue.h>
-#include <Atom/RHI/FrameGraphExecuteGroup.h>
 
 namespace AZ
 {
@@ -38,6 +37,7 @@ namespace AZ
             const RHI::GraphGroupId& GetGroupId() const;
 
             virtual AZStd::span<const Scope* const> GetScopes() const = 0;
+            virtual AZStd::span<Scope* const> GetScopes() = 0;
 
             virtual AZStd::span<const RHI::Ptr<CommandList>> GetCommandLists() const = 0;
 

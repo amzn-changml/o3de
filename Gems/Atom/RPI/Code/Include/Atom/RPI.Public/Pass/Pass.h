@@ -309,6 +309,12 @@ namespace AZ
             // Update all bindings on this pass that are connected to bindings on other passes
             virtual void UpdateConnectedBindings();
 
+            // Update input and input/output bindings on this pass that are connected to bindings on other passes
+            void UpdateConnectedInputBindings();
+
+            // Update output bindings on this pass that are connected to bindings on other passes
+            void UpdateConnectedOutputBindings();
+
         protected:
             explicit Pass(const PassDescriptor& descriptor);
 
@@ -510,6 +516,9 @@ namespace AZ
 
             //! Optional data used during pass initialization
             AZStd::shared_ptr<PassData> m_passData = nullptr;
+
+            //! Default RHI::ScopeAttachmentStage value for all pass attachments of usage RHI::ScopeAttachmentUsage::Shader
+            RHI::ScopeAttachmentStage m_defaultShaderAttachmentStage = RHI::ScopeAttachmentStage::AnyGraphics;
 
         private:
             // Return the Timestamp result of this pass

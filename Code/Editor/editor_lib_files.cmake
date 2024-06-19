@@ -222,6 +222,7 @@ set(FILES
     res/veed_tree.bmp
     res/vegetati.bmp
     res/vegtree.bmp
+    res/Prefab_80.svg
     res/video_record.ico
     res/warning16x16.ico
     res/water.bmp
@@ -264,14 +265,11 @@ set(FILES
     Include/IEditorClassFactory.h
     Include/ILogFile.h
     Include/IKeyTimeSet.h
-    Include/IObjectManager.h
     Include/IPlugin.h
     Include/IPreferencesPage.h
     Include/ISourceControl.h
     Include/ObjectEvent.h
     Util/AffineParts.cpp
-    Objects/BaseObject.cpp
-    Objects/BaseObject.h
     AnimationContext.cpp
     AnimationContext.h
     AzAssetBrowser/AzAssetBrowserRequestHandler.cpp
@@ -382,6 +380,7 @@ set(FILES
     NewLevelDialog.cpp
     NewLevelDialog.h
     NewLevelDialog.ui
+    NewLevelDialog.qrc
     Dialogs/PythonScriptsDialog.cpp
     Dialogs/PythonScriptsDialog.h
     Dialogs/PythonScriptsDialog.ui
@@ -390,9 +389,7 @@ set(FILES
     EditorFileMonitor.cpp
     EditorFileMonitor.h
     Include/IEditorFileMonitor.h
-    GameExporter.cpp
     GameResourcesExporter.cpp
-    GameExporter.h
     GameResourcesExporter.h
     DocMultiArchive.h
     FBXExporterDialog.h
@@ -406,18 +403,6 @@ set(FILES
     LevelIndependentFileMan.h
     LogFileImpl.cpp
     LogFileImpl.h
-    Objects/ClassDesc.h
-    Objects/DisplayContextShared.inl
-    Objects/ObjectLoader.cpp
-    Objects/ObjectLoader.h
-    Objects/ObjectManager.cpp
-    Objects/ObjectManager.h
-    Objects/ObjectManagerLegacyUndo.cpp
-    Objects/ObjectManagerLegacyUndo.h
-    Objects/DisplayContext.cpp
-    Objects/DisplayContext.h
-    Objects/EntityObject.cpp
-    Objects/EntityObject.h
     PythonEditorFuncs.cpp
     PythonEditorFuncs.h
     QtUI/WaitCursor.h

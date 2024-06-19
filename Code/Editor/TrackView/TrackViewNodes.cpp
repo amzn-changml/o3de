@@ -45,7 +45,6 @@
 // Editor
 #include "TrackView/TVEventsDialog.h"
 #include "TrackView/TrackViewDialog.h"
-#include "Objects/ObjectManager.h"
 #include "Util/AutoDirectoryRestoreFileDialog.h"
 #include "TrackViewFBXImportPreviewDialog.h"
 #include "AnimationContext.h"
@@ -172,7 +171,7 @@ protected:
             if (allValidReparenting && !nodes.isEmpty())
             {
                 // By default here the drop action is a CopyAction. That is what we want in case
-                // some other random control accepts this drop (and then does nothing with the data). 
+                // some other random control accepts this drop (and then does nothing with the data).
                 // If that happens we will not receive any notifications. If the Action default was MoveAction,
                 // the dragged items in the tree would be deleted out from under us causing a crash.
                 // Since we are here, we know this drop is on the same control so we can
@@ -486,11 +485,7 @@ int CTrackViewNodesCtrl::GetIconIndexForTrack(const CTrackViewTrack* pTrack) con
 
     AnimParamType type = paramType.GetType();
 
-    if (type == AnimParamType::FOV)
-    {
-        nImage = 2;
-    }
-    else if (type == AnimParamType::Position)
+    if (type == AnimParamType::Position)
     {
         nImage = 3;
     }
@@ -1003,14 +998,7 @@ void CTrackViewNodesCtrl::OnNMRclick(QPoint point)
 
     float scrollPos = SaveVerticalScrollPos();
 
-    if (cmd == eMI_SetAsViewCamera)
-    {
-        if (animNode && animNode->GetType() == AnimNodeType::Camera)
-        {
-            animNode->SetAsViewCamera();
-        }
-    }
-    else if (cmd == eMI_RemoveSelected)
+    if (cmd == eMI_RemoveSelected)
     {
         // If we are about to delete the sequence, cancel the notification
         // context, otherwise it will notify on a stale sequence pointer.
@@ -1220,18 +1208,6 @@ void CTrackViewNodesCtrl::OnNMRclick(QPoint point)
                 groupNode->GetAnimNodesByType(AnimNodeType::AzEntity).CollapseAll();
                 undoBatch.MarkEntityDirty(groupNode->GetSequence()->GetSequenceComponentEntityId());
             }
-            else if (cmd == eMI_ExpandCameras)
-            {
-                AzToolsFramework::ScopedUndoBatch undoBatch("Expand Track View cameras");
-                groupNode->GetAnimNodesByType(AnimNodeType::Camera).ExpandAll();
-                undoBatch.MarkEntityDirty(groupNode->GetSequence()->GetSequenceComponentEntityId());
-            }
-            else if (cmd == eMI_CollapseCameras)
-            {
-                AzToolsFramework::ScopedUndoBatch undoBatch("Collapse Track View cameras");
-                groupNode->GetAnimNodesByType(AnimNodeType::Camera).CollapseAll();
-                undoBatch.MarkEntityDirty(groupNode->GetSequence()->GetSequenceComponentEntityId());
-            }
             else if (cmd == eMI_ExpandEvents)
             {
                 AzToolsFramework::ScopedUndoBatch undoBatch("Expand Track View events");
@@ -1244,7 +1220,7 @@ void CTrackViewNodesCtrl::OnNMRclick(QPoint point)
                 groupNode->GetAnimNodesByType(AnimNodeType::Event).CollapseAll();
                 undoBatch.MarkEntityDirty(groupNode->GetSequence()->GetSequenceComponentEntityId());
             }
-        }  
+        }
     }
 
     if (cmd == eMI_EditEvents)
@@ -1320,7 +1296,13 @@ void CTrackViewNodesCtrl::OnNMRclick(QPoint point)
                 }
             } while (retryRename);
 
-            if (!newName.isEmpty())
+            if(!GetNodeRecord(animNode2)) {
+                QMessageBox::warning(
+                    this,
+                    tr("Entity does not exist"),
+                    tr("Entity has been deleted.\n\nUnable to rename entity"));
+            }
+            else if (!newName.isEmpty())
             {
                 const CTrackViewSequenceManager* sequenceManager = GetIEditor()->GetSequenceManager();
                 sequenceManager->RenameNode(animNode2, newName.toUtf8().data());
@@ -1660,11 +1642,6 @@ int CTrackViewNodesCtrl::ShowPopupMenuSingleSelection(SContextMenu& contextMenu,
 
         contextMenu.main.addAction("Select In Viewport")->setData(eMI_SelectInViewport);
 
-        if (animNode->GetType() == AnimNodeType::Camera)
-        {
-            contextMenu.main.addAction("Set As View Camera")->setData(eMI_SetAsViewCamera);
-        }
-
         bAppended = true;
     }
 
@@ -1772,8 +1749,6 @@ int CTrackViewNodesCtrl::ShowPopupMenuSingleSelection(SContextMenu& contextMenu,
             contextMenu.collapseSub.addAction("Collapse Folders")->setData(eMI_CollapseFolders);
             contextMenu.expandSub.addAction("Expand Entities")->setData(eMI_ExpandEntities);
             contextMenu.collapseSub.addAction("Collapse Entities")->setData(eMI_CollapseEntities);
-            contextMenu.expandSub.addAction("Expand Cameras")->setData(eMI_ExpandCameras);
-            contextMenu.collapseSub.addAction("Collapse Cameras")->setData(eMI_CollapseCameras);
             contextMenu.expandSub.addAction("Expand Events")->setData(eMI_ExpandEvents);
             contextMenu.collapseSub.addAction("Collapse Events")->setData(eMI_CollapseEvents);
         }
@@ -1988,7 +1963,7 @@ bool CTrackViewNodesCtrl::FillAddTrackMenu(STrackMenuTreeNode& menuAddTrack, con
     int paramCount = 0;
     IAnimNode::AnimParamInfos animatableProperties;
     CTrackViewNode* parentNode = animNode->GetParentNode();
-   
+
     // all AZ::Entity entities are animated through components. Component nodes always have a parent - the containing AZ::Entity
     if (nodeType == AnimNodeType::Component && parentNode)
     {
@@ -2001,19 +1976,19 @@ bool CTrackViewNodesCtrl::FillAddTrackMenu(STrackMenuTreeNode& menuAddTrack, con
             const AZ::EntityId azEntityId = static_cast<CTrackViewAnimNode*>(parentNode)->GetAzEntityId();
 
             // query the animatable component properties from the Sequence Component
-            Maestro::EditorSequenceComponentRequestBus::Event(const_cast<CTrackViewAnimNode*>(animNode)->GetSequence()->GetSequenceComponentEntityId(), 
-                                                                    &Maestro::EditorSequenceComponentRequestBus::Events::GetAllAnimatablePropertiesForComponent, 
+            Maestro::EditorSequenceComponentRequestBus::Event(const_cast<CTrackViewAnimNode*>(animNode)->GetSequence()->GetSequenceComponentEntityId(),
+                                                                    &Maestro::EditorSequenceComponentRequestBus::Events::GetAllAnimatablePropertiesForComponent,
                                                                     animatableProperties, azEntityId, animNode->GetComponentId());
 
             paramCount = static_cast<int>(animatableProperties.size());
-        }       
+        }
     }
     else
     {
         // legacy Entity
-        paramCount = animNode->GetParamCount(); 
+        paramCount = animNode->GetParamCount();
     }
-    
+
     for (int i = 0; i < paramCount; ++i)
     {
         CAnimParamType paramType;
@@ -2075,9 +2050,9 @@ bool CTrackViewNodesCtrl::FillAddTrackMenu(STrackMenuTreeNode& menuAddTrack, con
             pParamNode->paramType = paramType;
 
             bTracksToAdd = true;
-        }  
+        }
     }
-    
+
     return bTracksToAdd;
 }
 
@@ -2264,10 +2239,9 @@ void CTrackViewNodesCtrl::ShowNextResult()
 void CTrackViewNodesCtrl::Update()
 {
     // Update the Track UI elements with the latest names of the Tracks.
-    // In some cases (save slice overrides) the Track names (param names)
-    // may not be available at the time of the Sequence activation because
-    // they come from the animated entities (which may not be active). So
-    // just update them once a frame to make sure they are the latest.
+    // In some cases the Track names (param names) may not be available at the time
+    // of the Sequence activation because they come from the animated entities (which may not be active).
+    // So just update them once a frame to make sure they are the latest.
     for (auto iter = m_nodeToRecordMap.begin(); iter != m_nodeToRecordMap.end(); ++iter)
     {
         const CTrackViewNode* node = iter->first;
@@ -2417,7 +2391,7 @@ void CTrackViewNodesCtrl::ClearCustomTrackColor(CTrackViewTrack* pTrack)
     }
 
     AzToolsFramework::ScopedUndoBatch undoBatch("Clear Custom Track Color");
-    
+
     pTrack->ClearCustomColor();
     undoBatch.MarkEntityDirty(sequence->GetSequenceComponentEntityId());
 

@@ -14,7 +14,7 @@ namespace AZ::Vulkan
 {
     void FrameGraphExecuteGroupPrimary::Init(
         Device& device,
-        AZStd::vector<const Scope*>&& scopes)
+        AZStd::vector<Scope*>&& scopes)
     {
         AZ_Assert(!scopes.empty(), "Empty list of scopes for Merged group");
         // Use the max graphGroup id as the id of the execute group.
@@ -42,10 +42,12 @@ namespace AZ::Vulkan
             const auto& waitSemaphores = scope->GetWaitSemaphores();
             const auto& signalSemaphores = scope->GetSignalSemaphores();
             const auto& signalFences = scope->GetSignalFences();
+            const auto& waitFences = scope->GetWaitFences();
 
             m_workRequest.m_semaphoresToWait.insert(m_workRequest.m_semaphoresToWait.end(), waitSemaphores.begin(), waitSemaphores.end());
             m_workRequest.m_semaphoresToSignal.insert(m_workRequest.m_semaphoresToSignal.end(), signalSemaphores.begin(), signalSemaphores.end());
             m_workRequest.m_fencesToSignal.insert(m_workRequest.m_fencesToSignal.end(), signalFences.begin(), signalFences.end());
+            m_workRequest.m_fencesToWaitFor.insert(m_workRequest.m_fencesToWaitFor.end(), waitFences.begin(), waitFences.end());
         }
 
         InitMergedRequest request;
@@ -126,6 +128,11 @@ namespace AZ::Vulkan
     }
 
     AZStd::span<const Scope* const> FrameGraphExecuteGroupPrimary::GetScopes() const
+    {
+        return m_scopes;
+    }
+
+    AZStd::span<Scope* const> FrameGraphExecuteGroupPrimary::GetScopes()
     {
         return m_scopes;
     }

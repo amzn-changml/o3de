@@ -8,7 +8,6 @@
 #include "EditorSequenceComponent.h"
 #include "EditorSequenceAgentComponent.h"
 
-#include "Objects/EntityObject.h"
 #include "TrackView/TrackViewSequenceManager.h"
 #include <Maestro/Types/AnimValueType.h>
 #include <Maestro/Types/SequenceType.h>
@@ -318,7 +317,9 @@ namespace Maestro
         {
             s_lastPropertyRefreshTime = time;
 
-            // refresh
+            // refresh.  We have to refresh the entire property tree system since sequences can modify
+            // multiple different shapes in multiple different components.
+            
             AzToolsFramework::ToolsApplicationEvents::Bus::Broadcast(&AzToolsFramework::ToolsApplicationEvents::Bus::Events::InvalidatePropertyDisplay, AzToolsFramework::Refresh_Values);
 
             // disconnect from tick bus now that we've refreshed
@@ -337,23 +338,7 @@ namespace Maestro
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     bool EditorSequenceComponent::MarkEntityAsDirty() const
     {
-        bool retSuccess = false;
-        AZ::Entity* entity = nullptr;
-
-        AZ::ComponentApplicationBus::BroadcastResult(entity, &AZ::ComponentApplicationBus::Events::FindEntity, GetEntityId());
-        if (entity)
-        {
-            CEntityObject* entityObject = nullptr;
-
-            AzToolsFramework::ComponentEntityEditorRequestBus::EventResult(
-                entityObject, GetEntityId(), &AzToolsFramework::ComponentEntityEditorRequestBus::Events::GetSandboxObject);
-            if (entityObject)
-            {
-                entityObject->SetModified(false);
-                retSuccess = true;
-            }
-        }
-        return retSuccess;
+        return false;
     }
 
     //=========================================================================

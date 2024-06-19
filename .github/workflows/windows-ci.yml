@@ -57,7 +57,7 @@ jobs:
       - name: Decompress Build
         continue-on-error: true
         run: |
-          7z.exe x -mmt=4 ${{ github.workspace }}\build.zip
+          7z.exe x -mmt=4 -mta -mtc ${{ github.workspace }}\build.zip
           dir ${{ github.workspace }}\build
           del ${{ github.workspace }}\build.zip
 
@@ -95,7 +95,7 @@ jobs:
       - name: Compress Build
         continue-on-error: true
         if: always()
-        run: 7z.exe a -tzip -mmt=3 -mx=1 -mm=BZip2 c:\o3de\build.zip ${{ github.workspace }}\build
+        run: 7z.exe a -tzip -mmt=3 -mx=1 -mm=BZip2 -mta -mtc c:\o3de\build.zip ${{ github.workspace }}\build
       
       - name: Save build
         uses: actions/upload-artifact@v4

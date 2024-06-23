@@ -49,7 +49,7 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          run-id: 9632441067
+          run-id: 9634580674
           path: ${{ github.workspace }}\
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -59,7 +59,7 @@ jobs:
         run: |
           7z.exe x -mmt=3 -mta -mtc ${{ github.workspace }}\build.7z
           dir ${{ github.workspace }}\build
-          del ${{ github.workspace }}\build.zip
+          del ${{ github.workspace }}\build.7Z
 
       - uses: lukka/get-cmake@latest
         

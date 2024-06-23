@@ -102,6 +102,6 @@ jobs:
         continue-on-error: true
         if: always()
         with:
-          path: c:\o3de\build.zip
+          path: c:\o3de\build.7z
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
           compression-level: 0

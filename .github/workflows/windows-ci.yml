@@ -44,21 +44,10 @@ jobs:
           restore-keys: |
             O3DE-windows-3p-
       
-      - name: Restore build
-        uses: actions/download-artifact@v4
-        continue-on-error: true
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
-          run-id: 9634580674
-          path: ${{ github.workspace }}\
-          name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Decompress Build
-        continue-on-error: true
-        run: |
-          7z.exe x -mmt=3 -mta -mtc ${{ github.workspace }}\build.7z
-          dir ${{ github.workspace }}\build
-          del ${{ github.workspace }}\build.7Z
+          windows_compile_environment: msvc
 
       - uses: lukka/get-cmake@latest
         
@@ -90,17 +79,3 @@ jobs:
             ${{ github.workspace }}\python
             C:\Users\runneradmin\.o3de\Python
           key: O3DE-${{ matrix.image }}-3p
-
-      - name: Compress Build
-        continue-on-error: true
-        if: always()
-        run: 7z.exe a -t7z -mx=1 -mmt=3 -mtc -mta c:\o3de\build.7z ${{ github.workspace }}\build
-      
-      - name: Save build
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        if: always()
-        with:
-          path: c:\o3de\build.7z
-          name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
-          compression-level: 0

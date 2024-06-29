@@ -180,3 +180,24 @@ if(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION VERSION_LESS_EQUAL "10.0.19041.0")
             /wd5105
     )
 endif()
+
+find_program(ccache_exe ccache)
+if(ccache_exe)
+  message(STATUS "CCache found, using it for this build")
+  file(COPY_FILE
+    ${ccache_exe} ${CMAKE_BINARY_DIR}/cl.exe
+    ONLY_IF_DIFFERENT)
+
+  # By default Visual Studio generators will use /Zi which is not compatible
+  # with ccache, so tell Visual Studio to use /Z7 instead.
+  message(STATUS "Setting MSVC debug information format to 'Embedded'")
+  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
+
+  set(CMAKE_VS_GLOBALS
+    "CLToolExe=cl.exe"
+    "CLToolPath=${CMAKE_BINARY_DIR}"
+    "TrackFileAccess=false"
+    "UseMultiToolTask=true"
+    "DebugInformationFormat=OldStyle"
+  )
+endif()

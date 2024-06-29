@@ -28,7 +28,6 @@ public:
 
     MOCK_METHOD0(DeleteThis, void());
     MOCK_METHOD0(GetSystem, ISystem*());
-    MOCK_METHOD0(GetClassFactory, IEditorClassFactory* ());
     MOCK_METHOD0(GetCommandManager, CEditorCommandManager*());
     MOCK_METHOD0(GetICommandManager, ICommandManager* ());
     MOCK_METHOD1(ExecuteCommand, void(const QString& sCommand));
@@ -143,9 +142,6 @@ public:
     MOCK_METHOD1(UnregisterNotifyListener, void(IEditorNotifyListener* ));
     MOCK_METHOD1(RegisterDocListener, void(IDocListener* ));
     MOCK_METHOD1(UnregisterDocListener, void(IDocListener* ));
-    MOCK_METHOD0(GetSourceControl, ISourceControl* ());
-    MOCK_METHOD0(IsSourceControlAvailable, bool());
-    MOCK_METHOD0(IsSourceControlConnected, bool());
     MOCK_METHOD0(ReduceMemory, void());
     MOCK_CONST_METHOD0(GetEditorConfigPlatform, ESystemConfigPlatform());
     MOCK_METHOD0(ReloadTemplates, void());

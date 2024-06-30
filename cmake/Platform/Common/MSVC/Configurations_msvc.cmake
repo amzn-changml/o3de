@@ -188,6 +188,12 @@ if(ccache_exe)
     ${ccache_exe} ${CMAKE_BINARY_DIR}/cl.exe
     ONLY_IF_DIFFERENT)
 
+  file(MAKE_DIRECTORY lib/ccache/tools/ccache-4.10-windows-x86_64)
+  
+  file(COPY_FILE
+    ${ccache_exe} lib/ccache/tools/ccache-4.10-windows-x86_64/ccache.exe
+    ONLY_IF_DIFFERENT)
+
   # By default Visual Studio generators will use /Zi which is not compatible
   # with ccache, so tell Visual Studio to use /Z7 instead.
   message(STATUS "Setting MSVC debug information format to 'Embedded'")

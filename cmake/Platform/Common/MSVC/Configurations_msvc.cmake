@@ -184,12 +184,12 @@ endif()
 # Look for the ccacche executable, then copy it to the tools folder and set compatible project/conpile flags for MSBuild/VC
 # https://github.com/ccache/ccache/wiki/MS-Visual-Studio
 # This is primarily used for AR/CI processes, but can be used for local builds
-find_program(ccache_exe ccache)
+find_program(ccache_exe ccache PATHS C:/ProgramData/chocolatey/lib/ccache NO_DEFAULT_PATH)
 if(ccache_exe)
   message(STATUS "[CCACHE] ccache found in ${ccache_exe}, using it for this build")
-  file(COPY
+  file(COPY_FILE
     ${ccache_exe} DESTINATION ${CMAKE_BINARY_DIR}/cl.exe
-    FOLLOW_SYMLINK_CHAIN)
+    ONLY_IF_DIFFERENT)
 
   # By default Visual Studio generators will use /Zi which is not compatible
   # with ccache, so tell Visual Studio to use /Z7 instead.

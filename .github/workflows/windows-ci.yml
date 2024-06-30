@@ -48,7 +48,12 @@ jobs:
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
+          override_cache_key: O3DE-${{ matrix.image }}-${{matrix.config}}-${{matrix.target}}-ccache
+          override_cache_key_fallback: setup-ccache-action_Windows
           windows_compile_environment: msvc
+          remove_stale_cache: false
+          ccache_options: |
+            cache_dir=${{ github.workspace }}\.ccache
 
       - uses: lukka/get-cmake@latest
         

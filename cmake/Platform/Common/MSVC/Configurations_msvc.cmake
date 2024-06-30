@@ -185,7 +185,7 @@ find_program(ccache_exe ccache)
 if(ccache_exe)
   message(STATUS "CCache found in ${ccache_exe}, using it for this build")
   file(COPY_FILE
-    C:\ProgramData\chocolatey\lib\ccache\tools\ccache-4.10-windows-x86_64\ccache.exe ${CMAKE_BINARY_DIR}/cl.exe
+    C:/ProgramData/chocolatey/lib/ccache/tools/ccache-4.10-windows-x86_64/ccache.exe ${CMAKE_BINARY_DIR}/cl.exe
     ONLY_IF_DIFFERENT)
 
   # By default Visual Studio generators will use /Zi which is not compatible

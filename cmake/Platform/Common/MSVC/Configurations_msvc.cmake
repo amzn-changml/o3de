@@ -81,7 +81,7 @@ ly_append_configurations_options(
         /O2             # Maximinize speed, equivalent to /Og /Oi /Ot /Oy /Ob2 /GF /Gy
         /Zc:inline      # Removes unreferenced functions or data that are COMDATs or only have internal linkage
         /Zc:wchar_t     # Use compiler native wchar_t
-        /Z7             # Generate debugging information (no Edit/Continue)
+        /Zi             # Generate debugging information (no Edit/Continue)
     COMPILATION_RELEASE
         /Ox             # Full optimization
         /Ob2            # Inline any suitable function

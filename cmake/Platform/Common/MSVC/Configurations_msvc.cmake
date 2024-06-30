@@ -181,18 +181,24 @@ if(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION VERSION_LESS_EQUAL "10.0.19041.0")
     )
 endif()
 
+# Look for the ccacche executable, then copy it to the tools folder and set compatible project/conpile flags for MSBuild/VC
+# https://github.com/ccache/ccache/wiki/MS-Visual-Studio
+# This is primarily used for AR/CI processes, but can be used for local builds
 find_program(ccache_exe ccache)
 if(ccache_exe)
-  message(STATUS "CCache found in ${ccache_exe}, using it for this build")
-  file(COPY_FILE
-    C:/ProgramData/chocolatey/lib/ccache/tools/ccache-4.10-windows-x86_64/ccache.exe ${CMAKE_BINARY_DIR}/cl.exe
-    ONLY_IF_DIFFERENT)
+  message(STATUS "[CCACHE] ccache found in ${ccache_exe}, using it for this build")
+  file(COPY
+    ${ccache_exe} DESTINATION ${CMAKE_BINARY_DIR}/cl.exe
+    FOLLOW_SYMLINK_CHAIN)
 
   # By default Visual Studio generators will use /Zi which is not compatible
   # with ccache, so tell Visual Studio to use /Z7 instead.
   message(STATUS "Setting MSVC debug information format to 'Embedded'")
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
-
+  ly_append_configurations_options(
+        COMPILATION
+            /Z7
+    )
   set(CMAKE_VS_GLOBALS
     "CLToolExe=cl.exe"
     "CLToolPath=${CMAKE_BINARY_DIR}"

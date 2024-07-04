@@ -11,6 +11,7 @@ jobs:
       matrix:
         compiler: [msvc]
         type: [asset_profile]
+        target: [profile]
         image: [windows-2022]
 
     runs-on: ${{ matrix.image }}
@@ -47,7 +48,7 @@ jobs:
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.compiler }}-${{ matrix.type }}-ccache
+          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.compiler }}-${{ matrix.target }}-ccache
           override_cache_key_fallback: |
             setup-ccache-action_Windows
           windows_compile_environment: ${{ matrix.compiler }}
@@ -68,7 +69,7 @@ jobs:
           
       - name: Build
         env:
-          3rdParty: ${{ github.workspace }}\3rdParty
+          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type ${{ matrix.type }}
 

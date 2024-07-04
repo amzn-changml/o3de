@@ -1,0 +1,82 @@
+name: Windows
+
+on:
+  push:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [msvc]
+        type: [asset_profile]
+        image: [windows-2022]
+
+    runs-on: ${{ matrix.image }}
+
+    steps:               
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Git LFS fetch
+        run: |
+          git lfs install
+          git lfs fetch --include "*.ico"
+          git lfs checkout
+      
+      - name: Create binary folders
+        run: |
+          # "build","3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
+          "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
+          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
+                     
+      - name: Restore 3P Cache
+        uses: actions/cache/restore@v4
+        continue-on-error: true
+        with:
+          path: |
+            ${{ github.workspace }}\3rdParty\downloaded_packages
+            ${{ github.workspace }}\python
+            C:\Users\runneradmin\.o3de\Python
+          key: O3DE-${{ matrix.image }}-3p
+          restore-keys: |
+            O3DE-windows-3p-
+      
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1.4.3
+        with:
+          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.compiler }}-${{ matrix.type }}-ccache
+          override_cache_key_fallback: |
+            setup-ccache-action_Windows
+          windows_compile_environment: ${{ matrix.compiler }}
+          remove_stale_cache: false
+          ccache_options: |
+            cache_dir=${{ github.workspace }}\.ccache
+
+      - uses: lukka/get-cmake@latest
+        
+      - name: Configure environment
+        run: |
+          echo "Installing dependancies"
+          echo "Getting python..."
+          python\get_python.bat
+          
+      - name: Add msbuild to PATH
+        uses: ilammy/msvc-dev-cmd@v1.12.0
+          
+      - name: Build
+        run: 
+          python\python.cmd -u scripts\build\ci_build.py --platform Windows --type ${{ matrix.type }}
+
+      - name: Save 3P Cache
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        if: always()
+        with:
+          path: |
+            ${{ github.workspace }}\3rdParty\downloaded_packages
+            ${{ github.workspace }}\python
+            C:\Users\runneradmin\.o3de\Python
+          key: O3DE-${{ matrix.image }}-3p

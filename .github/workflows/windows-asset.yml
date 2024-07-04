@@ -67,6 +67,8 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1.12.0
           
       - name: Build
+        env:
+          3rdParty: ${{ github.workspace }}\3rdParty
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type ${{ matrix.type }}
 

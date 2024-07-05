@@ -66,15 +66,12 @@ jobs:
           
       - name: Add msbuild to PATH
         uses: ilammy/msvc-dev-cmd@v1.12.0
-      
-      - name: Configure
-        run: |
-          echo "Generating project..."
-          cmake -B build -G "Visual Studio 17 2022" -DLY_3RDPARTY_PATH=3rdParty
           
       - name: Build
+        env:
+          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
         run: 
-          cmake --build ${{ github.workspace }}\build --target ${{ matrix.target }} --config ${{ matrix.config }} -- /m /nologo
+          python\python.cmd -u scripts\build\ci_build.py --platform Windows --type profile 
 
       - name: Save 3P Cache
         uses: actions/cache/save@v4

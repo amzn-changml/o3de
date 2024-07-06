@@ -26,41 +26,40 @@ jobs:
           git lfs install
           git lfs fetch --include "*.ico,*.bmp"
           git lfs checkout
+
+      - name: Restore DevDrive
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          path: ${{ github.workspace }}\
+          name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Mount DevDrive
+        uses: samypr100/setup-dev-drive@v3
+        with: 
+          mount-path: E:\
+          drive-path: "build.vhdx"
+          mount-if-exists: true
       
-      - name: Create binary folders
+      - name: Setup build and 3p folder
         run: |
-          # "build","3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-          "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
+          "build","3rdParty","python" | % {New-Item "e:\$_" -ItemType 'Directory' -Force}
+          # "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
+          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
+          "build" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
+          "python" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
                      
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4
         continue-on-error: true
         with:
           path: |
-            ${{ github.workspace }}\3rdParty\downloaded_packages
-            ${{ github.workspace }}\python
             C:\Users\runneradmin\.o3de\Python
           key: O3DE-${{ matrix.image }}-3p
           restore-keys: |
             O3DE-windows-3p-
-                  
-      - name: Restore build
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          run-id: 9816626905
-          path: ${{ github.workspace }}\
-          name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Decompress Build
-        continue-on-error: true
-        run: |
-          7z.exe x -mmt=3 -mta -mtc -mtm ${{ github.workspace }}\build.7z
-          dir ${{ github.workspace }}\build
-          del ${{ github.workspace }}\build.7z
-      
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
@@ -71,7 +70,7 @@ jobs:
           remove_stale_cache: false
           ccache_options: |
             max_size=10G
-            cache_dir=${{ github.workspace }}\.ccache
+            cache_dir=${{ env.DEV_DRIVE }}\.ccache
 
       - uses: lukka/get-cmake@latest
         
@@ -83,6 +82,15 @@ jobs:
           
       - name: Add msbuild to PATH
         uses: ilammy/msvc-dev-cmd@v1.12.0
+
+      - name: Get environemnt
+        run: |
+          dir env:
+          get-psdrive
+          dir ${{ github.workspace }}
+          dir ${{ github.workspace }}\build
+          dir ${{ github.workspace }}\python
+          dir ${{ github.workspace }}\3rdParty\packages
           
       - name: Build
         env:
@@ -96,21 +104,14 @@ jobs:
         if: always()
         with:
           path: |
-            ${{ github.workspace }}\3rdParty\downloaded_packages
-            ${{ github.workspace }}\python
             C:\Users\runneradmin\.o3de\Python
           key: O3DE-${{ matrix.image }}-3p
           
-      - name: Compress Build
-        continue-on-error: true
-        if: always()
-        run: 7z.exe a -t7z -mx=1 -mmt=3 -mtc -mta -mtm c:\o3de\build.7z ${{ github.workspace }}\build
-      
-      - name: Save build
+      - name: Save DevDrive
         uses: actions/upload-artifact@v4
         continue-on-error: true
         if: always()
         with:
-          path: c:\o3de\build.7z
+          path: "build.vhdx"
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
-          compression-level: 0
+          compression-level: 1

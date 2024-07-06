@@ -24,7 +24,7 @@ jobs:
       - name: Git LFS fetch
         run: |
           git lfs install
-          git lfs fetch --include "*.ico" --include "*.bmp"
+          git lfs fetch --include "*.ico,*.bmp"
           git lfs checkout
       
       - name: Create binary folders

@@ -38,6 +38,8 @@ jobs:
       - name: Mount DevDrive
         uses: samypr100/setup-dev-drive@v3
         with: 
+          drive-size: 10GB
+          drive-format: NTFS
           drive-path: "D:\\build.vhdx"
           mount-if-exists: true
       

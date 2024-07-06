@@ -2,9 +2,8 @@ name: Windows Asset
 
 on:
   workflow_run:
-    workflows: ["Windows"]
-    types:
-      - completed
+    workflows: [Windows]
+    types: [completed]
 
 jobs:
   build:
@@ -47,6 +46,20 @@ jobs:
           restore-keys: |
             O3DE-windows-3p-
       
+      - name: Download Build
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: windows-ci.yml
+          workflow_search: true
+          workflow_conclusion: success
+
+      - name: Decompress Build
+        continue-on-error: true
+        run: |
+          7z.exe x -mmt=3 -mta -mtc -mtm ${{ github.workspace }}\build.7z
+          dir ${{ github.workspace }}\build
+          del ${{ github.workspace }}\build.7z
+            
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
@@ -57,8 +70,9 @@ jobs:
           remove_stale_cache: false
           ccache_options: |
             cache_dir=${{ github.workspace }}\.ccache
-
-      - uses: lukka/get-cmake@latest
+      
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
         
       - name: Configure environment
         run: |

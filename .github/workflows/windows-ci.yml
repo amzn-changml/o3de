@@ -41,21 +41,20 @@ jobs:
           drive-path: "D:\\build.vhdx"
           mount-if-exists: true
       
-      - name: Setup build and 3p folder
+      - name: Setup 3p folder
         run: |
-          "build" | % {New-Item "e:\$_" -ItemType 'Directory' -Force}
-          # "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-          # "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
-          "build" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
+          "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
+          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
                      
-      - name: Restore Python Cache
+      - name: Restore 3P Cache
         uses: actions/cache/restore@v4
         continue-on-error: true
         with:
           path: |
             ${{ github.workspace }}\python
             C:\Users\runneradmin\.o3de\Python
-          key: O3DE-${{ matrix.image }}-python
+            ${{ github.workspace }}\3rdParty\packages
+          key: O3DE-${{ matrix.image }}-3P
           restore-keys: |
             O3DE-windows-3p-
 
@@ -91,11 +90,11 @@ jobs:
           
       - name: Build
         env:
-          LY_3RDPARTY_PATH: ${{ env.DEV_DRIVE }}\3rdParty
+          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type profile 
 
-      - name: Save Python Cache
+      - name: Save 3P Cache
         uses: actions/cache/save@v4
         continue-on-error: true
         if: always()
@@ -103,7 +102,8 @@ jobs:
           path: |
             ${{ github.workspace }}\python
             C:\Users\runneradmin\.o3de\Python
-          key: O3DE-${{ matrix.image }}-python
+            ${{ github.workspace }}\3rdParty\packages
+          key: O3DE-${{ matrix.image }}-3P
           
       - name: Save DevDrive
         uses: actions/upload-artifact@v4

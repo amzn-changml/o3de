@@ -47,15 +47,15 @@ jobs:
           # "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
           "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
           "build" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
-          "python" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
                      
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4
         continue-on-error: true
         with:
           path: |
+            ${{ github.workspace }}\python
             C:\Users\runneradmin\.o3de\Python
-          key: O3DE-${{ matrix.image }}-3p
+          key: O3DE-${{ matrix.image }}-python
           restore-keys: |
             O3DE-windows-3p-
 
@@ -97,14 +97,15 @@ jobs:
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type profile 
 
-      - name: Save 3P Cache
+      - name: Save Python Cache
         uses: actions/cache/save@v4
         continue-on-error: true
         if: always()
         with:
           path: |
+            ${{ github.workspace }}\python
             C:\Users\runneradmin\.o3de\Python
-          key: O3DE-${{ matrix.image }}-3p
+          key: O3DE-${{ matrix.image }}-python
           
       - name: Save DevDrive
         uses: actions/upload-artifact@v4

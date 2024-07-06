@@ -31,14 +31,14 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          path: ${{ github.workspace }}\
+          path: "D:\\build.vhdx"
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-devdrive
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Mount DevDrive
         uses: samypr100/setup-dev-drive@v3
         with: 
-          drive-path: "build.vhdx"
+          drive-path: "D:\\build.vhdx"
           mount-if-exists: true
       
       - name: Setup build and 3p folder
@@ -112,6 +112,6 @@ jobs:
         continue-on-error: true
         if: always()
         with:
-          path: "build.vhdx"
+          path: "D:\\build.vhdx"
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-devdrive
           compression-level: 1

@@ -88,8 +88,6 @@ jobs:
           get-psdrive
           dir ${{ github.workspace }}
           dir ${{ github.workspace }}\build
-          dir ${{ github.workspace }}\python
-          dir ${{ github.workspace }}\3rdParty
           
       - name: Build
         env:

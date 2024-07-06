@@ -43,12 +43,12 @@ jobs:
       
       - name: Setup build and 3p folder
         run: |
-          "build","3rdParty","python" | % {New-Item "e:\$_" -ItemType 'Directory' -Force}
+          "build" | % {New-Item "e:\$_" -ItemType 'Directory' -Force}
           # "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
+          # "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
           "build" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
                      
-      - name: Restore 3P Cache
+      - name: Restore Python Cache
         uses: actions/cache/restore@v4
         continue-on-error: true
         with:
@@ -62,7 +62,7 @@ jobs:
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.target }}-ccache
+          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
@@ -93,7 +93,7 @@ jobs:
           
       - name: Build
         env:
-          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
+          LY_3RDPARTY_PATH: ${{ env.DEV_DRIVE }}\3rdParty
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type profile 
 

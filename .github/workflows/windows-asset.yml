@@ -89,7 +89,7 @@ jobs:
       - name: Compress Build
         continue-on-error: true
         if: always()
-        run: 7z.exe a -t7z -tbzip2 -mx=1 -mmt=3 -mtc -mta -mtm c:\o3de\build.7z ${{ github.workspace }}\build
+        run: 7z.exe a -t7z -mx=1 -mmt=3 -mtc -mta -mtm c:\o3de\build.7z ${{ github.workspace }}\build
       
       - name: Save build
         uses: actions/upload-artifact@v4

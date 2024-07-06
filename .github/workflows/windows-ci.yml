@@ -41,10 +41,12 @@ jobs:
           drive-path: "D:\\build.vhdx"
           mount-if-exists: true
       
-      - name: Setup 3p folder
+      - name: Setup 3p and build folder
         run: |
           "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
+          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
+          "build" | % {New-Item "e:\$_" -ItemType 'Directory' -Force}
+          "build" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
                      
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4
@@ -54,7 +56,7 @@ jobs:
             ${{ github.workspace }}\python
             C:\Users\runneradmin\.o3de\Python
             ${{ github.workspace }}\3rdParty\packages
-          key: O3DE-${{ matrix.image }}-3P
+          key: O3DE-${{ matrix.image }}-3p
           restore-keys: |
             O3DE-windows-3p-
 
@@ -101,7 +103,7 @@ jobs:
             ${{ github.workspace }}\python
             C:\Users\runneradmin\.o3de\Python
             ${{ github.workspace }}\3rdParty\packages
-          key: O3DE-${{ matrix.image }}-3P
+          key: O3DE-${{ matrix.image }}-3p
           
       - name: Save DevDrive
         uses: actions/upload-artifact@v4

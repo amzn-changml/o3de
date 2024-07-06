@@ -38,7 +38,6 @@ jobs:
       - name: Mount DevDrive
         uses: samypr100/setup-dev-drive@v3
         with: 
-          mount-path: E:\
           drive-path: "build.vhdx"
           mount-if-exists: true
       

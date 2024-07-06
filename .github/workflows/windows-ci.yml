@@ -45,12 +45,14 @@ jobs:
           restore-keys: |
             O3DE-windows-3p-
                   
-      - name: Download Build
-        uses: dawidd6/action-download-artifact@v6
+      - name: Restore build
+        uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
-          workflow: windows-ci.yml
-          workflow_search: true
-          workflow_conclusion: success
+          run-id: 9816626905
+          path: ${{ github.workspace }}\
+          name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Decompress Build
         continue-on-error: true

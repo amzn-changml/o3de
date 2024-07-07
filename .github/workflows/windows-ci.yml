@@ -31,6 +31,7 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
+          run-id: 9821512533
           path: "D:\\build.vhdx"
           name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-devdrive
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -84,7 +85,7 @@ jobs:
           python\get_python.bat
           
       - name: Add msbuild to PATH
-        uses: ilammy/msvc-dev-cmd@v1.12.0
+        uses: ilammy/msvc-dev-cmd@v1.13.0
 
       - name: Get environemnt
         run: |
@@ -114,5 +115,5 @@ jobs:
         if: always()
         with:
           path: "D:\\build.vhdx"
-          name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-devdrive
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
           compression-level: 1

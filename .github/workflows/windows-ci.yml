@@ -28,18 +28,18 @@ jobs:
           git lfs checkout
 
       - name: Restore DevDrive
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.8
         continue-on-error: true
         with:
           run-id: 9826329007
-          path: "c:\\build.vhdx.7z"
+          path: "c:\\"
           name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Decompress DevDrive
         continue-on-error: true
         run: |
-          7z.exe x -mmt=3 c:\build.vhdx.7z -od:\build.vhdx
+          7z.exe x -mmt=3 c:\build.vhdx.7z -od:\
           del c:\build.vhdx.7z
 
       - name: Mount DevDrive
@@ -47,7 +47,7 @@ jobs:
         with: 
           drive-size: 110GB
           # drive-format: NTFS
-          drive-path: "D:\\build.vhdx"
+          drive-path: "d:\\build.vhdx"
           mount-if-exists: true
       
       - name: Setup 3p and build folder
@@ -120,6 +120,7 @@ jobs:
         run: |
           Dismount-VHD -Path D:\build.vhdx
           7z.exe a -t7z -mx=1 -mmt=3 C:\build.vhdx.7z D:\build.vhdx
+          Mount-VHD -Path D:\build.vhdx
           
       - name: Save DevDrive
         uses: actions/upload-artifact@v4

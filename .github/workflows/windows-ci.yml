@@ -11,7 +11,6 @@ jobs:
       matrix:
         compiler: [msvc]
         config: [profile]
-        target: [ALL_BUILD]
         image: [windows-2022]
 
     runs-on: ${{ matrix.image }}
@@ -26,6 +25,9 @@ jobs:
           git lfs install
           git lfs fetch --include "*.ico,*.bmp"
           git lfs checkout
+    
+      - name: Restore timestamps
+        uses: chetan/git-restore-mtime-action@v2
 
       - name: Restore DevDrive
         uses: actions/download-artifact@v4.1.8

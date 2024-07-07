@@ -31,17 +31,21 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          run-id: 9821512533
-          path: "D:\\build.vhdx"
-          name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-devdrive
+          path: "c:\\build.vhdx.7z"
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decompress DevDrive
+        continue-on-error: true
+        run: |
+          7z.exe x -mmt=3 c:\build.vhdx.7z -od:\build.vhdx
+          del c:\build.vhdx.7z
 
       - name: Mount DevDrive
         uses: samypr100/setup-dev-drive@v3
         with: 
           drive-size: 110GB
-          # drive-format: NTFS
-          drive-type: Fixed
+          drive-format: NTFS
           drive-path: "D:\\build.vhdx"
           mount-if-exists: true
       
@@ -108,12 +112,18 @@ jobs:
             C:\Users\runneradmin\.o3de\Python
             ${{ github.workspace }}\3rdParty\packages
           key: O3DE-${{ matrix.image }}-3p
+
+      - name: Compress DevDrive
+        continue-on-error: true
+        if: always()
+        run: |
+          7z.exe a -t7z -mx=1 -mmt=3 C:\build.vhdx.7z D:\build.vhdx
           
       - name: Save DevDrive
         uses: actions/upload-artifact@v4
         continue-on-error: true
         if: always()
         with:
-          path: "D:\\build.vhdx"
+          path: "C:\\build.vhdx.7z"
           name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
-          compression-level: 1
+          compression-level: 0

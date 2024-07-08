@@ -16,10 +16,6 @@ jobs:
     runs-on: ${{ matrix.image }}
 
     steps:               
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Restore DevDrive
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -42,9 +38,13 @@ jobs:
           # drive-format: NTFS
           mount-path: ${{ github.workspace }}
           drive-path: "d:\\build.vhdx"
-          workspace-copy: true
           mount-if-exists: true
 
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: false
+  
       - name: Git LFS fetch
         run: |
           git lfs install

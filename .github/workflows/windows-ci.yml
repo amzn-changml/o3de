@@ -15,7 +15,22 @@ jobs:
 
     runs-on: ${{ matrix.image }}
 
-    steps:               
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: false
+  
+      - name: Git LFS fetch
+        run: |
+          git lfs install
+          git lfs fetch --include "*.ico,*.bmp"
+          git lfs checkout
+      
+      - name: Restore timestamps
+        uses: chetan/git-restore-mtime-action@v2
+        
       - name: Restore DevDrive
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -38,26 +53,7 @@ jobs:
           # drive-format: NTFS
           mount-path: ${{ github.workspace }}
           drive-path: "d:\\build.vhdx"
-          mount-if-exists: true
-
-      - name: Initialize DevDrive
-        run: |
-          git config --global init.defaultBranch main
-
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: false
-  
-      - name: Git LFS fetch
-        run: |
-          git lfs install
-          git lfs fetch --include "*.ico,*.bmp"
-          git lfs checkout
-      
-      - name: Restore timestamps
-        uses: chetan/git-restore-mtime-action@v2
+          mount-if-exists: true          
 
       # - name: Setup 3p and build folder
       #   run: |

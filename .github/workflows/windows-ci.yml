@@ -40,7 +40,12 @@ jobs:
           drive-path: "d:\\build.vhdx"
           mount-if-exists: true
 
-      - uses: actions/checkout@v4
+      - name: Initialize DevDrive
+        run: |
+          git config --global init.defaultBranch main
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           clean: false

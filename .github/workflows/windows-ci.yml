@@ -51,16 +51,16 @@ jobs:
         with: 
           drive-size: 110GB
           # drive-format: NTFS
-          mount-path: ${{ github.workspace }}
+          # mount-path: ${{ github.workspace }}
           drive-path: "d:\\build.vhdx"
-          mount-if-exists: true          
+          mount-if-exists: true      
 
-      # - name: Setup 3p and build folder
-      #   run: |
-      #     "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-      #     "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
-      #     "build" | % {New-Item "e:\$_" -ItemType 'Directory' -Force}
-      #     "build" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
+      - name: Setup 3p and build folder
+        run: |
+          "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
+          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
+          "build" | % {New-Item "e:\$_" -ItemType 'Directory' -Force}
+          "build" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
                      
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4
@@ -74,17 +74,17 @@ jobs:
           restore-keys: |
             O3DE-windows-3p-
 
-      - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1.4.3
-        with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
-          override_cache_key_fallback: |
-            O3DE-${{ matrix.image }}-${{ matrix.config }}
-          windows_compile_environment: msvc
-          remove_stale_cache: false
-          ccache_options: |
-            max_size=10G
-            cache_dir=${{ env.DEV_DRIVE }}\.ccache
+      # - name: Setup ccache
+      #   uses: Chocobo1/setup-ccache-action@v1.4.3
+      #   with:
+      #     override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+      #     override_cache_key_fallback: |
+      #       O3DE-${{ matrix.image }}-${{ matrix.config }}
+      #     windows_compile_environment: msvc
+      #     remove_stale_cache: false
+      #     ccache_options: |
+      #       max_size=10G
+      #       cache_dir=${{ env.DEV_DRIVE }}\.ccache
 
       - uses: lukka/get-cmake@latest
         
@@ -97,7 +97,7 @@ jobs:
       - name: Add msbuild to PATH
         uses: ilammy/msvc-dev-cmd@v1.13.0
 
-      - name: Get environemnt
+      - name: Get environment
         run: |
           dir env:
           get-psdrive
@@ -108,30 +108,31 @@ jobs:
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type profile 
 
-      # - name: Save 3P Cache
-      #   uses: actions/cache/save@v4
-      #   continue-on-error: true
-      #   if: always()
-      #   with:
-      #     path: |
-      #       ${{ github.workspace }}\python
-      #       C:\Users\runneradmin\.o3de\Python
-      #       ${{ github.workspace }}\3rdParty\packages
-      #     key: O3DE-${{ matrix.image }}-3p
-
-      - name: Compress DevDrive
+      - name: Save 3P Cache
+        uses: actions/cache/save@v4
         continue-on-error: true
         if: always()
-        run: |
-          Dismount-VHD -Path D:\build.vhdx
-          7z.exe a -t7z -mx=1 -mmt=3 C:\build.vhdx.7z D:\build.vhdx
-          Mount-VHD -Path D:\build.vhdx
+        with:
+          path: |
+            ${{ github.workspace }}\python
+            C:\Users\runneradmin\.o3de\Python
+            ${{ github.workspace }}\3rdParty\packages
+          key: O3DE-${{ matrix.image }}-3p
+
+      # - name: Compress DevDrive
+      #   continue-on-error: true
+      #   if: always()
+      #   run: |
+      #     Dismount-VHD -Path D:\build.vhdx
+      #     7z.exe a -t7z -mx=1 -mmt=3 C:\build.vhdx.7z D:\build.vhdx
+      #     Mount-VHD -Path D:\build.vhdx
           
       - name: Save DevDrive
         uses: actions/upload-artifact@v4
         continue-on-error: true
         if: always()
         with:
-          path: "C:\\build.vhdx.7z"
+          #path: "C:\\build.vhdx.7z"
+          path: "D:\\build.vhdx"
           name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
-          compression-level: 0
+          compression-level: 2

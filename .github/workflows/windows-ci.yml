@@ -93,7 +93,7 @@ jobs:
           echo "Installing dependancies"
           echo "Getting python..."
           python\get_python.bat
-          choco uninstall ccache
+          rm C:\ProgramData\chocolatey\lib\ccache\tools\ccache-4.10.1-windows-x86_64\ccache.exe
           
       - name: Add msbuild to PATH
         uses: ilammy/msvc-dev-cmd@v1.13.0

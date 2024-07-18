@@ -93,6 +93,7 @@ jobs:
           echo "Installing dependancies"
           echo "Getting python..."
           python\get_python.bat
+          choco uninstall ccache
           
       - name: Add msbuild to PATH
         uses: ilammy/msvc-dev-cmd@v1.13.0

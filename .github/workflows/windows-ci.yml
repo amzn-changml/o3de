@@ -35,7 +35,7 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          run-id: 9829890150
+          run-id: 10003992587
           path: "c:\\"
           name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -57,7 +57,6 @@ jobs:
         run: |
           "3rdParty", "build", ".o3de" | % {New-Item "${{ env.DEV_DRIVE }}\$_" -ItemType 'Directory' -Force}
           "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE }}\$_ -Force}
-          ".o3de" | % {New-Item "$env:USERPROFILE\$_" -ItemType 'Directory' -Force}
           ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE }}\$_ -Force}
                      
       - name: Restore 3P Cache

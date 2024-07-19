@@ -56,9 +56,9 @@ jobs:
       - name: Setup 3p and build folder symlinks
         run: |
           "3rdParty", "build", ".o3de" | % {New-Item "${{ env.DEV_DRIVE }}\$_" -ItemType 'Directory' -Force}
-          "3rdParty", "build" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target ${{ env.DEV_DRIVE }}\$_ -Force}
+          "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE }}\$_ -Force}
           ".o3de" | % {New-Item "$env:USERPROFILE\$_" -ItemType 'Directory' -Force}
-          ".o3de" | % {New-Item -ItemType SymbolicLink -Name "$env:USERPROFILE\$_" -Target ${{ env.DEV_DRIVE }}\$_ -Force}
+          ".o3de" | % {New-Item -Name $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE }}\$_ -Force}
                      
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4

@@ -194,11 +194,11 @@ if(ccache_exe)
     # By default Visual Studio generators will use /Zi which is not compatible
     # with ccache, so tell Visual Studio to use /Z7 instead.
     message(STATUS "Setting MSVC debug information format to 'Embedded'")
-    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
-    ly_append_configurations_options(
-        COMPILATION_PROFILE
-            /Z7
-    )
+    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Profile,Release,Debug>:Embedded>")
+#    ly_append_configurations_options(
+#        COMPILATION_PROFILE
+#            /Z7
+#    )
     set(CMAKE_VS_GLOBALS
         "CLToolExe=cl.exe"
         "CLToolPath=${CMAKE_BINARY_DIR}"
@@ -206,9 +206,9 @@ if(ccache_exe)
         "UseMultiToolTask=true"
         "DebugInformationFormat=OldStyle"
     )
-else()
-    ly_append_configurations_options(
-        COMPILATION_PROFILE
-            /Zi             # Generate debugging information (no Edit/Continue)
-    )
+# else()
+#    ly_append_configurations_options(
+#        COMPILATION_PROFILE
+#            /Zi             # Generate debugging information (no Edit/Continue)
+#    )
 endif()

@@ -50,41 +50,39 @@ jobs:
         uses: samypr100/setup-dev-drive@v3
         with: 
           drive-size: 110GB
-          # drive-format: NTFS
-          # mount-path: ${{ github.workspace }}
           drive-path: "d:\\build.vhdx"
           mount-if-exists: true      
 
-      - name: Setup 3p and build folder
+      - name: Setup 3p and build folder symlinks
         run: |
-          "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
-          "build" | % {New-Item "e:\$_" -ItemType 'Directory' -Force}
-          "build" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target e:\$_ -Force}
+          "3rdParty", "build", ".o3de" | % {New-Item "${{ env.DEV_DRIVE }}\$_" -ItemType 'Directory' -Force}
+          "3rdParty", "build" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target ${{ env.DEV_DRIVE }}\$_ -Force}
+          ".o3de" | % {New-Item "$env:USERPROFILE\$_" -ItemType 'Directory' -Force}
+          ".o3de" | % {New-Item -ItemType SymbolicLink -Name "$env:USERPROFILE\$_" -Target ${{ env.DEV_DRIVE }}\$_ -Force}
                      
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4
         continue-on-error: true
         with:
           path: |
-            ${{ github.workspace }}\python
-            C:\Users\runneradmin\.o3de\Python
-            ${{ github.workspace }}\3rdParty\packages
+            ${{ env.DEV_DRIVE }}\.o3de\Python
+            ${{ env.DEV_DRIVE }}\python
+            ${{ env.DEV_DRIVE }}\3rdParty\packages
           key: O3DE-${{ matrix.image }}-3p
           restore-keys: |
             O3DE-windows-3p-
 
-      # - name: Setup ccache
-      #   uses: Chocobo1/setup-ccache-action@v1.4.3
-      #   with:
-      #     override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
-      #     override_cache_key_fallback: |
-      #       O3DE-${{ matrix.image }}-${{ matrix.config }}
-      #     windows_compile_environment: msvc
-      #     remove_stale_cache: false
-      #     ccache_options: |
-      #       max_size=10G
-      #       cache_dir=${{ env.DEV_DRIVE }}\.ccache
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1.4.3
+        with:
+          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+          override_cache_key_fallback: |
+            O3DE-${{ matrix.image }}-${{ matrix.config }}
+          windows_compile_environment: msvc
+          remove_stale_cache: false
+          ccache_options: |
+            max_size=10G
+            cache_dir=${{ env.DEV_DRIVE }}\.ccache
 
       - uses: lukka/get-cmake@latest
         
@@ -104,7 +102,7 @@ jobs:
           
       - name: Build
         env:
-          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
+          LY_3RDPARTY_PATH: ${{ env.DEV_DRIVE }}\3rdParty
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type profile 
 
@@ -114,9 +112,9 @@ jobs:
         if: always()
         with:
           path: |
-            ${{ github.workspace }}\python
-            C:\Users\runneradmin\.o3de\Python
-            ${{ github.workspace }}\3rdParty\packages
+            ${{ env.DEV_DRIVE }}\.o3de\Python
+            ${{ env.DEV_DRIVE }}\python
+            ${{ env.DEV_DRIVE }}\3rdParty\packages
           key: O3DE-${{ matrix.image }}-3p
 
       # - name: Compress DevDrive

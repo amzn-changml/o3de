@@ -83,7 +83,7 @@ jobs:
             max_size=10G
             cache_dir=${{ env.DEV_DRIVE }}\.ccache
 
-      - uses: lukka/get-cmake@latest
+      # - uses: lukka/get-cmake@latest
         
       - name: Configure environment
         run: |

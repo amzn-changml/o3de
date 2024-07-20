@@ -31,14 +31,14 @@ jobs:
       - name: Restore timestamps
         uses: chetan/git-restore-mtime-action@v2
         
-      - name: Restore DevDrive
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          run-id: 10003992587
-          path: "d:\\"
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Restore DevDrive
+      #   uses: actions/download-artifact@v4
+      #   continue-on-error: true
+      #   with:
+      #     run-id: 10003992587
+      #     path: "d:\\"
+      #     name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # - name: Decompress DevDrive
       #   continue-on-error: true
@@ -116,13 +116,13 @@ jobs:
             ${{ env.DEV_DRIVE }}\3rdParty\packages
           key: O3DE-${{ matrix.image }}-3p
 
-      # - name: Compress DevDrive
-      #   continue-on-error: true
-      #   if: always()
-      #   run: |
-      #     Dismount-VHD -Path D:\build.vhdx
-      #     7z.exe a -t7z -mx=1 -mmt=3 C:\build.vhdx.7z D:\build.vhdx
-      #     Mount-VHD -Path D:\build.vhdx
+      - name: Compress DevDrive
+        continue-on-error: true
+        if: always()
+        run: |
+          Dismount-VHD -Path D:\build.vhdx
+          7z.exe a -t7z -mx=1 -mmt=3 C:\build.vhdx.7z D:\build.vhdx
+          Mount-VHD -Path D:\build.vhdx
           
       - name: Save DevDrive
         uses: actions/upload-artifact@v4

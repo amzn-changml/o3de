@@ -196,7 +196,9 @@ if(ccache_exe)
     message(STATUS "Setting MSVC debug information format to 'Embedded'")
     set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Profile,Release,Debug>:Embedded>")
     ly_append_configurations_options(
-        COMPILATION
+        COMPILATION_PROFILE
+            /Z7
+        COMPILATION_RELEASE
             /Z7
     )
     set(CMAKE_VS_GLOBALS
@@ -208,7 +210,9 @@ if(ccache_exe)
     )
  else()
     ly_append_configurations_options(
-        COMPILATION
+        COMPILATION_PROFILE
             /Zi             # Generate debugging information (no Edit/Continue)
+        COMPILATION_RELEASE
+            /Zi
     )
 endif()

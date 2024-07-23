@@ -31,20 +31,20 @@ jobs:
       - name: Restore timestamps
         uses: chetan/git-restore-mtime-action@v2
         
-      # - name: Restore DevDrive
-      #   uses: actions/download-artifact@v4
-      #   continue-on-error: true
-      #   with:
-      #     run-id: 10003992587
-      #     path: "d:\\"
-      #     name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Restore DevDrive
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          run-id: 10031682972
+          path: "d:\\"
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Decompress DevDrive
-      #   continue-on-error: true
-      #   run: |
-      #     7z.exe x -mmt=3 c:\build.vhdx.7z -od:\
-      #     del c:\build.vhdx.7z
+      - name: Decompress DevDrive
+        continue-on-error: true
+        run: |
+           7z.exe x -mmt=3 c:\build.vhdx.7z -od:\
+           del c:\build.vhdx.7z
 
       - name: Mount DevDrive
         uses: samypr100/setup-dev-drive@v3

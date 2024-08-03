@@ -198,8 +198,6 @@ if(ccache_exe)
     ly_append_configurations_options(
         COMPILATION_PROFILE
             /Z7
-        COMPILATION_RELEASE
-            /Z7
     )
     set(CMAKE_VS_GLOBALS
         "CLToolExe=cl.exe"
@@ -212,7 +210,5 @@ if(ccache_exe)
     ly_append_configurations_options(
         COMPILATION_PROFILE
             /Zi             # Generate debugging information (no Edit/Continue)
-        COMPILATION_RELEASE
-            /Zi
     )
 endif()

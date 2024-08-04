@@ -31,20 +31,20 @@ jobs:
       - name: Restore timestamps
         uses: chetan/git-restore-mtime-action@v2
         
-      - name: Restore DevDrive
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          run-id: 9829890150
-          path: "c:\\"
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Restore DevDrive
+      #   uses: actions/download-artifact@v4
+      #   continue-on-error: true
+      #   with:
+      #     run-id: 9829890150
+      #     path: "c:\\"
+      #     name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Decompress DevDrive
-        continue-on-error: true
-        run: |
-           7z.exe x -mmt=3 c:\build.vhdx.7z -od:\
-           del c:\build.vhdx.7z
+      # - name: Decompress DevDrive
+      #   continue-on-error: true
+      #   run: |
+      #      7z.exe x -mmt=3 c:\build.vhdx.7z -od:\
+      #      del c:\build.vhdx.7z
 
       - name: Mount DevDrive
         uses: samypr100/setup-dev-drive@v3
@@ -78,9 +78,10 @@ jobs:
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
+          prepend_symlinks_to_path: false
           # remove_stale_cache: false
           ccache_options: |
-            max_size=10G
+            max_size=15G
             cache_dir=${{ env.DEV_DRIVE }}\.ccache
 
       # - uses: lukka/get-cmake@latest
@@ -129,7 +130,7 @@ jobs:
         continue-on-error: true
         if: always()
         with:
-          #path: "C:\\build.vhdx.7z"
-          path: "D:\\build.vhdx"
+          path: "C:\\build.vhdx.7z"
+          #path: "D:\\build.vhdx"
           name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
-          compression-level: 2
+          compression-level: 0

@@ -78,7 +78,7 @@ jobs:
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
-          remove_stale_cache: false
+          # remove_stale_cache: false
           ccache_options: |
             max_size=10G
             cache_dir=${{ env.DEV_DRIVE }}\.ccache

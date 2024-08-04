@@ -183,7 +183,7 @@ endif()
 # Look for the ccacche executable, then copy it to the tools folder as cl.exe and set compatible project/compile flags for MSBuild/VC
 # https://github.com/ccache/ccache/wiki/MS-Visual-Studio
 # This is primarily used for AR/CI processes, but can be used for local builds
-set(ccache_exe "")
+# comment set(ccache_exe "")
 find_program(ccache_exe ccache PATHS C:/ProgramData/chocolatey/lib/ccache/tools/*/ NO_DEFAULT_PATH)
 if(ccache_exe)
     message(STATUS "[CCACHE] ccache found in ${ccache_exe}, using it for this build")
@@ -207,6 +207,7 @@ if(ccache_exe)
         "DebugInformationFormat=OldStyle"
     )
  else()
+    message(STATUS "[CCACHE] ccache not found")
     ly_append_configurations_options(
         COMPILATION_PROFILE
             /Zi             # Generate debugging information (no Edit/Continue)

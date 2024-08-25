@@ -4,6 +4,8 @@ on:
   push:
   workflow_dispatch: {}
 
+
+
 jobs:
   build:
     strategy:
@@ -17,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7
         with:
           fetch-depth: 0
           clean: false
@@ -46,28 +48,34 @@ jobs:
       #      7z.exe x -mmt=3 c:\build.vhdx.7z -od:\
       #      del c:\build.vhdx.7z
 
-      - name: Mount DevDrive
-        uses: samypr100/setup-dev-drive@v3
-        with: 
-          drive-size: 120GB
-          drive-format: NTFS
-          drive-path: "d:\\build.vhdx"
-          mount-if-exists: true      
+      # - name: Mount DevDrive
+      #   uses: samypr100/setup-dev-drive@v3
+      #   with: 
+      #     drive-size: 120GB
+      #     drive-format: NTFS
+      #     drive-path: "d:\\build.vhdx"
+      #     mount-if-exists: true      
+
+      # - name: Setup 3p and build folder symlinks
+      #   run: |
+      #     "3rdParty", "build", ".o3de" | % {New-Item "${{ env.DEV_DRIVE }}\$_" -ItemType 'Directory' -Force}
+      #     "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE }}\$_ -Force}
+      #     ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE }}\$_ -Force}
 
       - name: Setup 3p and build folder symlinks
         run: |
-          "3rdParty", "build", ".o3de" | % {New-Item "${{ env.DEV_DRIVE }}\$_" -ItemType 'Directory' -Force}
-          "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE }}\$_ -Force}
-          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE }}\$_ -Force}
+          "3rdParty", "build", ".o3de" | % {New-Item "D:\$_" -ItemType 'Directory' -Force}
+          "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
+          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
                      
       - name: Restore 3P Cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@vv4.0.2
         continue-on-error: true
         with:
           path: |
-            ${{ env.DEV_DRIVE }}\.o3de\Python
-            ${{ env.DEV_DRIVE }}\python
-            ${{ env.DEV_DRIVE }}\3rdParty\packages
+            D:\.o3de\Python
+            D:\python
+            D:\3rdParty\packages
           key: O3DE-${{ matrix.image }}-3p
           restore-keys: |
             O3DE-windows-3p-
@@ -83,7 +91,7 @@ jobs:
           # remove_stale_cache: false
           ccache_options: |
             max_size=15G
-            cache_dir=${{ env.DEV_DRIVE }}\.ccache
+            cache_dir=D:\.ccache
 
       # - uses: lukka/get-cmake@latest
         
@@ -103,35 +111,40 @@ jobs:
           
       - name: Build
         env:
-          LY_3RDPARTY_PATH: ${{ env.DEV_DRIVE }}\3rdParty
+          LY_3RDPARTY_PATH: D:\3rdParty
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type profile 
 
       - name: Save 3P Cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v4.0.2
         continue-on-error: true
         if: always()
         with:
           path: |
-            ${{ env.DEV_DRIVE }}\.o3de\Python
-            ${{ env.DEV_DRIVE }}\python
-            ${{ env.DEV_DRIVE }}\3rdParty\packages
+            D:\.o3de\Python
+            D:\python
+            D:\3rdParty\packages
           key: O3DE-${{ matrix.image }}-3p
 
-      - name: Compress DevDrive
-        continue-on-error: true
-        if: always()
-        run: |
-          Dismount-VHD -Path D:\build.vhdx
-          7z.exe a -t7z -mx=1 -mmt=3 C:\build.vhdx.7z D:\build.vhdx
-          Mount-VHD -Path D:\build.vhdx
+      # - name: Compress Builds
+      #   continue-on-error: true
+      #   if: always()
+      #   run: |
+      #     Dismount-VHD -Path D:\build.vhdx
+      #     7z a -t7z -mx=1 -mmt=3 C:\build.vhdx.7z D:\build.vhdx
+      #     Mount-VHD -Path D:\build.vhdx 
           
-      - name: Save DevDrive
-        uses: actions/upload-artifact@v4
+      - name: Save Builds
+        uses: actions/upload-artifact@v4.3.6
         continue-on-error: true
         if: always()
         with:
-          path: "C:\\build.vhdx.7z"
-          #path: "D:\\build.vhdx"
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
-          compression-level: 0
+          # path: "C:\\build.vhdx.7z"
+          path: |
+            D:\.o3de\Python
+            D:\python
+            D:\3rdParty\packages
+            D:\build
+            
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
+          compression-level: 1

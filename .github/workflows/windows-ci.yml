@@ -69,7 +69,7 @@ jobs:
           ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
                      
       - name: Restore 3P Cache
-        uses: actions/cache/restore@vv4.0.2
+        uses: actions/cache/restore@v4.0.2
         continue-on-error: true
         with:
           path: |

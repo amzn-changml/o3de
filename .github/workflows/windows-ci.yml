@@ -141,9 +141,6 @@ jobs:
         with:
           # path: "C:\\build.vhdx.7z"
           path: |
-            D:\.o3de\Python
-            D:\python
-            D:\3rdParty\packages
             D:\build
             
           name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build

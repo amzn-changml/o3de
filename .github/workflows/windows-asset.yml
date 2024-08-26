@@ -1,9 +1,10 @@
 name: Windows Asset
 
 on:
-  workflow_run:
-    workflows: [Windows]
-    types: [completed]
+  push:
+  workflow_dispatch: {}
+
+
 
 jobs:
   build:
@@ -12,67 +13,66 @@ jobs:
       matrix:
         compiler: [msvc]
         type: [asset_profile]
-        target: [profile]
+        config: [profile]
         image: [windows-2022]
 
     runs-on: ${{ matrix.image }}
 
-    steps:               
-      - uses: actions/checkout@v4
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.1.7
         with:
           fetch-depth: 0
-      
+          clean: false
+  
       - name: Git LFS fetch
         run: |
           git lfs install
-          git lfs fetch --include "*.ico" --include "*.bmp"
+          git lfs fetch --include "*.ico,*.bmp"
           git lfs checkout
       
-      - name: Create binary folders
+      - name: Restore timestamps
+        uses: chetan/git-restore-mtime-action@v2
+
+      - name: Setup 3p and build folder symlinks
         run: |
-          # "build","3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-          "3rdParty" | % {New-Item "c:\o3de\$_" -ItemType 'Directory' -Force}
-          "3rdParty" | % {New-Item -ItemType SymbolicLink -Name .\$_ -Target c:\o3de\$_ -Force}
+          "3rdParty", "build", ".o3de" | % {New-Item "D:\$_" -ItemType 'Directory' -Force}
+          "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
+          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
                      
       - name: Restore 3P Cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v4.0.2
         continue-on-error: true
         with:
           path: |
-            ${{ github.workspace }}\3rdParty\downloaded_packages
-            ${{ github.workspace }}\python
-            C:\Users\runneradmin\.o3de\Python
+            D:\.o3de\Python
+            D:\python
+            D:\3rdParty\packages
           key: O3DE-${{ matrix.image }}-3p
           restore-keys: |
             O3DE-windows-3p-
-      
-      - name: Download Build
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          workflow: windows-ci.yml
-          workflow_search: true
-          workflow_conclusion: success
-
-      - name: Decompress Build
-        continue-on-error: true
-        run: |
-          7z.exe x -mmt=3 -mta -mtc -mtm ${{ github.workspace }}\build.7z
-          dir ${{ github.workspace }}\build
-          del ${{ github.workspace }}\build.7z
             
+      - name: Restore Build
+        uses: actions/download-artifact@v4.3.5
+        continue-on-error: true
+        with:
+          run-id: 10552082159
+          path: "d:\\"
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.target }}-ccache
+          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
-          windows_compile_environment: ${{ matrix.compiler }}
+          windows_compile_environment: msvc
+          prepend_symlinks_to_path: false
           remove_stale_cache: false
           ccache_options: |
-            cache_dir=${{ github.workspace }}\.ccache
-      
-      - name: Setup CMake
-        uses: lukka/get-cmake@latest
+            max_size=15G
+            cache_dir=D:\.ccache
         
       - name: Configure environment
         run: |
@@ -81,35 +81,26 @@ jobs:
           python\get_python.bat
           
       - name: Add msbuild to PATH
-        uses: ilammy/msvc-dev-cmd@v1.12.0
+        uses: ilammy/msvc-dev-cmd@v1.13.0
+
+      - name: Get environment
+        run: |
+          dir env:
+          get-psdrive
           
       - name: Build
         env:
-          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
+          LY_3RDPARTY_PATH: D:\3rdParty
         run: 
-          python\python.cmd -u scripts\build\ci_build.py --platform Windows --type ${{ matrix.type }}
-
-      - name: Save 3P Cache
-        uses: actions/cache/save@v4
+          python\python.cmd -u scripts\build\ci_build.py --platform Windows --type ${{ matrix.type }} 
+          
+      - name: Save Builds
+        uses: actions/upload-artifact@v4.3.5
         continue-on-error: true
         if: always()
         with:
           path: |
-            ${{ github.workspace }}\3rdParty\downloaded_packages
-            ${{ github.workspace }}\python
-            C:\Users\runneradmin\.o3de\Python
-          key: O3DE-${{ matrix.image }}-3p
-
-      - name: Compress Build
-        continue-on-error: true
-        if: always()
-        run: 7z.exe a -t7z -mx=1 -mmt=3 -mtc -mta -mtm c:\o3de\build.7z ${{ github.workspace }}\build
-      
-      - name: Save build
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        if: always()
-        with:
-          path: c:\o3de\build.7z
-          name: O3DE-${{ matrix.image }}-build-${{ matrix.config }}-${{ matrix.target }}
-          compression-level: 0
+            D:\build
+            
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build-asset
+          compression-level: 1

@@ -53,7 +53,7 @@ jobs:
             O3DE-windows-3p-
             
       - name: Restore Build
-        uses: actions/download-artifact@v4.3.5
+        uses: actions/download-artifact@v4.1.8
         continue-on-error: true
         with:
           run-id: 10552082159

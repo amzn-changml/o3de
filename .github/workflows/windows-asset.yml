@@ -28,7 +28,7 @@ jobs:
       - name: Git LFS fetch
         run: |
           git lfs install
-          git lfs fetch --include "*.ico,*.bmp"
+          git lfs fetch
           git lfs checkout
       
       - name: Restore timestamps

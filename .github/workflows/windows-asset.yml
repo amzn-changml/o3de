@@ -52,14 +52,13 @@ jobs:
           restore-keys: |
             O3DE-windows-3p-
             
-      # - name: Restore Build
-      #   uses: actions/download-artifact@v4.1.8
-      #   continue-on-error: true
-      #   with:
-      #     run-id: 10552082159
-      #     path: "d:\\"
-      #     name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Restore Build
+        uses: actions/download-artifact@v4.1.8
+        continue-on-error: true
+        with:
+          run-id: 10564962709
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3

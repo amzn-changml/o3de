@@ -90,7 +90,8 @@ jobs:
       - name: Build
         env:
           LY_3RDPARTY_PATH: D:\3rdParty
-        run: 
+        run: |
+          del D:\a\o3de\o3de\windows\CMakeCache.txt
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type ${{ matrix.type }} 
           
       - name: Save Builds

@@ -57,7 +57,7 @@ jobs:
         continue-on-error: true
         with:
           run-id: 10564962709
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build-asset
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup ccache

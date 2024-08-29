@@ -1,4 +1,4 @@
-name: MacOS
+name: MacOS Profile
 
 on:
   push:
@@ -43,35 +43,46 @@ jobs:
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p
           save-always: true
-
-      - name: Cache build
-        uses: actions/cache@v4.0.1
-        continue-on-error: true
-        with:
-          path: |
-            ${{ github.workspace }}/build
-          key: O3DE-mac-build-${{ matrix.image }}
-          save-always: true
           
-      - uses: hendrikmuhs/ccache-action@v1.2.12
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
-          key: O3DE-mac-${{ matrix.image }}-${{ matrix.config }}-${{ matrix.compiler }}
-          max-size: 2048M
-          variant: ccache
-
-      - uses: lukka/get-cmake@latest
+          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+          override_cache_key_fallback: |
+            O3DE-${{ matrix.image }}-${{ matrix.config }}
+          prepend_symlinks_to_path: false
+          ccache_options: |
+            max_size=15G
+            cache_dir=${{ github.workspace }}/.ccache
         
       - name: Configure environment
         run: |
           echo "Getting python..."
           ./python/get_python.sh
-         
-      - name: Configure
-        run: |
-          echo "Generating project..."
-          cmake -B build -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DLY_3RDPARTY_PATH=./3rdParty
           
       - name: Build
+        env:
+          LY_3RDPARTY_PATH: ./3rdParty
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          cmake --build build --target Editor --config ${{ matrix.config }} -j3
+          python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile
+
+      - name: Save Builds
+        uses: actions/upload-artifact@v4.3.5
+        continue-on-error: true
+        if: always()
+        with:
+          path: |
+            ${{ github.workspace }}/build           
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
+          compression-level: 1
+
+      - name: Save Cache
+        uses: actions/upload-artifact@v4.3.5
+        continue-on-error: true
+        if: always()
+        with:
+          path: |
+            ${{ github.workspace }}/.ccache          
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-cache
+          compression-level: 1

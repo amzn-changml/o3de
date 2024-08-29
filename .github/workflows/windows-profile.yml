@@ -1,11 +1,9 @@
-name: Windows
+name: Windows Profile
 
 on:
   push:
       paths: '.github/workflows/windows-profile.yml'
   workflow_dispatch: {}
-
-
 
 jobs:
   build:

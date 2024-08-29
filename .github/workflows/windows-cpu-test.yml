@@ -1,11 +1,9 @@
-name: Windows Asset
+name: Windows CPU Test
 
 on:
   push:
       paths: '.github/workflows/windows-cpu-test.yml'
   workflow_dispatch: {}
-
-
 
 jobs:
   build:

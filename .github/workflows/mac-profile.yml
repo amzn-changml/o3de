@@ -54,6 +54,8 @@ jobs:
           ccache_options: |
             max_size=15G
             cache_dir=${{ github.workspace }}/.ccache
+
+      - uses: lukka/get-cmake@latest
         
       - name: Configure environment
         run: |

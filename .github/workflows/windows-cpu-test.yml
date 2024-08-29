@@ -50,14 +50,6 @@ jobs:
           key: O3DE-${{ matrix.image }}-3p
           save-always: true
             
-      - name: Restore Profile Build
-        uses: actions/download-artifact@v4.1.8
-        continue-on-error: true
-        with:
-          run-id: 10552082159
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Restore Asset Build
         uses: actions/download-artifact@v4.1.8
         continue-on-error: true
@@ -69,7 +61,7 @@ jobs:
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.type }}-ccache
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
@@ -96,7 +88,6 @@ jobs:
         env:
           LY_3RDPARTY_PATH: D:\3rdParty
         run: |
-          del D:\a\o3de\o3de\windows\CMakeCache.txt
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type ${{ matrix.type }} 
           
       - name: Save Builds

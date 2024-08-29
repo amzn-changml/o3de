@@ -67,7 +67,7 @@ jobs:
           LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile
+          python/python.sh -u scripts/build/ci_build.py --platform Mac --type profile
 
       - name: Save Builds
         uses: actions/upload-artifact@v4.3.5

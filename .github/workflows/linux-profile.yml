@@ -12,15 +12,9 @@ jobs:
       matrix:
         compiler: [clang]
         config: [profile]
-        image: [ubuntu-24.04]
+        image: [ubuntu-22.04]
 
     runs-on: ${{ matrix.image }}
-
-    env:
-      CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
-      CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
-      CMAKE_C_COMPILER_LAUNCHER: ccache
-      CMAKE_CXX_COMPILER_LAUNCHER: ccache
 
     steps:
       - name: Maximize build space
@@ -73,6 +67,10 @@ jobs:
       - name: Build
         env:
           LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
+          CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
+          CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile

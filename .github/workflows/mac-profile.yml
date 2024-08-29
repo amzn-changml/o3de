@@ -16,10 +16,6 @@ jobs:
 
     runs-on: ${{ matrix.image }}
 
-    env:
-      CMAKE_C_COMPILER_LAUNCHER: ccache
-      CMAKE_CXX_COMPILER_LAUNCHER: ccache
-
     steps:    
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -50,7 +46,6 @@ jobs:
           override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
-          prepend_symlinks_to_path: false
           ccache_options: |
             max_size=15G
             cache_dir=${{ github.workspace }}/.ccache
@@ -65,8 +60,9 @@ jobs:
       - name: Build
         env:
           LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
+          CMAKE_C_COMPILER_LAUNCHER: /usr/local/bin/ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: /usr/local/bin/ccache
         run: |
-          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           python/python.sh -u scripts/build/ci_build.py --platform Mac --type profile
 
       - name: Save Builds

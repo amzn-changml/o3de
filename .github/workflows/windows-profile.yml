@@ -2,6 +2,7 @@ name: Windows
 
 on:
   push:
+      paths: '.github/workflows/windows-profile.yml'
   workflow_dispatch: {}
 
 
@@ -12,6 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [msvc]
+        type: [profile]
         config: [profile]
         image: [windows-2022]
 
@@ -32,44 +34,15 @@ jobs:
       
       - name: Restore timestamps
         uses: chetan/git-restore-mtime-action@v2
-        
-      # - name: Restore DevDrive
-      #   uses: actions/download-artifact@v4
-      #   continue-on-error: true
-      #   with:
-      #     run-id: ${{ vars.WINDOWS_DEV_IMAGE_RUNID }}
-      #     path: "c:\\"
-      #     name: O3DE-${{ matrix.image }}-${{ matrix.config }}-devdrive
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # - name: Decompress DevDrive
-      #   continue-on-error: true
-      #   run: |
-      #      7z.exe x -mmt=3 c:\build.vhdx.7z -od:\
-      #      del c:\build.vhdx.7z
-
-      # - name: Mount DevDrive
-      #   uses: samypr100/setup-dev-drive@v3
-      #   with: 
-      #     drive-size: 120GB
-      #     drive-format: NTFS
-      #     drive-path: "d:\\build.vhdx"
-      #     mount-if-exists: true      
-
-      # - name: Setup 3p and build folder symlinks
-      #   run: |
-      #     "3rdParty", "build", ".o3de" | % {New-Item "${{ env.DEV_DRIVE }}\$_" -ItemType 'Directory' -Force}
-      #     "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE }}\$_ -Force}
-      #     ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE }}\$_ -Force}
 
       - name: Setup 3p and build folder symlinks
         run: |
           "3rdParty", "build", ".o3de" | % {New-Item "D:\$_" -ItemType 'Directory' -Force}
           "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
           ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
-                     
-      - name: Restore 3P Cache
-        uses: actions/cache/restore@v4.0.2
+
+      - name: Cache 3p
+        uses: actions/cache@v4.0.2
         continue-on-error: true
         with:
           path: |
@@ -77,8 +50,7 @@ jobs:
             D:\python
             D:\3rdParty\packages
           key: O3DE-${{ matrix.image }}-3p
-          restore-keys: |
-            O3DE-windows-3p-
+          save-always: true
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
@@ -88,12 +60,9 @@ jobs:
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
           prepend_symlinks_to_path: false
-          # remove_stale_cache: false
           ccache_options: |
             max_size=15G
             cache_dir=D:\.ccache
-
-      # - uses: lukka/get-cmake@latest
         
       - name: Configure environment
         run: |
@@ -114,34 +83,13 @@ jobs:
           LY_3RDPARTY_PATH: D:\3rdParty
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type profile 
-
-      - name: Save 3P Cache
-        uses: actions/cache/save@v4.0.2
-        continue-on-error: true
-        if: always()
-        with:
-          path: |
-            D:\.o3de\Python
-            D:\python
-            D:\3rdParty\packages
-          key: O3DE-${{ matrix.image }}-3p
-
-      # - name: Compress Builds
-      #   continue-on-error: true
-      #   if: always()
-      #   run: |
-      #     Dismount-VHD -Path D:\build.vhdx
-      #     7z a -t7z -mx=1 -mmt=3 C:\build.vhdx.7z D:\build.vhdx
-      #     Mount-VHD -Path D:\build.vhdx 
           
       - name: Save Builds
         uses: actions/upload-artifact@v4.3.5
         continue-on-error: true
         if: always()
         with:
-          # path: "C:\\build.vhdx.7z"
           path: |
-            D:\build
-            
+            D:\build           
           name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
           compression-level: 1

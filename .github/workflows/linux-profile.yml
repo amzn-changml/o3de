@@ -1,6 +1,8 @@
 name: Linux
 
 on:
+  push:
+      paths: '.github/workflows/linux-profile.yml'
   workflow_dispatch: {}
 
 jobs:
@@ -19,10 +21,6 @@ jobs:
       CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
-      BUILDCACHE_MAX_CACHE_SIZE: 10737418240
-      BUILDCACHE_REMOTE: ${{ secrets.TEST_BUILDCACHE_REMOTE }}
-      BUILDCACHE_S3_ACCESS: ${{ secrets.TEST_BUILDCACHE_KEY }}
-      BUILDCACHE_S3_SECRET: ${{ secrets.TEST_BUILDCACHE_SECRET }}
 
     steps:
       - name: Maximize build space
@@ -43,13 +41,14 @@ jobs:
           ref: development
           
       - name: Cache 3p
-        uses: actions/cache@v4
+        uses: actions/cache@v4.0.2
         continue-on-error: true
         with:
           path: |
-            ./3rdParty/downloaded_packages
-            ./python
-          key: O3DE-linux-3p-${{ matrix.image }}
+            ${{ github.workspace }}/3rdParty/downloaded_packages
+            ${{ github.workspace }}/python
+          key: O3DE-${{ matrix.image }}-3p
+          save-always: true
 
       - name: Use ccache
         uses: hendrikmuhs/ccache-action@v1.2.12
@@ -75,4 +74,4 @@ jobs:
       - name: Build
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          cmake --build build --target Editor --config ${{ matrix.config }} -j1
+          cmake --build build --target Editor --config ${{ matrix.config }} -j3

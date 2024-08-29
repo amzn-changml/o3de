@@ -2,7 +2,7 @@ name: Windows Asset
 
 on:
   push:
-      paths: '.github/workflows/windows-asset.yml'
+      paths: '.github/workflows/windows-cpu-test.yml'
   workflow_dispatch: {}
 
 
@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [msvc]
-        type: [asset_profile]
+        type: [test_cpu_profile]
         config: [profile]
         image: [windows-2022]
 
@@ -51,7 +51,23 @@ jobs:
             D:\3rdParty\packages
           key: O3DE-${{ matrix.image }}-3p
           save-always: true
+            
+      - name: Restore Profile Build
+        uses: actions/download-artifact@v4.1.8
+        continue-on-error: true
+        with:
+          run-id: 10552082159
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Restore Asset Build
+        uses: actions/download-artifact@v4.1.8
+        continue-on-error: true
+        with:
+          run-id: 10564962709
+          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build-asset
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+  
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
@@ -81,7 +97,8 @@ jobs:
       - name: Build
         env:
           LY_3RDPARTY_PATH: D:\3rdParty
-        run:
+        run: |
+          del D:\a\o3de\o3de\windows\CMakeCache.txt
           python\python.cmd -u scripts\build\ci_build.py --platform Windows --type ${{ matrix.type }} 
           
       - name: Save Builds

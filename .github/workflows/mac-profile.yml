@@ -1,6 +1,8 @@
 name: MacOS
 
 on:
+  push:
+      paths: '.github/workflows/mac-profile.yml'
   workflow_dispatch: {}
 
 jobs:
@@ -33,15 +35,15 @@ jobs:
           git lfs checkout
           
       - name: Cache 3p
-        uses: actions/cache@v4.0.1
+        uses: actions/cache@v4.0.2
         continue-on-error: true
         with:
           path: |
             ${{ github.workspace }}/3rdParty/downloaded_packages
             ${{ github.workspace }}/python
-          key: O3DE-mac-3p-${{ matrix.image }}
+          key: O3DE-${{ matrix.image }}-3p
           save-always: true
-      
+
       - name: Cache build
         uses: actions/cache@v4.0.1
         continue-on-error: true
@@ -72,4 +74,4 @@ jobs:
       - name: Build
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          cmake --build build --target Editor --config ${{ matrix.config }} -j2
+          cmake --build build --target Editor --config ${{ matrix.config }} -j3

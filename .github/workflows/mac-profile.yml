@@ -27,7 +27,7 @@ jobs:
       - name: Git LFS fetch
         run: |
           git lfs install
-          git lfs fetch --include="*.ico"
+          git lfs fetch --include "*.ico,*.bmp"
           git lfs checkout
           
       - name: Cache 3p
@@ -37,6 +37,7 @@ jobs:
           path: |
             ${{ github.workspace }}/3rdParty/downloaded_packages
             ${{ github.workspace }}/python
+            ~/work/o3de/o3de/python
           key: O3DE-${{ matrix.image }}-3p
           save-always: true
           
@@ -48,14 +49,13 @@ jobs:
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           ccache_options: |
             max_size=15G
-            cache_dir=${{ github.workspace }}/.ccache
 
       - uses: lukka/get-cmake@latest
         
       - name: Configure environment
         run: |
           echo "Getting python..."
-          ./python/get_python.sh
+          ${{ github.workspace }}/python/get_python.sh
           
       - name: Build
         env:
@@ -63,7 +63,7 @@ jobs:
           CMAKE_C_COMPILER_LAUNCHER: /usr/local/bin/ccache
           CMAKE_CXX_COMPILER_LAUNCHER: /usr/local/bin/ccache
         run: |
-          python/python.sh -u scripts/build/ci_build.py --platform Mac --type profile
+          ${{ github.workspace }}/python/python.sh -u scripts/build/ci_build.py --platform Mac --type profile
 
       - name: Save Builds
         uses: actions/upload-artifact@v4.3.5
@@ -81,6 +81,6 @@ jobs:
         if: always()
         with:
           path: |
-            ${{ github.workspace }}/.ccache          
+            /Users/runner/Library/Caches/ccache        
           name: O3DE-${{ matrix.image }}-${{ matrix.config }}-cache
           compression-level: 1

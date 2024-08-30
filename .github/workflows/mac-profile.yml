@@ -60,9 +60,10 @@ jobs:
       - name: Build
         env:
           LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
-          CMAKE_C_COMPILER_LAUNCHER: /usr/local/bin/ccache
-          CMAKE_CXX_COMPILER_LAUNCHER: /usr/local/bin/ccache
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
+          export PATH="/usr/local/bin/:/usr/local/opt/ccache/libexec:$PATH"
           ${{ github.workspace }}/python/python.sh -u scripts/build/ci_build.py --platform Mac --type profile
 
       - name: Save Builds

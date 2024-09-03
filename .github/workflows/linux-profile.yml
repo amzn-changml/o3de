@@ -78,7 +78,7 @@ jobs:
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile_nonunity
+          python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile_nounity
       
       - name: Save Builds
         uses: actions/upload-artifact@v4.3.5

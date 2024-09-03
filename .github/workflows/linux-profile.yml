@@ -27,11 +27,11 @@ jobs:
           remove-android: 'true'     
             
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7
         with:
           fetch-depth: 1
-          repository: o3de/o3de
-          ref: development
+          show-progress: false
+          clean: false
           
       - name: Git LFS fetch
         run: |

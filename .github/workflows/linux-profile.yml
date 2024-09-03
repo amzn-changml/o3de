@@ -20,7 +20,7 @@ jobs:
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
         with:
-          root-reserve-mb: 7168
+          root-reserve-mb: 4096
           swap-size-mb: 512
           remove-dotnet: 'true'
           remove-haskell: 'true'
@@ -30,9 +30,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          submodules: recursive
-          repository: aws-lumberyard-dev/o3de
+          repository: o3de/o3de
           ref: development
+          
+      - name: Git LFS fetch
+        run: |
+          git lfs install
+          git lfs fetch --include "*.ico,*.bmp"
+          git lfs checkout
           
       - name: Cache 3p
         uses: actions/cache@v4.0.2

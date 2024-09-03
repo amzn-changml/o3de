@@ -21,9 +21,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4.1.7
         with:
-          fetch-depth: 0
+          fetch-depth: 1
+          show-progress: false
           clean: false
-  
+          
       - name: Git LFS fetch
         run: |
           git lfs install

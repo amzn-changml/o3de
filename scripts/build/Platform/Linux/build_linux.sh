@@ -63,7 +63,7 @@ if [[ "${LY_MIN_MEMORY_PER_CORE:-0}" -gt 0 ]]; then
     echo "Max Usable Cores    : $CORE_COUNT"
 else
     # Reserve at least 1 core to reduce IO contention
-    CORE_COUNT=($TOTAL_CORE_COUNT - 1)
+    CORE_COUNT=$(expr $TOTAL_CORE_COUNT - 1)
 fi
 
 # Split the configuration on semi-colon and use the cmake --build wrapper to run the underlying build command for each

@@ -46,8 +46,6 @@ jobs:
           remove-android: true
           remove-codeql: true
           remove-docker-images: true
-
-
             
       - name: Checkout repo
         uses: actions/checkout@v4.1.7
@@ -67,7 +65,7 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            ~/3rdParty/downloaded_packages
+            ${{ github.workspace }}/3rdParty/downloaded_packages
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p
           save-always: true
@@ -94,7 +92,7 @@ jobs:
           
       - name: Build
         env:
-          LY_3RDPARTY_PATH: ~/3rdParty
+          LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
           CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
           CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
           CMAKE_C_COMPILER_LAUNCHER: ccache

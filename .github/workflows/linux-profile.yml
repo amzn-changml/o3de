@@ -39,8 +39,8 @@ jobs:
       - name: Maximize build space - 2nd pass
         uses: easimon/maximize-build-space@v10
         with:
-          root-reserve-mb: 3000
-          swap-size-mb: 500
+          root-reserve-mb: 1024
+          swap-size-mb: 256
           remove-dotnet: true
           remove-haskell: true
           remove-android: true
@@ -50,7 +50,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4.1.7
         with:
-          fetch-depth: 1
           show-progress: false
           clean: false
           
@@ -88,6 +87,10 @@ jobs:
           popd
           echo "Getting python..."
           ./python/get_python.sh
+          sudo apt -y autoremove --purge
+          sudo apt -y autoclean
+          sudo apt clean
+          df -h
           
       - name: Build
         env:
@@ -110,22 +113,22 @@ jobs:
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p
       
-      - name: Save Builds
-        uses: actions/upload-artifact@v4.3.5
-        continue-on-error: true
-        if: always()
-        with:
-          path: |
-            ${{ github.workspace }}/build           
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
-          compression-level: 1
+      #- name: Save Builds
+      #  uses: actions/upload-artifact@v4.3.5
+      #  continue-on-error: true
+      #  if: always()
+      #  with:
+      #    path: |
+      #      ${{ github.workspace }}/build           
+      #    name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
+      #    compression-level: 1
 
-      - name: Save Cache
-        uses: actions/upload-artifact@v4.3.5
-        continue-on-error: true
-        if: always()
-        with:
-          path: |
-            ${{ github.workspace }}/.ccache          
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-cache
-          compression-level: 1
+      #- name: Save Cache
+      #  uses: actions/upload-artifact@v4.3.5
+      #  continue-on-error: true
+      #  if: always()
+      #  with:
+      #    path: |
+      #      ${{ github.workspace }}/.ccache          
+      #    name: O3DE-${{ matrix.image }}-${{ matrix.config }}-cache
+      #    compression-level: 1

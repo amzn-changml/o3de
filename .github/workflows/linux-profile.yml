@@ -60,15 +60,14 @@ jobs:
           git lfs fetch --include "*.ico,*.bmp"
           git lfs checkout
           
-      - name: Cache 3p
-        uses: actions/cache@v4.0.2
+      - name: Restore 3P Cache
+        uses: actions/cache/restore@v4.0.2
         continue-on-error: true
         with:
           path: |
             ${{ github.workspace }}/3rdParty/downloaded_packages
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p
-          save-always: true
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
@@ -100,6 +99,15 @@ jobs:
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile_unity
+
+      - name: Save 3P Cache
+        uses: actions/cache/restore@v4.0.2
+        continue-on-error: true
+        with:
+          path: |
+            ${{ github.workspace }}/3rdParty/packages
+            ${{ github.workspace }}/python
+          key: O3DE-${{ matrix.image }}-3p
       
       - name: Save Builds
         uses: actions/upload-artifact@v4.3.5

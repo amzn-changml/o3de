@@ -103,6 +103,11 @@ jobs:
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile_unity
 
+      - name: Get disk space
+        run: |
+          df -h
+          ls -lah ${{ github.workspace }}
+
       - name: Save 3P Cache
         uses: actions/cache/save@v4.0.2
         continue-on-error: true

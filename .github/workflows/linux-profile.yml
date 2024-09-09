@@ -101,7 +101,7 @@ jobs:
           python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile_unity
 
       - name: Save 3P Cache
-        uses: actions/cache/restore@v4.0.2
+        uses: actions/cache/save@v4.0.2
         continue-on-error: true
         if: always()
         with:

@@ -12,41 +12,45 @@ jobs:
       matrix:
         compiler: [clang]
         config: [profile]
-        image: [ubuntu-22.04]
+        image: [windows-latest]
 
     runs-on: ${{ matrix.image }}
 
     steps:
-      - name: Maximize build space - 1st pass
-        continue-on-error: true
-        run: |
-          sudo rm -rf \
-            "$AGENT_TOOLSDIRECTORY" \
-            /opt/google/chrome \
-            /opt/microsoft/msedge \
-            /opt/microsoft/powershell \
-            /opt/pipx \
-            /usr/lib/mono \
-            /usr/local/julia* \
-            /usr/local/lib/android \
-            /usr/local/lib/node_modules \
-            /usr/local/share/chromium \
-            /usr/local/share/powershell \
-            /usr/share/dotnet \
-            /usr/share/swift
-          df -h
+      # - name: Maximize build space - 1st pass
+      #   continue-on-error: true
+      #   run: |
+      #     sudo rm -rf \
+      #       "$AGENT_TOOLSDIRECTORY" \
+      #       /opt/google/chrome \
+      #       /opt/microsoft/msedge \
+      #       /opt/microsoft/powershell \
+      #       /opt/pipx \
+      #       /usr/lib/mono \
+      #       /usr/local/julia* \
+      #       /usr/local/lib/android \
+      #       /usr/local/lib/node_modules \
+      #       /usr/local/share/chromium \
+      #       /usr/local/share/powershell \
+      #       /usr/share/dotnet \
+      #       /usr/share/swift
+      #     df -h
           
-      - name: Maximize build space - 2nd pass
-        uses: easimon/maximize-build-space@v10
+      # - name: Maximize build space - 2nd pass
+      #   uses: easimon/maximize-build-space@v10
+      #   with:
+      #     root-reserve-mb: 2000
+      #     swap-size-mb: 256
+      #     remove-dotnet: true
+      #     remove-haskell: true
+      #     remove-android: true
+      #     remove-codeql: true
+      #     remove-docker-images: true
+
+      - uses: Vampire/setup-wsl@v3.1.1
         with:
-          root-reserve-mb: 2000
-          swap-size-mb: 256
-          remove-dotnet: true
-          remove-haskell: true
-          remove-android: true
-          remove-codeql: true
-          remove-docker-images: true
-            
+            distribution: Ubuntu-20.04   
+                  
       - name: Checkout repo
         uses: actions/checkout@v4.1.7
         with:

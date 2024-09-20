@@ -16,6 +16,10 @@ jobs:
 
     runs-on: ${{ matrix.image }}
 
+    defaults:
+      run:
+          shell: wsl-bash {0}
+
     steps:
       # - name: Maximize build space - 1st pass
       #   continue-on-error: true

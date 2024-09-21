@@ -12,19 +12,11 @@ jobs:
       matrix:
         compiler: [clang]
         config: [profile]
-        image: [windows-latest]
+        image: [ubuntu-20.04]
 
     runs-on: ${{ matrix.image }}
 
-    defaults:
-      run:
-          shell: wsl-bash {0}
-
-    steps:
-      - uses: Vampire/setup-wsl@v3.1.1
-        with:
-            distribution: Ubuntu-20.04   
-                  
+    steps:                  
       - name: Checkout repo
         uses: actions/checkout@v4.1.7
         with:
@@ -43,7 +35,7 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            ${{ github.workspace }}/3rdParty/packages
+            /dev/shm/3rdParty/packages
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p
 
@@ -56,7 +48,7 @@ jobs:
           prepend_symlinks_to_path: false
           ccache_options: |
             max_size=5G
-            cache_dir=${{ github.workspace }}/.ccache
+            cache_dir=/dev/shm/.ccache
 
       - name: Configure environment
         run: |
@@ -73,7 +65,7 @@ jobs:
           
       - name: Build
         env:
-          LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
+          LY_3RDPARTY_PATH: /dev/shm/3rdParty
           CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
           CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
           CMAKE_C_COMPILER_LAUNCHER: ccache
@@ -93,6 +85,6 @@ jobs:
         if: always()
         with:
           path: |
-            ${{ github.workspace }}/3rdParty/packages
+            /dev/shm/3rdParty/packages
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p

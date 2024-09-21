@@ -33,10 +33,10 @@ jobs:
           
       - name: Git LFS fetch
         run: |
-          sudo apt-get install git-lfs -y
           git lfs install
           git lfs fetch --include "*.ico,*.bmp"
           git lfs checkout
+        shell: cmd
           
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4.0.2
@@ -96,23 +96,3 @@ jobs:
             ${{ github.workspace }}/3rdParty/packages
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p
-      
-      #- name: Save Builds
-      #  uses: actions/upload-artifact@v4.3.5
-      #  continue-on-error: true
-      #  if: always()
-      #  with:
-      #    path: |
-      #      ${{ github.workspace }}/build           
-      #    name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
-      #    compression-level: 1
-
-      #- name: Save Cache
-      #  uses: actions/upload-artifact@v4.3.5
-      #  continue-on-error: true
-      #  if: always()
-      #  with:
-      #    path: |
-      #      ${{ github.workspace }}/.ccache          
-      #    name: O3DE-${{ matrix.image }}-${{ matrix.config }}-cache
-      #    compression-level: 1

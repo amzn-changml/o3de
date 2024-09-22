@@ -39,8 +39,8 @@ jobs:
       - name: Maximize build space - 2nd pass
         uses: easimon/maximize-build-space@v10
         with:
-          root-reserve-mb: 2000
-          swap-size-mb: 256
+          root-reserve-mb: 1500
+          swap-size-mb: 100
           remove-dotnet: true
           remove-haskell: true
           remove-android: true
@@ -110,6 +110,15 @@ jobs:
           df -h
           ls -lah ${{ github.workspace }}
 
+      - name: Save CCache
+        uses: actions/cache/save@v4.0.2
+        continue-on-error: true
+        if: always()
+        with:
+          path: |
+            /dev/shm/.ccache
+          key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+      
       - name: Save 3P Cache
         uses: actions/cache/save@v4.0.2
         continue-on-error: true
@@ -118,4 +127,4 @@ jobs:
           path: |
             /dev/shm/3rdParty/packages
             /dev/shm/python
-          key: O3DE-${{ matrix.image }}-3p
+          key: O3DE-${{ matrix.image }}-3p     

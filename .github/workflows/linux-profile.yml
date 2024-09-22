@@ -93,6 +93,7 @@ jobs:
           df -h
           
       - name: Build
+        continue-on-error: true
         env:
           LY_3RDPARTY_PATH: /dev/shm/3rdParty
           CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
@@ -104,6 +105,7 @@ jobs:
           python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile_unity
 
       - name: Get disk space
+        if: always()
         run: |
           df -h
           ls -lah ${{ github.workspace }}

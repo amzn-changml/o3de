@@ -108,7 +108,7 @@ jobs:
         if: always()
         run: |
           df -h
-          ls -lah ${{ github.workspace }}
+          ls -lah ${{ github.workspace }}/build
 
       - name: Save CCache
         uses: actions/cache/save@v4.0.2

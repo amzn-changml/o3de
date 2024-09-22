@@ -15,7 +15,7 @@ namespace AZ::RHI
     void ShaderResourceGroup::Compile(
         const ShaderResourceGroupData& groupData, CompileMode compileMode /*= CompileMode::Async*/)
     {
-        m_Data = groupData;
+        m_data = groupData;
 
         IterateObjects<DeviceShaderResourceGroup>([&groupData, compileMode](auto deviceIndex, auto deviceShaderResourceGroup)
         {
@@ -53,16 +53,11 @@ namespace AZ::RHI
 
     const ShaderResourceGroupData& ShaderResourceGroup::GetData() const
     {
-        return m_Data;
+        return m_data;
     }
 
     void ShaderResourceGroup::Shutdown()
     {
-        IterateObjects<DeviceShaderResourceGroup>([]([[maybe_unused]] auto deviceIndex, auto deviceShaderResourceGroup)
-        {
-            deviceShaderResourceGroup->Shutdown();
-        });
-
         Resource::Shutdown();
     }
 } // namespace AZ::RHI

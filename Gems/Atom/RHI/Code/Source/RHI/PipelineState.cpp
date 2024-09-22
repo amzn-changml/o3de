@@ -29,6 +29,17 @@ namespace AZ::RHI
         return true;
     }
 
+    void PipelineState::PreInitialize(MultiDevice::DeviceMask deviceMask)
+    {
+        MultiDeviceObject::IterateDevices(
+            deviceMask,
+            [this](int deviceIndex)
+            {
+                m_deviceObjects[deviceIndex] = Factory::Get().CreatePipelineState();
+                return true;
+            });
+    }
+
     ResultCode PipelineState::Init(
         MultiDevice::DeviceMask deviceMask, const PipelineStateDescriptor& descriptor, PipelineLibrary* pipelineLibrary)
     {
@@ -51,7 +62,11 @@ namespace AZ::RHI
             {
                 auto* device = RHISystemInterface::Get()->GetDevice(deviceIndex);
 
-                m_deviceObjects[deviceIndex] = Factory::Get().CreatePipelineState();
+                if(!m_deviceObjects.contains(deviceIndex))
+                {
+                    m_deviceObjects[deviceIndex] = Factory::Get().CreatePipelineState();
+                }
+
                 switch (descriptor.GetType())
                 {
                 case PipelineStateType::Draw:
@@ -106,9 +121,14 @@ namespace AZ::RHI
 
         if (resultCode != ResultCode::Success)
         {
-            // Reset already initialized device-specific PipelineStates and set deviceMask to 0
-            m_deviceObjects.clear();
+            // Only reset the device mask but the the device-specific PipelineStates, as other
+            // threads might be using them already
             MultiDeviceObject::Init(static_cast<MultiDevice::DeviceMask>(0u));
+        }
+
+        if (const auto& name = GetName(); !name.IsEmpty())
+        {
+            SetName(name);
         }
 
         return resultCode;
@@ -116,9 +136,9 @@ namespace AZ::RHI
 
     void PipelineState::Shutdown()
     {
+        m_deviceObjects.clear();
         if (IsInitialized())
         {
-            m_deviceObjects.clear();
             MultiDeviceObject::Shutdown();
         }
     }

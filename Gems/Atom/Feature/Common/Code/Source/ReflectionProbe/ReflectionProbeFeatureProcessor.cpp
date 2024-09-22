@@ -44,7 +44,7 @@ namespace AZ
 
             m_bufferPool = aznew RHI::BufferPool;
             m_bufferPool->SetName(Name("ReflectionProbeBoxBufferPool"));
-            [[maybe_unused]] RHI::ResultCode resultCode = m_bufferPool->Init(RHI::MultiDevice::AllDevices, desc);
+            [[maybe_unused]] RHI::ResultCode resultCode = m_bufferPool->Init(desc);
             AZ_Error("ReflectionProbeFeatureProcessor", resultCode == RHI::ResultCode::Success, "Failed to initialize buffer pool");
 
             // create box mesh vertices and indices
@@ -630,8 +630,9 @@ namespace AZ
                 sizeof(indices),
                 AZ::RHI::IndexFormat::Uint16,
             };
-            m_reflectionRenderData.m_boxIndexBufferView = indexBufferView;
-            m_reflectionRenderData.m_boxIndexCount = numIndices;
+
+            m_reflectionRenderData.m_geometryView.SetIndexBufferView(indexBufferView);
+            m_reflectionRenderData.m_geometryView.SetDrawArguments(RHI::DrawIndexed{ 0, numIndices, 0 });
 
             // create position buffer
             m_boxPositionBuffer = aznew RHI::Buffer;
@@ -649,9 +650,10 @@ namespace AZ
                 (uint32_t)(m_boxPositions.size() * sizeof(Position)),
                 sizeof(Position),
             };
-            m_reflectionRenderData.m_boxPositionBufferView = { { positionBufferView } };
+            m_reflectionRenderData.m_geometryView.ClearStreamBufferViews();
+            m_reflectionRenderData.m_geometryView.AddStreamBufferView(positionBufferView);
 
-            AZ::RHI::ValidateStreamBufferViews(m_boxStreamLayout, m_reflectionRenderData.m_boxPositionBufferView);
+            AZ::RHI::ValidateStreamBufferViews(m_boxStreamLayout, m_reflectionRenderData.m_geometryView.GetStreamBufferViews());
         }
 
         void ReflectionProbeFeatureProcessor::LoadShader(

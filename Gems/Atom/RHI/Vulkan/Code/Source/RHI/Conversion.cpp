@@ -12,7 +12,9 @@
 #include <Atom/RHI/Image.h>
 #include <Atom/RHI/Resource.h>
 #include <Atom/RHI/DeviceImageView.h>
+#include <RHI/Vulkan.h>
 #include <RHI/Conversion.h>
+#include <RHI/Device.h>
 #include <RHI/Image.h>
 #include <RHI/PhysicalDevice.h>
 
@@ -44,9 +46,13 @@ namespace AZ
             return vkFlags;
         }
 
-        VkPipelineStageFlags GetResourcePipelineStateFlags(const RHI::ScopeAttachment& scopeAttachment)
+        VkPipelineStageFlags GetResourcePipelineStateFlags(
+            AZ::RHI::ScopeAttachmentUsage scopeAttachmentUsage,
+            AZ::RHI::ScopeAttachmentStage scopeAttachmentStage,
+            AZ::RHI::HardwareQueueClass scopeQueueClass,
+            VkImageUsageFlags shadingRateAttachmentUsageFlags)
         {
-            switch (scopeAttachment.GetUsage())
+            switch (scopeAttachmentUsage)
             {
             case RHI::ScopeAttachmentUsage::RenderTarget:
                 return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -54,17 +60,29 @@ namespace AZ
                 return VK_PIPELINE_STAGE_TRANSFER_BIT;
             case RHI::ScopeAttachmentUsage::DepthStencil:
                 return RHI::FilterBits(
-                    ConvertScopeAttachmentStage(scopeAttachment.GetStage()),
+                    ConvertScopeAttachmentStage(scopeAttachmentStage),
                     static_cast<VkPipelineStageFlags>(
                         VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT));
             case RHI::ScopeAttachmentUsage::SubpassInput:
+                {
+                    AZ_Assert(scopeQueueClass == RHI::HardwareQueueClass::Graphics,
+                        "SubpassInput attachment usage is only supported by the Graphics Queue Class.");
+                    // REMARK, We remove VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR in this filter because
+                    // when using subpasses only stages for the raster pipeline are supported.
+                    return RHI::FilterBits(
+                            ConvertScopeAttachmentStage(scopeAttachmentStage),
+                            static_cast<VkPipelineStageFlags>(
+                                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+                                VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT));
+                }
             case RHI::ScopeAttachmentUsage::Shader:
                 {
-                    switch (scopeAttachment.GetScope().GetHardwareQueueClass())
+                    switch (scopeQueueClass)
                     {
                     case RHI::HardwareQueueClass::Graphics:
                         return RHI::FilterBits(
-                            ConvertScopeAttachmentStage(scopeAttachment.GetStage()),
+                            ConvertScopeAttachmentStage(scopeAttachmentStage),
                             static_cast<VkPipelineStageFlags>(
                                 VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
@@ -87,11 +105,11 @@ namespace AZ
                 return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
             case RHI::ScopeAttachmentUsage::ShadingRate:
                 {
-                    const Image& image =
-                        static_cast<const Image&>(*(static_cast<const RHI::ImageView*>(scopeAttachment.GetResourceView()))->GetImage()->GetDeviceImage(scopeAttachment.GetScope().GetDeviceIndex()));
+                    AZ_Assert(shadingRateAttachmentUsageFlags != 0, "shading Rate Attachment UsageFlags can not be 0");
                     return
                         RHI::CheckBitsAll(
-                            image.GetUsageFlags(), static_cast<VkImageUsageFlags>(VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT))
+                               shadingRateAttachmentUsageFlags,
+                               static_cast<VkImageUsageFlags>(VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT))
                         ? VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT
                         : VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
                 }
@@ -99,6 +117,21 @@ namespace AZ
                 break;
             }
             return {};
+        }
+
+        VkPipelineStageFlags GetResourcePipelineStateFlags(const RHI::ScopeAttachment& scopeAttachment)
+        {
+            VkImageUsageFlags shadingRateAttachmentUsageFlags = 0;
+            if (scopeAttachment.GetUsage() == RHI::ScopeAttachmentUsage::ShadingRate)
+            {
+                const RHI::ImageView* imageView = static_cast<const RHI::ImageView*>(scopeAttachment.GetResourceView());
+                const int deviceIndex = scopeAttachment.GetScope().GetDeviceIndex();
+                const Image& image = static_cast<const Image&>(*imageView->GetImage()->GetDeviceImage(deviceIndex));
+                shadingRateAttachmentUsageFlags = image.GetUsageFlags();
+            }
+            return GetResourcePipelineStateFlags(
+                scopeAttachment.GetUsage(), scopeAttachment.GetStage(), scopeAttachment.GetScope().GetHardwareQueueClass(),
+                shadingRateAttachmentUsageFlags);
         }
 
         VkPipelineStageFlags GetResourcePipelineStateFlags(const RHI::BufferBindFlags& bindFlags)
@@ -202,11 +235,13 @@ namespace AZ
             return flags;
         }
 
-        VkAccessFlags GetResourceAccessFlags(const RHI::ScopeAttachment& scopeAttachment)
+        VkAccessFlags GetResourceAccessFlags(
+            AZ::RHI::ScopeAttachmentAccess access,
+            AZ::RHI::ScopeAttachmentUsage scopeAttachmentUsage,
+            VkImageUsageFlags shadingRateAttachmentUsageFlags)
         {
             VkAccessFlags accessFlags = {};
-            RHI::ScopeAttachmentAccess access = scopeAttachment.GetAccess();
-            switch (scopeAttachment.GetUsage())
+            switch (scopeAttachmentUsage)
             {
             case RHI::ScopeAttachmentUsage::RenderTarget:
                 accessFlags |= RHI::CheckBitsAny(access, RHI::ScopeAttachmentAccess::Write)
@@ -228,6 +263,11 @@ namespace AZ
                     : accessFlags;
                 break;
             case RHI::ScopeAttachmentUsage::SubpassInput:
+                // QCOMM is particularly restrictive about this:
+                // Starting from the second subpass where the input_attachments field is used,
+                // the dstAccessMask must be set to VK_ACCESS_INPUT_ATTACHMENT_READ_BIT.
+                accessFlags = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+                break;
             case RHI::ScopeAttachmentUsage::Shader:
                 accessFlags |= RHI::CheckBitsAny(access, RHI::ScopeAttachmentAccess::Write)
                     ? VK_ACCESS_SHADER_WRITE_BIT
@@ -255,11 +295,10 @@ namespace AZ
                 break;
             case RHI::ScopeAttachmentUsage::ShadingRate:
                 {
-                    const Image& image =
-                        static_cast<const Image&>(*(static_cast<const RHI::ImageView*>(scopeAttachment.GetResourceView()))->GetImage()->GetDeviceImage(scopeAttachment.GetScope().GetDeviceIndex()));
+                    AZ_Assert(shadingRateAttachmentUsageFlags != 0, "shading Rate Attachment UsageFlags can not be 0");
                     accessFlags |=
-                        RHI::CheckBitsAll(
-                            image.GetUsageFlags(), static_cast<VkImageUsageFlags>(VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT))
+                        RHI::CheckBitsAll(shadingRateAttachmentUsageFlags,
+                                          static_cast<VkImageUsageFlags>(VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT))
                         ? VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT
                         : VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
                     break;
@@ -268,6 +307,19 @@ namespace AZ
                 break;
             }
             return accessFlags;
+        }
+
+        VkAccessFlags GetResourceAccessFlags(const RHI::ScopeAttachment& scopeAttachment)
+        {
+            VkImageUsageFlags shadingRateAttachmentUsageFlags = 0;
+            if (scopeAttachment.GetUsage() == RHI::ScopeAttachmentUsage::ShadingRate)
+            {
+                const RHI::ImageView* imageView = static_cast<const RHI::ImageView*>(scopeAttachment.GetResourceView());
+                const int deviceIndex = scopeAttachment.GetScope().GetDeviceIndex();
+                const Image& image = static_cast<const Image&>(*imageView->GetImage()->GetDeviceImage(deviceIndex));
+                shadingRateAttachmentUsageFlags = image.GetUsageFlags();
+            }
+            return GetResourceAccessFlags(scopeAttachment.GetAccess(), scopeAttachment.GetUsage(), shadingRateAttachmentUsageFlags);
         }
 
         VkAccessFlags GetResourceAccessFlags(const RHI::BufferBindFlags& bindFlags)
@@ -355,7 +407,6 @@ namespace AZ
         VkImageLayout GetImageAttachmentLayout(const RHI::ImageScopeAttachment& imageAttachment)
         {
             const RHI::DeviceImageView* imageView = imageAttachment.GetImageView()->GetDeviceImageView(imageAttachment.GetScope().GetDeviceIndex()).get();
-            auto& physicalDevice = static_cast<const PhysicalDevice&>(imageView->GetDevice().GetPhysicalDevice());
             auto imageAspects = RHI::FilterBits(imageView->GetImage().GetAspectFlags(), imageView->GetDescriptor().m_aspectFlags);
             RHI::ScopeAttachmentAccess access = imageAttachment.GetAccess();
             switch (imageAttachment.GetUsage())
@@ -381,39 +432,28 @@ namespace AZ
                                                                                         : VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
                 }                
             case RHI::ScopeAttachmentUsage::Shader:
+                if (RHI::CheckBitsAny(access, RHI::ScopeAttachmentAccess::Write))
+                {
+                    return VK_IMAGE_LAYOUT_GENERAL;
+                }
+                [[fallthrough]];
             case RHI::ScopeAttachmentUsage::SubpassInput:
                 {
-                    // always set VK_IMAGE_LAYOUT_GENERAL if the Image is ShaderWrite, even in a read scope
-                    if (RHI::CheckBitsAny(access, RHI::ScopeAttachmentAccess::Write) ||
-                        RHI::CheckBitsAny(imageView->GetImage().GetDescriptor().m_bindFlags, RHI::ImageBindFlags::ShaderWrite))
-                    {
-                        return VK_IMAGE_LAYOUT_GENERAL;
-                    }
-                    else
-                    {
-                        // if we are reading from a depth/stencil texture, then we use the depth/stencil read optimal layout instead of the
-                        // generic shader read one
-                        AZ_Error(
-                            "Vulkan",
-                            !RHI::CheckBitsAll(imageAspects, RHI::ImageAspectFlags::DepthStencil),
-                            "Please specify depth or stencil aspect mask for ScopeAttachment %s in Scope %s",
-                            imageAttachment.GetDescriptor().m_attachmentId.GetCStr(),
-                            imageAttachment.GetScope().GetId().GetCStr());
+                    // if we are reading from a depth/stencil texture, then we use the depth/stencil read optimal layout instead of the
+                    // generic shader read one
+                    AZ_Error(
+                        "Vulkan",
+                        !RHI::CheckBitsAll(imageAspects, RHI::ImageAspectFlags::DepthStencil),
+                        "Please specify depth or stencil aspect mask for ScopeAttachment %s in Scope %s",
+                        imageAttachment.GetDescriptor().m_attachmentId.GetCStr(),
+                        imageAttachment.GetScope().GetId().GetCStr());
 
-                        if (physicalDevice.IsFeatureSupported(DeviceFeature::SeparateDepthStencil))
-                        {
-                            if (RHI::CheckBitsAll(imageAspects, RHI::ImageAspectFlags::Depth))
-                            {
-                                return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
-                            }
-                            else if (RHI::CheckBitsAll(imageAspects, RHI::ImageAspectFlags::Stencil))
-                            {
-                                return VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL;
-                            }
-                        }                        
-                        
-                        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    if (RHI::CheckBitsAny(imageAspects, RHI::ImageAspectFlags::DepthStencil))
+                    {
+                        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
                     }
+                        
+                    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 }
             case RHI::ScopeAttachmentUsage::Copy:
                 return RHI::CheckBitsAny(access, RHI::ScopeAttachmentAccess::Write)
@@ -507,6 +547,22 @@ namespace AZ
             {
                 return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
             }
+            // We always add both depth and stencil aspects for image layouts, even when dealing with depth only or stencil only layouts.
+            // Using a depth only or stencil only layouts requires an extension and more complicated logic.
+            else if (
+                isSameFunc(VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL) ||
+                isSameFunc(VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL))   
+            {
+                return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            }
+            // We always add both depth and stencil aspects for image layouts, even when dealing with depth only or stencil only layouts.
+            // Using a depth only or stencil only layouts requires an extension and more complicated logic.
+            else if (
+                isSameFunc(VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ||
+                isSameFunc(VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL))  
+            {
+                return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            }
 
             return lhs;
         }
@@ -562,6 +618,94 @@ namespace AZ
             }
 
             return layout;
+        }
+
+        VkAttachmentLoadOp ConvertAttachmentLoadAction(RHI::AttachmentLoadAction loadAction, const Device& device)
+        {
+            const auto& physicalDevice = static_cast<const PhysicalDevice&>(device.GetPhysicalDevice());
+            switch (loadAction)
+            {
+            case RHI::AttachmentLoadAction::Load:
+                return VK_ATTACHMENT_LOAD_OP_LOAD;
+            case RHI::AttachmentLoadAction::Clear:
+                return VK_ATTACHMENT_LOAD_OP_CLEAR;
+            case RHI::AttachmentLoadAction::DontCare:
+                return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            case RHI::AttachmentLoadAction::None:
+                return physicalDevice.IsFeatureSupported(DeviceFeature::LoadNoneOp) ? VK_ATTACHMENT_LOAD_OP_NONE_EXT
+                                                                                    : VK_ATTACHMENT_LOAD_OP_LOAD;
+            default:
+                AZ_Assert(false, "AttachmentLoadAction is invalid.");
+                return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            }
+        }
+
+        VkAttachmentStoreOp ConvertAttachmentStoreAction(RHI::AttachmentStoreAction storeAction, const Device& device)
+        {
+            const auto& physicalDevice = static_cast<const PhysicalDevice&>(device.GetPhysicalDevice());
+            switch (storeAction)
+            {
+            case RHI::AttachmentStoreAction::Store:
+                return VK_ATTACHMENT_STORE_OP_STORE;
+            case RHI::AttachmentStoreAction::DontCare:
+                return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            case RHI::AttachmentStoreAction::None:
+                return physicalDevice.IsFeatureSupported(DeviceFeature::StoreNoneOp) ? VK_ATTACHMENT_STORE_OP_NONE
+                                                                                     : VK_ATTACHMENT_STORE_OP_STORE;
+            default:
+                AZ_Assert(false, "AttachmentStoreAction is invalid.");
+                return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            }
+        }
+
+        RHI::AttachmentLoadAction CombineLoadOp(RHI::AttachmentLoadAction currentOp, RHI::AttachmentLoadAction newOp)
+        {
+            switch (currentOp)
+            {
+            case RHI::AttachmentLoadAction::Load:
+                return RHI::AttachmentLoadAction::Load;
+            case RHI::AttachmentLoadAction::DontCare:
+                return RHI::AttachmentLoadAction::DontCare;
+            case RHI::AttachmentLoadAction::Clear:
+                return RHI::AttachmentLoadAction::Clear;
+            case RHI::AttachmentLoadAction::None:
+                return newOp != RHI::AttachmentLoadAction::None ? RHI::AttachmentLoadAction::Load : RHI::AttachmentLoadAction::None;
+            default:
+                AZ_Assert(false, "AttachmentLoadAction is invalid.");
+                return RHI::AttachmentLoadAction::Load;
+            }
+        }
+
+        RHI::AttachmentStoreAction CombineStoreOp(RHI::AttachmentStoreAction currentOp, RHI::AttachmentStoreAction newOp)
+        {
+            switch (currentOp)
+            {
+            case RHI::AttachmentStoreAction::DontCare:
+                return newOp;
+            case RHI::AttachmentStoreAction::Store:
+                return newOp == RHI::AttachmentStoreAction::None ? RHI::AttachmentStoreAction::Store : newOp;
+            case RHI::AttachmentStoreAction::None:
+                return newOp;
+            default:
+                AZ_Assert(false, "AttachmentStoreAction is invalid.");
+                return RHI::AttachmentStoreAction::Store;
+            }
+        }
+
+        BarrierTypeFlags ConvertBarrierType(VkStructureType type)
+        {
+            switch (type)
+            {
+            case VK_STRUCTURE_TYPE_MEMORY_BARRIER:
+                return BarrierTypeFlags::Memory;
+            case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
+                return BarrierTypeFlags::Buffer;
+            case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
+                return BarrierTypeFlags::Image;
+            default:
+                AZ_Assert(false, "Invalid memory barrier type.");
+                return BarrierTypeFlags::None;
+            }
         }
     }
 }

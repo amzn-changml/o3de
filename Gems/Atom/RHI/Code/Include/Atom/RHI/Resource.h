@@ -73,10 +73,10 @@ namespace AZ::RHI
         void SetPool(ResourcePool* pool);
 
         //! Called by the frame attachment at frame building time.
-        void SetFrameAttachment(FrameAttachment* frameAttachment);
+        void SetFrameAttachment(FrameAttachment* frameAttachment, int deviceIndex = MultiDevice::InvalidDeviceIndex);
 
         //! The parent pool this resource is registered with.
-        ResourcePool* m_Pool = nullptr;
+        ResourcePool* m_pool = nullptr;
 
         //! The current frame attachment registered on this resource.
         FrameAttachment* m_frameAttachment = nullptr;

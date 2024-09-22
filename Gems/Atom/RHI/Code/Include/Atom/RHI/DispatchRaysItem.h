@@ -9,12 +9,12 @@
 
 #include <Atom/RHI.Reflect/Limits.h>
 #include <Atom/RHI/DeviceDispatchRaysItem.h>
+#include <Atom/RHI/IndirectArguments.h>
 #include <Atom/RHI/DispatchRaysIndirectBuffer.h>
 #include <Atom/RHI/RayTracingAccelerationStructure.h>
 #include <Atom/RHI/RayTracingPipelineState.h>
 #include <Atom/RHI/RayTracingShaderTable.h>
 #include <Atom/RHI/ShaderResourceGroup.h>
-#include <Atom/RHI/RHISystemInterface.h>
 #include <AzCore/std/containers/array.h>
 
 namespace AZ::RHI
@@ -73,7 +73,7 @@ namespace AZ::RHI
 
         DispatchRaysArguments(const DispatchRaysIndirect& indirect)
             : m_type{ DispatchRaysType::Indirect }
-            , m_Indirect{ indirect }
+            , m_indirect{ indirect }
         {
         }
 
@@ -86,14 +86,14 @@ namespace AZ::RHI
                 return DeviceDispatchRaysArguments(m_direct);
             case DispatchRaysType::Indirect:
                 return DeviceDispatchRaysArguments(DeviceDispatchRaysIndirect{
-                    m_Indirect.m_maxSequenceCount,
-                    m_Indirect.m_indirectBufferView->GetDeviceIndirectBufferView(deviceIndex),
-                    m_Indirect.m_indirectBufferByteOffset,
-                    m_Indirect.m_dispatchRaysIndirectBuffer
-                        ? m_Indirect.m_dispatchRaysIndirectBuffer->GetDeviceDispatchRaysIndirectBuffer(deviceIndex).get()
+                    m_indirect.m_maxSequenceCount,
+                    m_indirect.m_indirectBufferView->GetDeviceIndirectBufferView(deviceIndex),
+                    m_indirect.m_indirectBufferByteOffset,
+                    m_indirect.m_dispatchRaysIndirectBuffer
+                        ? m_indirect.m_dispatchRaysIndirectBuffer->GetDeviceDispatchRaysIndirectBuffer(deviceIndex).get()
                         : nullptr,
-                    m_Indirect.m_countBuffer ? m_Indirect.m_countBuffer->GetDeviceBuffer(deviceIndex).get() : nullptr,
-                    m_Indirect.m_countBufferByteOffset });
+                    m_indirect.m_countBuffer ? m_indirect.m_countBuffer->GetDeviceBuffer(deviceIndex).get() : nullptr,
+                    m_indirect.m_countBufferByteOffset });
             default:
                 return DeviceDispatchRaysArguments();
             }
@@ -104,7 +104,7 @@ namespace AZ::RHI
             //! Arguments for a direct dispatch.
             DispatchRaysDirect m_direct;
             //! Arguments for an indirect dispatch.
-            DispatchRaysIndirect m_Indirect;
+            DispatchRaysIndirect m_indirect;
         };
     };
 
@@ -115,15 +115,13 @@ namespace AZ::RHI
         DispatchRaysItem(MultiDevice::DeviceMask deviceMask)
             : m_deviceMask{ deviceMask }
         {
-            auto deviceCount{ RHI::RHISystemInterface::Get()->GetDeviceCount() };
-
-            for (int deviceIndex = 0; deviceIndex < deviceCount; ++deviceIndex)
-            {
-                if (CheckBitsAll(AZStd::to_underlying(m_deviceMask), 1u << deviceIndex))
+            MultiDeviceObject::IterateDevices(
+                m_deviceMask,
+                [this](int deviceIndex)
                 {
                     m_deviceDispatchRaysItems.emplace(deviceIndex, DeviceDispatchRaysItem{});
-                }
-            }
+                    return true;
+                });
         }
 
         //! Returns the device-specific DeviceDispatchRaysItem for the given index
@@ -185,7 +183,7 @@ namespace AZ::RHI
 
                 auto& [index, deviceShaderResourceGroup]{ *it };
 
-                for (int i = 0; i < shaderResourceGroupCount; ++i)
+                for (int i = 0; i < static_cast<int>(shaderResourceGroupCount); ++i)
                 {
                     deviceShaderResourceGroup[i] = shaderResourceGroups[i]->GetDeviceShaderResourceGroup(deviceIndex).get();
                 }

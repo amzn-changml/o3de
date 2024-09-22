@@ -89,17 +89,17 @@ namespace DebugDraw
 
     void DebugDrawSystemComponent::GetProvidedServices(AZ::ComponentDescriptor::DependencyArrayType& provided)
     {
-        provided.push_back(AZ_CRC("DebugDrawService", 0x651d8874));
+        provided.push_back(AZ_CRC_CE("DebugDrawService"));
     }
 
     void DebugDrawSystemComponent::GetIncompatibleServices(AZ::ComponentDescriptor::DependencyArrayType& incompatible)
     {
-        incompatible.push_back(AZ_CRC("DebugDrawService", 0x651d8874));
+        incompatible.push_back(AZ_CRC_CE("DebugDrawService"));
     }
 
     void DebugDrawSystemComponent::GetRequiredServices(AZ::ComponentDescriptor::DependencyArrayType& required)
     {
-        required.push_back(AZ_CRC("RPISystem", 0xf2add773));
+        required.push_back(AZ_CRC_CE("RPISystem"));
     }
 
     void DebugDrawSystemComponent::GetDependentServices(AZ::ComponentDescriptor::DependencyArrayType& dependent)
@@ -1143,7 +1143,7 @@ namespace DebugDraw
                 "DebugDraw::Sphere",
                 rayTracingShader,
                 "SphereIntersection",
-                m_spheresRayTracingIndicesBuffer->GetBufferView()->GetDeviceBufferView(AZ::RHI::MultiDevice::DefaultDeviceIndex)->GetBindlessReadIndex());
+                m_spheresRayTracingIndicesBuffer->GetBufferView()->GetBindlessReadIndex());
         }
 
         element.m_localInstanceIndex = m_spheresRayTracingIndices.AddEntry(0);
@@ -1153,7 +1153,7 @@ namespace DebugDraw
         {
             m_spheresRayTracingIndicesBuffer->Resize(requiredSizeInBytes);
             m_rayTracingFeatureProcessor->SetProceduralGeometryTypeBindlessBufferIndex(
-                m_sphereRayTracingTypeHandle.GetWeakHandle(), m_spheresRayTracingIndicesBuffer->GetBufferView()->GetDeviceBufferView(AZ::RHI::MultiDevice::DefaultDeviceIndex)->GetBindlessReadIndex());
+                m_sphereRayTracingTypeHandle.GetWeakHandle(), m_spheresRayTracingIndicesBuffer->GetBufferView()->GetBindlessReadIndex());
 
             // Need to copy all existing data to resized buffer
             AZStd::vector<float> radii(m_spheresRayTracingIndices.GetIndexList().size());

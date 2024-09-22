@@ -12,7 +12,6 @@
 #include <Atom/RHI/IndirectArguments.h>
 #include <Atom/RHI/PipelineState.h>
 #include <Atom/RHI/ShaderResourceGroup.h>
-#include <Atom/RHI/RHISystemInterface.h>
 #include <AzCore/Casting/numeric_cast.h>
 #include <AzCore/std/containers/array.h>
 
@@ -41,7 +40,7 @@ namespace AZ::RHI
 
         DispatchArguments(const DispatchIndirect& indirect)
             : m_type{ DispatchType::Indirect }
-            , m_Indirect{ indirect }
+            , m_indirect{ indirect }
         {
         }
 
@@ -53,7 +52,7 @@ namespace AZ::RHI
             case DispatchType::Direct:
                 return DeviceDispatchArguments(m_direct);
             case DispatchType::Indirect:
-                return DeviceDispatchArguments(DeviceDispatchIndirect{m_Indirect.m_maxSequenceCount, m_Indirect.m_indirectBufferView->GetDeviceIndirectBufferView(deviceIndex), m_Indirect.m_indirectBufferByteOffset, m_Indirect.m_countBuffer ? m_Indirect.m_countBuffer->GetDeviceBuffer(deviceIndex).get() : nullptr, m_Indirect.m_countBufferByteOffset});
+                return DeviceDispatchArguments(DeviceDispatchIndirect{m_indirect.m_maxSequenceCount, m_indirect.m_indirectBufferView->GetDeviceIndirectBufferView(deviceIndex), m_indirect.m_indirectBufferByteOffset, m_indirect.m_countBuffer ? m_indirect.m_countBuffer->GetDeviceBuffer(deviceIndex).get() : nullptr, m_indirect.m_countBufferByteOffset});
             default:
                 return DeviceDispatchArguments();
             }
@@ -64,7 +63,7 @@ namespace AZ::RHI
             //! Arguments for a direct dispatch.
             DispatchDirect m_direct;
             //! Arguments for an indirect dispatch.
-            DispatchIndirect m_Indirect;
+            DispatchIndirect m_indirect;
         };
     };
 
@@ -77,15 +76,13 @@ namespace AZ::RHI
         DispatchItem(MultiDevice::DeviceMask deviceMask)
             : m_deviceMask{ deviceMask }
         {
-            auto deviceCount{ RHI::RHISystemInterface::Get()->GetDeviceCount() };
-
-            for (int deviceIndex = 0; deviceIndex < deviceCount; ++deviceIndex)
-            {
-                if (CheckBitsAll(AZStd::to_underlying(m_deviceMask), 1u << deviceIndex))
+            MultiDeviceObject::IterateDevices(
+                m_deviceMask,
+                [this](int deviceIndex)
                 {
                     m_deviceDispatchItems.emplace(deviceIndex, DeviceDispatchItem{});
-                }
-            }
+                    return true;
+                });
         }
 
         //! Returns the device-specific DeviceDispatchItem for the given index

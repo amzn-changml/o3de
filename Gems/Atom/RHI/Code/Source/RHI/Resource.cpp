@@ -53,7 +53,7 @@ namespace AZ::RHI
 
     void Resource::SetPool(ResourcePool* bufferPool)
     {
-        m_Pool = bufferPool;
+        m_pool = bufferPool;
 
         const bool isValidPool = bufferPool != nullptr;
         if (isValidPool)
@@ -71,30 +71,32 @@ namespace AZ::RHI
 
     const ResourcePool* Resource::GetPool() const
     {
-        return m_Pool;
+        return m_pool;
     }
 
     ResourcePool* Resource::GetPool()
     {
-        return m_Pool;
+        return m_pool;
     }
 
-    void Resource::SetFrameAttachment(FrameAttachment* frameAttachment)
+    void Resource::SetFrameAttachment(FrameAttachment* frameAttachment, int deviceIndex)
     {
-        if (Validation::IsEnabled())
-        {
-            // The frame attachment has tight control over lifecycle here.
-            [[maybe_unused]] const bool isAttach = (!m_frameAttachment && frameAttachment);
-            [[maybe_unused]] const bool isDetach = (m_frameAttachment && !frameAttachment);
-            AZ_Assert(isAttach || isDetach, "The frame attachment for resource '%s' was not assigned properly.", GetName().GetCStr());
-        }
-
         m_frameAttachment = frameAttachment;
 
-        IterateObjects<DeviceResource>([frameAttachment]([[maybe_unused]] auto deviceIndex, auto deviceResource)
+        if (deviceIndex >= 0)
         {
-            deviceResource->SetFrameAttachment(frameAttachment);
-        });
+            GetDeviceObject<DeviceResource>(deviceIndex)->SetFrameAttachment(frameAttachment);
+        }
+        else
+        {
+            // If we don't get a valid device index, we must assume that the resource may be used on
+            // any device, so we set it for all of them.
+            IterateObjects<DeviceResource>(
+                [frameAttachment]([[maybe_unused]] auto deviceIndex, auto deviceResource)
+                {
+                    deviceResource->SetFrameAttachment(frameAttachment);
+                });
+        }
     }
 
     const FrameAttachment* Resource::GetFrameAttachment() const
@@ -105,7 +107,7 @@ namespace AZ::RHI
     void Resource::Shutdown()
     {
         // Shutdown is delegated to the parent pool if this resource is registered on one.
-        if (m_Pool)
+        if (m_pool)
         {
             AZ_Error(
                 "Resource",
@@ -114,7 +116,7 @@ namespace AZ::RHI
                 "to shutdown a resource while it is being used as an Attachment. The "
                 "behavior is undefined.");
 
-            m_Pool->ShutdownResource(this);
+            m_pool->ShutdownResource(this);
         }
         MultiDeviceObject::Shutdown();
     }

@@ -39,6 +39,7 @@ namespace AZ::RHI
                 auto device = RHISystemInterface::Get()->GetDevice(deviceIndex);
 
                 m_deviceObjects[deviceIndex] = Factory::Get().CreateIndirectBufferSignature();
+
                 resultCode = GetDeviceIndirectBufferSignature(deviceIndex)->Init(
                     *device, descriptor.GetDeviceIndirectBufferSignatureDescriptor(deviceIndex));
 
@@ -51,7 +52,12 @@ namespace AZ::RHI
                 return resultCode == ResultCode::Success;
             });
 
-        m_Descriptor = descriptor;
+        if (const auto& name = GetName(); !name.IsEmpty())
+        {
+            SetName(name);
+        }
+
+        m_descriptor = descriptor;
 
         return resultCode;
     }
@@ -73,7 +79,7 @@ namespace AZ::RHI
                 return 0;
             }
 
-            if (index.GetIndex() >= m_Descriptor.m_layout.GetCommands().size())
+            if (index.GetIndex() >= m_descriptor.m_layout.GetCommands().size())
             {
                 AZ_Assert(false, "Index %d is greater than the number of commands on the layout", index.GetIndex());
                 return 0;
@@ -99,12 +105,12 @@ namespace AZ::RHI
 
     const IndirectBufferSignatureDescriptor& IndirectBufferSignature::GetDescriptor() const
     {
-        return m_Descriptor;
+        return m_descriptor;
     }
 
     const AZ::RHI::IndirectBufferLayout& IndirectBufferSignature::GetLayout() const
     {
-        return m_Descriptor.m_layout;
+        return m_descriptor.m_layout;
     }
 
     void IndirectBufferSignature::Shutdown()

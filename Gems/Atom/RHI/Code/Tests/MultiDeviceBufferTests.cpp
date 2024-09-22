@@ -66,7 +66,7 @@ namespace UnitTest
 
             RHI::BufferPoolDescriptor bufferPoolDesc;
             bufferPoolDesc.m_bindFlags = RHI::BufferBindFlags::Constant;
-            bufferPool->Init(DeviceMask, bufferPoolDesc);
+            bufferPool->Init(bufferPoolDesc);
 
             AZStd::vector<uint8_t> testData(32);
             for (uint32_t i = 0; i < 32; ++i)
@@ -140,7 +140,7 @@ namespace UnitTest
 
             RHI::Ptr<AZ::RHI::BufferPool> bufferPoolB;
             bufferPoolB = aznew AZ::RHI::BufferPool;
-            bufferPoolB->Init(DeviceMask, bufferPoolDesc);
+            bufferPoolB->Init(bufferPoolDesc);
 
             initRequest.m_buffer = bufferB.get();
             initRequest.m_descriptor = RHI::BufferDescriptor(RHI::BufferBindFlags::Constant, 16);
@@ -170,7 +170,7 @@ namespace UnitTest
 
             RHI::BufferPoolDescriptor bufferPoolDesc;
             bufferPoolDesc.m_bindFlags = RHI::BufferBindFlags::Constant;
-            bufferPool->Init(DeviceMask, bufferPoolDesc);
+            bufferPool->Init(bufferPoolDesc);
 
             RHI::Ptr<RHI::Buffer> buffer;
             buffer = aznew RHI::Buffer;
@@ -189,25 +189,24 @@ namespace UnitTest
             }
 
             // Should report as still initialized and also stale.
-            buffer->Shutdown();
             for(auto deviceIndex{0}; deviceIndex < DeviceCount; ++deviceIndex)
             {
+                buffer->GetDeviceBuffer(deviceIndex)->Shutdown();
                 AZ_TEST_ASSERT(bufferViewsA[deviceIndex]->IsInitialized());
                 AZ_TEST_ASSERT(bufferViewsA[deviceIndex]->IsStale());
             }
+            buffer->Shutdown();
 
-            // Should *still* report as stale since resource invalidation events are queued.
             bufferPool->InitBuffer(initRequest);
-            for(auto deviceIndex{0}; deviceIndex < DeviceCount; ++deviceIndex) 
-            {
-                AZ_TEST_ASSERT(bufferViewsA[deviceIndex]->IsInitialized());
-                AZ_TEST_ASSERT(bufferViewsA[deviceIndex]->IsStale()); 
-            }
 
-            // This should re-initialize the views.
+            // Make sure that the buffer doesn't expect an invalidation event.
             RHI::ResourceInvalidateBus::ExecuteQueuedEvents();
-            for(auto deviceIndex{0}; deviceIndex < DeviceCount; ++deviceIndex)
+
+            // We need to recreate device views since device buffers are recreated after Shutdown.
+            for (auto deviceIndex{ 0 }; deviceIndex < DeviceCount; ++deviceIndex)
             {
+                bufferViewsA[deviceIndex] =
+                    buffer->GetDeviceBuffer(deviceIndex)->GetBufferView(RHI::BufferViewDescriptor::CreateRaw(0, 32));
                 AZ_TEST_ASSERT(bufferViewsA[deviceIndex]->IsInitialized());
                 AZ_TEST_ASSERT(bufferViewsA[deviceIndex]->IsStale() == false);
             }
@@ -253,7 +252,7 @@ namespace UnitTest
             m_bufferPool = aznew AZ::RHI::BufferPool;
             RHI::BufferPoolDescriptor bufferPoolDesc;
             bufferPoolDesc.m_bindFlags = GetParam().bufferBindFlags;
-            m_bufferPool->Init(DeviceMask, bufferPoolDesc);
+            m_bufferPool->Init(bufferPoolDesc);
 
             m_buffer = aznew RHI::Buffer;
             RHI::BufferInitRequest initRequest;
@@ -499,7 +498,7 @@ namespace UnitTest
 
         RHI::BufferPoolDescriptor bufferPoolDesc;
         bufferPoolDesc.m_bindFlags = RHI::BufferBindFlags::Constant;
-        bufferPool->Init(DeviceMask, bufferPoolDesc);
+        bufferPool->Init(bufferPoolDesc);
 
         RHI::Ptr<RHI::Buffer> buffer;
         buffer = aznew RHI::Buffer;

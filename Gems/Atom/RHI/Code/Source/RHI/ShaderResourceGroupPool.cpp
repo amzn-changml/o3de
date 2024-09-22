@@ -14,8 +14,7 @@
 
 namespace AZ::RHI
 {
-    ResultCode ShaderResourceGroupPool::Init(
-        MultiDevice::DeviceMask deviceMask, const ShaderResourceGroupPoolDescriptor& descriptor)
+    ResultCode ShaderResourceGroupPool::Init(const ShaderResourceGroupPoolDescriptor& descriptor)
     {
         if (Validation::IsEnabled())
         {
@@ -27,7 +26,7 @@ namespace AZ::RHI
         }
 
         ResultCode resultCode = ResourcePool::Init(
-            deviceMask,
+            descriptor.m_deviceMask,
             [this, &descriptor]()
             {
                 IterateDevices(
@@ -36,6 +35,7 @@ namespace AZ::RHI
                         auto* device = RHISystemInterface::Get()->GetDevice(deviceIndex);
 
                         m_deviceObjects[deviceIndex] = Factory::Get().CreateShaderResourceGroupPool();
+
                         GetDeviceShaderResourceGroupPool(deviceIndex)->Init(*device, descriptor);
 
                         return true;
@@ -69,6 +69,7 @@ namespace AZ::RHI
                 return IterateObjects<DeviceShaderResourceGroupPool>([this, &group](auto deviceIndex, [[maybe_unused]] auto deviceShaderResourceGroupPool)
                 {
                     group.m_deviceObjects[deviceIndex] = Factory::Get().CreateShaderResourceGroup();
+
                     return GetDeviceShaderResourceGroupPool(deviceIndex)->InitGroup(*group.GetDeviceShaderResourceGroup(deviceIndex));
                 });
             });
@@ -78,7 +79,7 @@ namespace AZ::RHI
             const ShaderResourceGroupLayout* layout = GetLayout();
 
             // Pre-initialize the data so that we can build view diffs later.
-            group.m_Data = ShaderResourceGroupData(GetDeviceMask(), layout);
+            group.m_data = ShaderResourceGroupData(GetDeviceMask(), layout);
 
             // Cache off the binding slot for one less indirection.
             group.m_bindingSlot = layout->GetBindingSlot();
@@ -187,11 +188,6 @@ namespace AZ::RHI
 
     void ShaderResourceGroupPool::Shutdown()
     {
-        IterateObjects<DeviceShaderResourceGroupPool>([]([[maybe_unused]] auto deviceIndex, auto deviceShaderResourceGroupPool)
-        {
-            deviceShaderResourceGroupPool->Shutdown();
-        });
-
         ResourcePool::Shutdown();
     }
 } // namespace AZ::RHI

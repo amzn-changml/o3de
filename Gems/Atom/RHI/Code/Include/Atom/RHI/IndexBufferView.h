@@ -45,9 +45,12 @@ namespace AZ::RHI
         //! Returns the format of each index in the view.
         IndexFormat GetIndexFormat() const;
 
+        //! Returns whether the view is valid and points to a buffer
+        bool IsValid() const { return m_buffer != nullptr; }
+
     private:
         HashValue64 m_hash = HashValue64{ 0 };
-        const Buffer* m_Buffer = nullptr;
+        const Buffer* m_buffer = nullptr;
         uint32_t m_byteOffset = 0;
         uint32_t m_byteCount = 0;
         IndexFormat m_format = IndexFormat::Uint32;

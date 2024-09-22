@@ -20,7 +20,53 @@ namespace AZ
     {
         using CompleteCallback = AZStd::function<void()>;
 
-        using StreamingImageInitRequest = StreamingImageInitRequestTemplate<Image>;
+        //! A structure used as an argument to StreamingImagePool::UpdateImageDeviceMask.
+        struct StreamingImageDeviceMaskRequest
+        {
+            StreamingImageDeviceMaskRequest() = default;
+
+            StreamingImageDeviceMaskRequest(
+                Image& image,
+                AZStd::span<const StreamingImageMipSlice> tailMipSlices,
+                MultiDevice::DeviceMask deviceMask = MultiDevice::AllDevices)
+                : m_image{ &image }
+                , m_tailMipSlices{ tailMipSlices }
+                , m_deviceMask{ deviceMask }
+            {
+            }
+
+            /// The image to initialize.
+            Image* m_image = nullptr;
+
+            //! An array of tail mip slices to upload. This must not be empty or the call will fail.
+            //! This should only include the baseline set of mips necessary to render the image at
+            //! its lowest resolution. The uploads is performed synchronously.
+            AZStd::span<const StreamingImageMipSlice> m_tailMipSlices;
+
+            /// The device mask used for the image.
+            /// Note: Only devices in the mask of the image pool will be considered.
+            MultiDevice::DeviceMask m_deviceMask = MultiDevice::AllDevices;
+        };
+
+        //! A structure used as an argument to StreamingImagePool::InitImage.
+        struct StreamingImageInitRequest : public StreamingImageDeviceMaskRequest
+        {
+            StreamingImageInitRequest() = default;
+
+            StreamingImageInitRequest(
+                Image& image,
+                const ImageDescriptor& descriptor,
+                AZStd::span<const StreamingImageMipSlice> tailMipSlices,
+                MultiDevice::DeviceMask deviceMask = MultiDevice::AllDevices)
+                : StreamingImageDeviceMaskRequest{ image, tailMipSlices, deviceMask }
+                , m_descriptor{ descriptor }
+            {
+            }
+
+            /// The descriptor used to to initialize the image.
+            ImageDescriptor m_descriptor;
+        };
+
         using StreamingImageExpandRequest = StreamingImageExpandRequestTemplate<Image>;
 
         class StreamingImagePool : public ImagePoolBase
@@ -33,10 +79,13 @@ namespace AZ
             virtual ~StreamingImagePool() = default;
 
             //! Initializes the pool. The pool must be initialized before images can be registered with it.
-            ResultCode Init(MultiDevice::DeviceMask deviceMask, const StreamingImagePoolDescriptor& descriptor);
+            ResultCode Init(const StreamingImagePoolDescriptor& descriptor);
 
             //! Initializes the backing resources of an image.
             ResultCode InitImage(const StreamingImageInitRequest& request);
+
+            //! Updates the device mask of an image instance created from this pool.
+            ResultCode UpdateImageDeviceMask(const StreamingImageDeviceMaskRequest& request);
 
             //! Expands a streaming image with new mip chain data. The expansion can be performed
             //! asynchronously or synchronously depends on @m_waitForUpload in @StreamingImageExpandRequest.

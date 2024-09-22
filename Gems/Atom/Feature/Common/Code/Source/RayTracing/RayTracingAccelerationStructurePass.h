@@ -77,6 +77,9 @@ namespace AZ
             // revision number of the ray tracing data when the TLAS was built
             uint32_t m_rayTracingRevision = 0;
 
+            // revision out of date
+            bool m_rayTracingRevisionOutDated{ false };
+
             // keeps track of the current frame to determine updates or rebuilds of the skinned BLASes
             uint64_t m_frameCount = 0;
 
@@ -84,10 +87,10 @@ namespace AZ
             static constexpr uint32_t SKINNED_BLAS_REBUILD_FRAME_INTERVAL = 8;
 
             // Readback results from the Timestamp queries
-            AZ::RPI::TimestampResult m_timestampResult;
+            AZ::RPI::TimestampResult m_timestampResult{};
 
             // Readback results from the PipelineStatistics queries
-            AZ::RPI::PipelineStatisticsResult m_statisticsResult;
+            AZ::RPI::PipelineStatisticsResult m_statisticsResult{};
 
             // The device index the pass ran on during the last frame, necessary to read the queries.
             int m_lastDeviceIndex = RHI::MultiDevice::DefaultDeviceIndex;

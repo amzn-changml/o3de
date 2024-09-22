@@ -107,7 +107,8 @@ namespace AZ
                     AZStd::bind(&CopyPass::SetupFrameGraphDependenciesSameDevice, this, AZStd::placeholders::_1),
                     AZStd::bind(&CopyPass::CompileResourcesSameDevice, this, AZStd::placeholders::_1),
                     AZStd::bind(&CopyPass::BuildCommandListInternalSameDevice, this, AZStd::placeholders::_1),
-                    m_hardwareQueueClass);
+                    m_hardwareQueueClass,
+                    m_data.m_sourceDeviceIndex);
             }
             else if (m_copyMode == CopyMode::DifferentDevicesIntermediateHost)
             {
@@ -136,7 +137,7 @@ namespace AZ
                 {
                     fence = new RHI::Fence();
                     AZ_Assert(fence != nullptr, "CopyPass failed to create a fence");
-                    [[maybe_unused]] auto result = fence->Init(RHI::MultiDevice::AllDevices, RHI::FenceState::Signaled);
+                    [[maybe_unused]] auto result = fence->Init(RHI::MultiDevice::AllDevices, RHI::FenceState::Signaled, true);
                     AZ_Assert(result == RHI::ResultCode::Success, "CopyPass failed to init fence");
                 }
 
@@ -392,6 +393,7 @@ namespace AZ
                         desc.m_byteCount = m_deviceHostBufferByteCount[m_currentBufferIndex];
 
                         m_device1HostBuffer[m_currentBufferIndex] = BufferSystemInterface::Get()->CreateBufferFromCommonPool(desc);
+                        desc.m_poolType = RPI::CommonBufferPoolType::Staging;
                         desc.m_bufferName = AZStd::string(GetPathName().GetStringView()) + "_hostbuffer2";
                         m_device2HostBuffer[m_currentBufferIndex] = BufferSystemInterface::Get()->CreateBufferFromCommonPool(desc);
                     }
@@ -437,7 +439,7 @@ namespace AZ
         void CopyPass::SetupFrameGraphDependenciesHostToDevice(RHI::FrameGraphInterface frameGraph)
         {
             DeclareAttachmentsToFrameGraph(frameGraph, PassSlotType::Output);
-            frameGraph.ExecuteAfter(m_copyScopeProducerHostToDevice->GetScopeId());
+            frameGraph.ExecuteAfter(m_copyScopeProducerDeviceToHost->GetScopeId());
             for (Pass* pass : m_executeBeforePasses)
             {
                 RenderPass* renderPass = azrtti_cast<RenderPass*>(pass);
@@ -599,6 +601,7 @@ namespace AZ
             copyDesc.m_destinationOffset = m_data.m_bufferDestinationOffset;
             copyDesc.m_destinationBytesPerRow = m_data.m_bufferDestinationBytesPerRow;
             copyDesc.m_destinationBytesPerImage = m_data.m_bufferDestinationBytesPerImage;
+            copyDesc.m_destinationFormat = sourceImage->GetDescriptor().m_format;
 
             m_copyItemSameDevice = copyDesc;
         }

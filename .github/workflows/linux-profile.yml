@@ -39,8 +39,8 @@ jobs:
       - name: Maximize build space - 2nd pass
         uses: easimon/maximize-build-space@v10
         with:
-          root-reserve-mb: 1500
-          swap-size-mb: 100
+          root-reserve-mb: 1000
+          swap-size-mb: 50
           remove-dotnet: true
           remove-haskell: true
           remove-android: true
@@ -109,6 +109,7 @@ jobs:
         run: |
           df -h
           ls -lah ${{ github.workspace }}/build
+          rm -rf ${{ github.workspace }}/build
 
       - name: Save CCache
         uses: actions/cache/save@v4.0.2

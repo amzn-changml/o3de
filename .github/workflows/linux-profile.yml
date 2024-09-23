@@ -12,7 +12,7 @@ jobs:
       matrix:
         compiler: [clang]
         config: [profile]
-        image: [ubuntu-22.04]
+        image: [ubuntu-24.04]
 
     runs-on: ${{ matrix.image }}
 
@@ -28,7 +28,6 @@ jobs:
             /opt/pipx \
             /usr/lib/mono \
             /usr/local/julia* \
-            /usr/local/lib/android \
             /usr/local/lib/node_modules \
             /usr/local/share/chromium \
             /usr/local/share/powershell \
@@ -39,11 +38,10 @@ jobs:
       - name: Maximize build space - 2nd pass
         uses: easimon/maximize-build-space@v10
         with:
-          root-reserve-mb: 2000
+          root-reserve-mb: 5000
           swap-size-mb: 200
           remove-dotnet: true
           remove-haskell: true
-          remove-android: true
           remove-codeql: true
           remove-docker-images: true
             
@@ -80,6 +78,8 @@ jobs:
             cache_dir=${{ github.workspace }}/.ccache
 
       - name: Configure environment
+        continue-on-error: true
+        if: always()
         run: |
           echo "Installing dependancies"
           pushd ./scripts/build/build_node/Platform/Linux
@@ -105,20 +105,10 @@ jobs:
           python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile
 
       - name: Get disk space
+        continue-on-error: true
         if: always()
         run: |
           df -h
-          ls -lah ${{ github.workspace }}/build
-          rm -rf ${{ github.workspace }}/build
-
-      - name: Save CCache
-        uses: actions/cache/save@v4.0.2
-        continue-on-error: true
-        if: always()
-        with:
-          path: |
-            ${{ github.workspace }}/.ccache
-          key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
       
       - name: Save 3P Cache
         uses: actions/cache/save@v4.0.2

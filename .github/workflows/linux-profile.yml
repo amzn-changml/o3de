@@ -65,7 +65,7 @@ jobs:
         with:
           path: |
             /dev/shm/3rdParty/packages
-            /dev/shm/python
+            ${{ github.wokrspace }}/python
           key: O3DE-${{ matrix.image }}-3p
 
       - name: Setup ccache
@@ -77,7 +77,7 @@ jobs:
           prepend_symlinks_to_path: false
           ccache_options: |
             max_size=5G
-            cache_dir=/dev/shm/.ccache
+            cache_dir=${{ github.workspace }}/.ccache
 
       - name: Configure environment
         run: |
@@ -117,7 +117,7 @@ jobs:
         if: always()
         with:
           path: |
-            /dev/shm/.ccache
+            ${{ github.workspace }}/.ccache
           key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
       
       - name: Save 3P Cache
@@ -127,5 +127,5 @@ jobs:
         with:
           path: |
             /dev/shm/3rdParty/packages
-            /dev/shm/python
+            ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p     

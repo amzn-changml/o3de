@@ -102,7 +102,7 @@ jobs:
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile_unity
+          python/python.sh -u scripts/build/ci_build.py --platform Linux --type test_profile
 
       - name: Get disk space
         if: always()

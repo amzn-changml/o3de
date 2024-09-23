@@ -40,7 +40,7 @@ jobs:
         uses: easimon/maximize-build-space@v10
         with:
           root-reserve-mb: 2000
-          swap-size-mb: 100
+          swap-size-mb: 200
           remove-dotnet: true
           remove-haskell: true
           remove-android: true
@@ -64,7 +64,7 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            /dev/shm/3rdParty/packages
+            ${{ github.wokrspace }}/3rdParty/packages
             ${{ github.wokrspace }}/python
           key: O3DE-${{ matrix.image }}-3p
 
@@ -95,14 +95,14 @@ jobs:
       - name: Build
         continue-on-error: true
         env:
-          LY_3RDPARTY_PATH: /dev/shm/3rdParty
+          LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
           CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
           CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          python/python.sh -u scripts/build/ci_build.py --platform Linux --type test_profile
+          python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile
 
       - name: Get disk space
         if: always()
@@ -126,6 +126,6 @@ jobs:
         if: always()
         with:
           path: |
-            /dev/shm/3rdParty/packages
+            ${{ github.workspace }}/3rdParty/packages
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p     

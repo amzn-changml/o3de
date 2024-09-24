@@ -1,0 +1,121 @@
+name: Linux Profile
+
+on:
+  push:
+      paths: '.github/workflows/linux-cpu-test.yml'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [clang]
+        config: [profile]
+        image: [ubuntu-24.04]
+
+    runs-on: ${{ matrix.image }}
+
+    steps:
+      - name: Maximize build space - 1st pass
+        continue-on-error: true
+        run: |
+          sudo rm -rf \
+            "$AGENT_TOOLSDIRECTORY" \
+            /opt/google/chrome \
+            /opt/microsoft/msedge \
+            /opt/microsoft/powershell \
+            /opt/pipx \
+            /usr/lib/mono \
+            /usr/local/julia* \
+            /usr/local/lib/node_modules \
+            /usr/local/share/chromium \
+            /usr/local/share/powershell \
+            /usr/share/dotnet \
+            /usr/share/swift
+          df -h
+          
+      - name: Maximize build space - 2nd pass
+        uses: easimon/maximize-build-space@v10
+        with:
+          root-reserve-mb: 5000
+          swap-size-mb: 200
+          remove-dotnet: true
+          remove-haskell: true
+          remove-codeql: true
+          remove-docker-images: true
+            
+      - name: Checkout repo
+        uses: actions/checkout@v4.1.7
+        with:
+          show-progress: false
+          clean: false
+          
+      - name: Git LFS fetch
+        run: |
+          git lfs install
+          git lfs fetch --include "*.ico,*.bmp"
+          git lfs checkout
+          
+      - name: Restore 3P Cache
+        uses: actions/cache/restore@v4.0.2
+        continue-on-error: true
+        with:
+          path: |
+            ${{ github.wokrspace }}/3rdParty/packages
+            ${{ github.wokrspace }}/python
+          key: O3DE-${{ matrix.image }}-3p
+
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1.4.3
+        with:
+          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+          override_cache_key_fallback: |
+            O3DE-${{ matrix.image }}-${{ matrix.config }}
+          prepend_symlinks_to_path: false
+          ccache_options: |
+            max_size=5G
+            cache_dir=${{ github.workspace }}/.ccache
+
+      - name: Configure environment
+        continue-on-error: true
+        if: always()
+        run: |
+          echo "Installing dependancies"
+          pushd ./scripts/build/build_node/Platform/Linux
+          sudo ./install-ubuntu.sh
+          popd
+          echo "Getting python..."
+          ./python/get_python.sh
+          sudo apt -y autoremove --purge
+          sudo apt -y autoclean
+          sudo apt clean
+          df -h
+          
+      - name: Build
+        continue-on-error: true
+        env:
+          LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
+          CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
+          CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: |
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          python/python.sh -u scripts/build/ci_build.py --platform Linux --type test_profile
+
+      - name: Get disk space
+        continue-on-error: true
+        if: always()
+        run: |
+          df -h
+      
+      - name: Save 3P Cache
+        uses: actions/cache/save@v4.0.2
+        continue-on-error: true
+        if: always()
+        with:
+          path: |
+            ${{ github.workspace }}/3rdParty/packages
+            ${{ github.workspace }}/python
+          key: O3DE-${{ matrix.image }}-3p     

@@ -12,7 +12,7 @@ jobs:
       matrix:
         compiler: [clang]
         config: [profile]
-        image: [ubuntu-22.04]
+        image: [ubuntu-24.04]
 
     runs-on: ${{ matrix.image }}
 
@@ -54,7 +54,7 @@ jobs:
       - name: Git LFS fetch
         run: |
           git lfs install
-          git lfs fetch --include "*.ico,*.bmp"
+          git lfs fetch --all
           git lfs checkout
           
       - name: Restore 3P Cache

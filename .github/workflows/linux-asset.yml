@@ -50,6 +50,7 @@ jobs:
         with:
           show-progress: false
           fetch-depth: 0
+          clean: false
           
       - name: Git LFS fetch
         run: |

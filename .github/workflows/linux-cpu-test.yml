@@ -1,4 +1,4 @@
-name: Linux Profile
+name: Linux Profile CPU Test
 
 on:
   push:
@@ -54,7 +54,7 @@ jobs:
       - name: Git LFS fetch
         run: |
           git lfs install
-          git lfs fetch --include "*.ico,*.bmp"
+          git lfs fetch --all
           git lfs checkout
           
       - name: Restore 3P Cache

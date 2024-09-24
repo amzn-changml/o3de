@@ -1,4 +1,4 @@
-name: Linux Profile
+name: Linux Asset Profile
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
       matrix:
         compiler: [clang]
         config: [profile]
-        image: [ubuntu-24.04]
+        image: [ubuntu-22.04]
 
     runs-on: ${{ matrix.image }}
 

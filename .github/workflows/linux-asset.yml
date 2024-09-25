@@ -92,6 +92,7 @@ jobs:
           popd
           echo "Getting python..."
           ./python/get_python.sh
+          sudo apt-get install -y libevdev2
           sudo apt -y autoremove --purge
           sudo apt -y autoclean
           sudo apt clean

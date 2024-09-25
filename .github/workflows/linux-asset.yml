@@ -71,6 +71,8 @@ jobs:
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
+        continue-on-error: true
+        if: always()
         with:
           override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
@@ -96,7 +98,6 @@ jobs:
           df -h
           
       - name: Build
-        continue-on-error: true
         env:
           LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
           CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
@@ -108,7 +109,6 @@ jobs:
           python/python.sh -u scripts/build/ci_build.py --platform Linux --type asset_profile
 
       - name: Get disk space
-        continue-on-error: true
         if: always()
         run: |
           df -h

@@ -38,7 +38,7 @@ jobs:
       - name: Maximize build space - 2nd pass
         uses: easimon/maximize-build-space@v10
         with:
-          root-reserve-mb: 5000
+          root-reserve-mb: 8000
           swap-size-mb: 200
           remove-dotnet: true
           remove-haskell: true
@@ -49,13 +49,16 @@ jobs:
         uses: actions/checkout@v4.1.7
         with:
           show-progress: false
-          clean: false
+          fetch-depth: 0
           
       - name: Git LFS fetch
         run: |
           git lfs install
           git lfs fetch --all
           git lfs checkout
+
+      - name: Restore timestamps
+        uses: chetan/git-restore-mtime-action@v2
           
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4.0.2
@@ -68,6 +71,8 @@ jobs:
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
+        continue-on-error: true
+        if: always()
         with:
           override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
@@ -93,7 +98,6 @@ jobs:
           df -h
           
       - name: Build
-        continue-on-error: true
         env:
           LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
           CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
@@ -105,7 +109,6 @@ jobs:
           python/python.sh -u scripts/build/ci_build.py --platform Linux --type test_profile
 
       - name: Get disk space
-        continue-on-error: true
         if: always()
         run: |
           df -h

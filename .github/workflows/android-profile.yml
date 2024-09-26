@@ -66,6 +66,7 @@ jobs:
             cache_dir=D:\.ccache
         
       - name: Configure environment
+        continue-on-error: true
         run: |
           echo "Installing dependancies"
           echo "Getting python..."
@@ -87,7 +88,7 @@ jobs:
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.config }} 
           
-      - name: Restore 3p Cache
+      - name: Save 3p Cache
         uses: actions/cache/save@v4.0.2
         continue-on-error: true
         if: always()

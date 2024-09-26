@@ -67,12 +67,14 @@ jobs:
         
       - name: Configure environment
         continue-on-error: true
+        env:
+          chocolateyPackageFolder: "C:\\ProgramData\\chocolatey"
         run: |
           echo "Installing dependancies"
           echo "Getting python..."
           python\get_python.bat
           echo "Setup Android SDK..."
-          scripts\build\build_node\Platform\Windows\install-windows-android.ps1
+          scripts\build\build_node\Platform\Windows\install-windows-android.ps1 | Out-Null
           
       - name: Add msbuild to PATH
         uses: ilammy/msvc-dev-cmd@v1.13.0
@@ -85,6 +87,8 @@ jobs:
       - name: Build
         env:
           LY_3RDPARTY_PATH: D:\3rdParty
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.config }} 
           

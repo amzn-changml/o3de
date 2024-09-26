@@ -16,26 +16,8 @@ jobs:
 
     runs-on: ${{ matrix.image }}
 
-    steps:
-      - name: Maximize build space - 1st pass
-        continue-on-error: true
-        run: |
-          sudo rm -rf \
-            "$AGENT_TOOLSDIRECTORY" \
-            /opt/google/chrome \
-            /opt/microsoft/msedge \
-            /opt/microsoft/powershell \
-            /opt/pipx \
-            /usr/lib/mono \
-            /usr/local/julia* \
-            /usr/local/lib/node_modules \
-            /usr/local/share/chromium \
-            /usr/local/share/powershell \
-            /usr/share/dotnet \
-            /usr/share/swift
-          df -h
-          
-      - name: Maximize build space - 2nd pass
+    steps:          
+      - name: Maximize build space
         uses: easimon/maximize-build-space@v10
         with:
           root-reserve-mb: 8000
@@ -67,6 +49,7 @@ jobs:
           path: |
             ${{ github.wokrspace }}/3rdParty/packages
             ${{ github.wokrspace }}/python
+            ~/python
           key: O3DE-${{ matrix.image }}-3p
 
       - name: Setup ccache
@@ -113,13 +96,3 @@ jobs:
         if: always()
         run: |
           df -h
-      
-      - name: Save 3P Cache
-        uses: actions/cache/save@v4.0.2
-        continue-on-error: true
-        if: always()
-        with:
-          path: |
-            ${{ github.workspace }}/3rdParty/packages
-            ${{ github.workspace }}/python
-          key: O3DE-${{ matrix.image }}-3p     

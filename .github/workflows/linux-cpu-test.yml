@@ -75,7 +75,7 @@ jobs:
           ./python/get_python.sh
 
           echo "Installing desktop environment and tools"
-          sudo apt-get install ubuntu-desktop mesa-utils vulkan-tools awscli unzip -y
+          sudo apt-get install ubuntu-desktop mesa-utils vulkan-tools unzip -y
           
           # Setup X desktop manager (Wayland needs to be turned off for GDM3)
           #

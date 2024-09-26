@@ -40,8 +40,7 @@ jobs:
             ${{ github.workspace }}/3rdParty/downloaded_packages
             ${{ github.workspace }}/python
             ~/work/o3de/o3de/python
-          key: O3DE-${{ matrix.image }}-3p
-          save-always: true
+          key: O3DE-${{ matrix.platform }}-3p
           
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
@@ -53,8 +52,7 @@ jobs:
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           ccache_options: |
             max_size=5G
-
-      - uses: lukka/get-cmake@latest
+            cache_dir=${{ github.workspace }}/.ccache
         
       - name: Configure environment
         run: |
@@ -68,17 +66,17 @@ jobs:
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/local/bin/:/usr/local/opt/ccache/libexec:$PATH"
-          ${{ github.workspace }}/python/python.sh -u scripts/build/ci_build.py --platform ${{ maxtrix.platform }} --type $ {{ matrix.config }}
+          ${{ github.workspace }}/python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type $ {{ matrix.config }}
 
       - name: Save 3p cache
         uses: actions/cache/save@v4.0.2
         continue-on-error: true
+        if: always()
         with:
           path: |
             ${{ github.workspace }}/3rdParty/downloaded_packages
             ${{ github.workspace }}/python
             ~/work/o3de/o3de/python
           key: O3DE-${{ matrix.platform }}-3p
-          save-always: true
 
       

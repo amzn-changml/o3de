@@ -1,0 +1,97 @@
+name: Android Profile
+
+on:
+  push:
+      paths: '.github/workflows/android-profile.yml'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [msvc]
+        type: [profile]
+        config: [profile]
+        image: [windows-2022]
+        platform: [Android]
+
+    runs-on: ${{ matrix.image }}
+
+    env:
+        LY_NDK_DIR: "C:/Android/android-sdk/ndk/21.4.7075529"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.1.7
+        with:
+          show-progress: false
+          
+      - name: Git LFS fetch
+        run: |
+          git lfs install
+          git lfs fetch --include "*.ico,*.bmp"
+          git lfs checkout
+      
+      - name: Restore timestamps
+        uses: chetan/git-restore-mtime-action@v2
+
+      - name: Setup 3p and build folder symlinks
+        run: |
+          "3rdParty", "build", ".o3de" | % {New-Item "D:\$_" -ItemType 'Directory' -Force}
+          "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
+          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
+
+      - name: Restore 3p Cache
+        uses: actions/cache/restore@v4.0.2
+        continue-on-error: true
+        if: always()
+        with:
+          path: |
+            D:\.o3de\Python
+            D:\python
+            D:\3rdParty\packages
+          key: O3DE-${{ matrix.platform }}-3p
+
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1.4.3
+        with:
+          override_cache_key: O3DE-${{ matrix.image }}-ccache
+          override_cache_key_fallback: |
+            O3DE-${{ matrix.image }}-${{ matrix.config }}
+          windows_compile_environment: msvc
+          prepend_symlinks_to_path: false
+          ccache_options: |
+            max_size=5G
+            cache_dir=D:\.ccache
+        
+      - name: Configure environment
+        run: |
+          echo "Installing dependancies"
+          echo "Getting python..."
+          python\get_python.bat
+          
+      - name: Add msbuild to PATH
+        uses: ilammy/msvc-dev-cmd@v1.13.0
+
+      - name: Get environment
+        run: |
+          dir env:
+          get-psdrive
+          
+      - name: Build
+        env:
+          LY_3RDPARTY_PATH: D:\3rdParty
+        run: 
+          python\python.cmd -u scripts\build\ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.config }} 
+          
+      - name: Restore 3p Cache
+        uses: actions/cache/save@v4.0.2
+        continue-on-error: true
+        if: always()
+        with:
+          path: |
+            D:\.o3de\Python
+            D:\python
+            D:\3rdParty\packages
+          key: O3DE-${{ matrix.platform }}-3p

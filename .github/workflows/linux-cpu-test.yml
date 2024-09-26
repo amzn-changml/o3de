@@ -75,23 +75,23 @@ jobs:
           ./python/get_python.sh
 
           echo "Installing desktop environment and tools"
-          apt-get install ubuntu-desktop mesa-utils vulkan-tools awscli unzip -y
+          sudo apt-get install ubuntu-desktop mesa-utils vulkan-tools awscli unzip -y
           
           # Setup X desktop manager (Wayland needs to be turned off for GDM3)
           #
           if [ "`cat /etc/issue | grep 18.04`" != "" ] ; then
-              apt-get install lightdm -y
+              sudo apt-get install lightdm -y
           else
-              apt-get install gdm3 -y
-              sed -i 's/#WaylandEnable=false/WaylandEnable=false/g' /etc/gdm3/custom.conf
-              systemctl restart gdm3
+              sudo apt-get install gdm3 -y
+              sudo sed -i 's/#WaylandEnable=false/WaylandEnable=false/g' /etc/gdm3/custom.conf
+              sudo systemctl restart gdm3
           fi
           
           # Set desktop environment to start by default
           #
-          systemctl get-default
-          systemctl set-default graphical.target
-          systemctl isolate graphical.target
+          sudo systemctl get-default
+          sudo systemctl set-default graphical.target
+          sudo systemctl isolate graphical.target
           
           sudo apt -y autoremove --purge
           sudo apt -y autoclean

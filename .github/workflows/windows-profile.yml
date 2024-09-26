@@ -14,6 +14,7 @@ jobs:
         type: [profile]
         config: [profile]
         image: [windows-2022]
+        platform: [Windows]
 
     runs-on: ${{ matrix.image }}
 
@@ -21,9 +22,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4.1.7
         with:
-          fetch-depth: 1
           show-progress: false
-          clean: false
           
       - name: Git LFS fetch
         run: |
@@ -40,27 +39,27 @@ jobs:
           "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
           ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
 
-      - name: Cache 3p
-        uses: actions/cache@v4.0.2
+      - name: Restore 3p Cache
+        uses: actions/cache/restore@v4.0.2
         continue-on-error: true
+        if: always()
         with:
           path: |
             D:\.o3de\Python
             D:\python
             D:\3rdParty\packages
-          key: O3DE-${{ matrix.image }}-3p
-          save-always: true
+          key: O3DE-${{ matrix.platform }}-3p
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+          override_cache_key: O3DE-${{ matrix.image }}-ccache
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
           prepend_symlinks_to_path: false
           ccache_options: |
-            max_size=15G
+            max_size=5G
             cache_dir=D:\.ccache
         
       - name: Configure environment
@@ -81,14 +80,15 @@ jobs:
         env:
           LY_3RDPARTY_PATH: D:\3rdParty
         run: 
-          python\python.cmd -u scripts\build\ci_build.py --platform Windows --type profile 
+          python\python.cmd -u scripts\build\ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.config }} 
           
-      - name: Save Builds
-        uses: actions/upload-artifact@v4.3.5
+      - name: Restore 3p Cache
+        uses: actions/cache/save@v4.0.2
         continue-on-error: true
         if: always()
         with:
           path: |
-            D:\build           
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
-          compression-level: 1
+            D:\.o3de\Python
+            D:\python
+            D:\3rdParty\packages
+          key: O3DE-${{ matrix.platform }}-3p

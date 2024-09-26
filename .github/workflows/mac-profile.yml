@@ -13,6 +13,7 @@ jobs:
         compiler: [xcode]
         config: [profile]
         image: [macos-13]
+        platform: [Mac]
 
     runs-on: ${{ matrix.image }}
 
@@ -20,18 +21,19 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
-          submodules: recursive
-          ref: development
+          show-progress: false
 
       - name: Git LFS fetch
         run: |
           git lfs install
           git lfs fetch --include "*.ico,*.bmp"
           git lfs checkout
+
+      - name: Restore timestamps
+        uses: chetan/git-restore-mtime-action@v2
           
-      - name: Cache 3p
-        uses: actions/cache@v4.0.2
+      - name: Restore 3p cache
+        uses: actions/cache/restore@v4.0.2
         continue-on-error: true
         with:
           path: |
@@ -43,12 +45,14 @@ jobs:
           
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
+        continue-on-error: true
+        if: always()
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+          override_cache_key: O3DE-${{ matrix.image }}-ccache
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           ccache_options: |
-            max_size=15G
+            max_size=5G
 
       - uses: lukka/get-cmake@latest
         
@@ -64,24 +68,17 @@ jobs:
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/local/bin/:/usr/local/opt/ccache/libexec:$PATH"
-          ${{ github.workspace }}/python/python.sh -u scripts/build/ci_build.py --platform Mac --type profile
+          ${{ github.workspace }}/python/python.sh -u scripts/build/ci_build.py --platform ${{ maxtrix.platform }} --type $ {{ matrix.config }}
 
-      - name: Save Builds
-        uses: actions/upload-artifact@v4.3.5
+      - name: Save 3p cache
+        uses: actions/cache/save@v4.0.2
         continue-on-error: true
-        if: always()
         with:
           path: |
-            ${{ github.workspace }}/build           
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build
-          compression-level: 1
+            ${{ github.workspace }}/3rdParty/downloaded_packages
+            ${{ github.workspace }}/python
+            ~/work/o3de/o3de/python
+          key: O3DE-${{ matrix.platform }}-3p
+          save-always: true
 
-      - name: Save Cache
-        uses: actions/upload-artifact@v4.3.5
-        continue-on-error: true
-        if: always()
-        with:
-          path: |
-            /Users/runner/Library/Caches/ccache        
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-cache
-          compression-level: 1
+      

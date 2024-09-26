@@ -38,7 +38,7 @@ jobs:
       - name: Maximize build space - 2nd pass
         uses: easimon/maximize-build-space@v10
         with:
-          root-reserve-mb: 5000
+          root-reserve-mb: 8000
           swap-size-mb: 200
           remove-dotnet: true
           remove-haskell: true
@@ -49,7 +49,6 @@ jobs:
         uses: actions/checkout@v4.1.7
         with:
           show-progress: false
-          clean: false
           
       - name: Git LFS fetch
         run: |
@@ -62,12 +61,14 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            ${{ github.wokrspace }}/3rdParty/packages
-            ${{ github.wokrspace }}/python
+            ${{ github.workspace }}/3rdParty/packages
+            ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
+        continue-on-error: true
+        if: always()
         with:
           override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
@@ -93,7 +94,6 @@ jobs:
           df -h
           
       - name: Build
-        continue-on-error: true
         env:
           LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
           CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}

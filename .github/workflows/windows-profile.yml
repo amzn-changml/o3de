@@ -51,9 +51,11 @@ jobs:
           key: O3DE-${{ matrix.platform }}-3p
 
       - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1.4.3
+        uses: Chocobo1/setup-ccache-action@v1.4.4
+        continue-on-error: true
+        if: always()
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-ccache
+          override_cache_key: O3DE-${{ matrix.platform }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
@@ -70,19 +72,14 @@ jobs:
           
       - name: Add msbuild to PATH
         uses: ilammy/msvc-dev-cmd@v1.13.0
-
-      - name: Get environment
-        run: |
-          dir env:
-          get-psdrive
           
       - name: Build
         env:
           LY_3RDPARTY_PATH: D:\3rdParty
         run: 
-          python\python.cmd -u scripts\build\ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.config }} 
+          python\python.cmd -u scripts\build\ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }} 
           
-      - name: Restore 3p Cache
+      - name: Save 3p Cache
         uses: actions/cache/save@v4.0.2
         continue-on-error: true
         if: always()

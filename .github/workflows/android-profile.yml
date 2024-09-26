@@ -70,6 +70,8 @@ jobs:
           echo "Installing dependancies"
           echo "Getting python..."
           python\get_python.bat
+          echo "Setup Android SDK..."
+          scripts\build\build_node\Platform\Windows\install-windows-android.ps1
           
       - name: Add msbuild to PATH
         uses: ilammy/msvc-dev-cmd@v1.13.0

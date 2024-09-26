@@ -46,8 +46,8 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            ${{ github.wokrspace }}/3rdParty/packages
-            ${{ github.wokrspace }}/python
+            ${{ github.workspace }}/3rdParty/packages
+            ${{ github.workspace }}/python
           key: O3DE-${{ matrix.image }}-3p
 
       - name: Setup ccache

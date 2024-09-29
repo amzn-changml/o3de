@@ -13,6 +13,8 @@ jobs:
         compiler: [clang]
         config: [profile]
         image: [ubuntu-22.04]
+        platform: [Linux]
+        type: [asset_profile]
 
     runs-on: ${{ matrix.image }}
 
@@ -58,7 +60,7 @@ jobs:
         with:
           override_cache_key: O3DE-${{ matrix.platform }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
-            O3DE-${{ matrix.image }}-${{ matrix.config }}
+            O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           prepend_symlinks_to_path: false
           store_cache: false
           ccache_options: |
@@ -90,7 +92,7 @@ jobs:
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          python/python.sh -u scripts/build/ci_build.py --platform Linux --type asset_profile
+          python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
 
       - name: Get disk space
         if: always()

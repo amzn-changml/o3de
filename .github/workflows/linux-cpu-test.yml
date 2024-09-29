@@ -13,6 +13,8 @@ jobs:
         compiler: [clang]
         config: [profile]
         image: [ubuntu-22.04]
+        platform: [Linux]
+        type: [test_profile]
 
     runs-on: ${{ matrix.image }}
 
@@ -96,7 +98,7 @@ jobs:
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           sudo systemctl restart gdm3
-          python/python.sh -u scripts/build/ci_build.py --platform Linux --type test_profile
+          python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
 
       - name: Get disk space
         if: always()

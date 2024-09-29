@@ -55,9 +55,9 @@ jobs:
         continue-on-error: true
         if: always()
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+          override_cache_key: O3DE-${{ matrix.platform }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
-            O3DE-${{ matrix.platform }}-${{ matrix.config }}
+            O3DE-${{ matrix.image }}-${{ matrix.config }}
           prepend_symlinks_to_path: false
           ccache_options: |
             max_size=5G
@@ -92,7 +92,7 @@ jobs:
           CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
-          DISPLAY: :0
+          DISPLAY: ":0"
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           sudo systemctl restart gdm3

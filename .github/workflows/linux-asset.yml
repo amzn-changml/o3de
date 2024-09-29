@@ -31,7 +31,6 @@ jobs:
         uses: actions/checkout@v4.1.7
         with:
           show-progress: false
-          fetch-depth: 0
           
       - name: Git LFS fetch
         run: |
@@ -57,10 +56,11 @@ jobs:
         continue-on-error: true
         if: always()
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+          override_cache_key: O3DE-${{ matrix.platform }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           prepend_symlinks_to_path: false
+          store_cache: false
           ccache_options: |
             max_size=5G
             cache_dir=${{ github.workspace }}/.ccache

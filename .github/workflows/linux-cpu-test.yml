@@ -94,7 +94,7 @@ jobs:
           CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
           CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
           CMAKE_C_COMPILER_LAUNCHER: ccache
-          CMAKE_CXX_COMPILER_LAUNCHER: ccach
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           Xvfb :0 -screen 0 1024x768x16 &

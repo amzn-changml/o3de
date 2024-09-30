@@ -91,15 +91,29 @@ jobs:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
-          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          { python/python.sh -u scripts/build/ci_build.py --platform "${{ matrix.platform }}" --type "${{ matrix.type }}" 2>&1; echo "${PIPESTATUS[0]}" > exit_code.tmp; } | tee output.log
-          exit_code=$(cat exit_code.tmp)
-          if grep -Eq "AssetProcessor: JOB LOG: .* ERROR .* AssetBuilder .* failed to respond within 3600 seconds" output.log; then
+          output_file=$(mktemp)
+          bypass_errors=(
+            "AssetProcessor: JOB LOG: .* ERROR .* AssetBuilder .* failed to respond within 3600 seconds"
+          )
+          python/python.sh -u scripts/build/ci_build.py --platform "${{ matrix.platform }}" --type "${{ matrix.type }}" 2>&1 | tee "$output_file"
+          exit_code=${PIPESTATUS[0]}
+          bypass_exit_code=false
+          while IFS= read -r line; do
+            echo "$line"
+            for error_pattern in "${bypass_errors[@]}"; do
+              if [[ $line =~ $error_pattern ]]; then
+                bypass_exit_code=true
+                echo "::warning ::$line"
+                break
+              fi
+            done
+          done < "$output_file"
+          if [ "$bypass_exit_code" = true ]; then
             exit 0
           else
             exit $exit_code
           fi
-          rm exit_code.tmp output.log
+          rm "$output_file"
 
       - name: Get disk space
         if: always()

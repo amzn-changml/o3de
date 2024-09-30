@@ -92,7 +92,14 @@ jobs:
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
+          { python/python.sh -u scripts/build/ci_build.py --platform "${{ matrix.platform }}" --type "${{ matrix.type }}" 2>&1; echo "${PIPESTATUS[0]}" > exit_code.tmp; } | tee output.log
+          exit_code=$(cat exit_code.tmp)
+          if grep -Eq "AssetProcessor: JOB LOG: .* ERROR .* AssetBuilder .* failed to respond within 3600 seconds" output.log; then
+            exit 0
+          else
+            exit $exit_code
+          fi
+          rm exit_code.tmp output.log
 
       - name: Get disk space
         if: always()

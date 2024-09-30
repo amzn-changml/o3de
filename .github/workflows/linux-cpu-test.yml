@@ -12,7 +12,7 @@ jobs:
       matrix:
         compiler: [clang]
         config: [profile]
-        image: [ubuntu-20.04]
+        image: [ubuntu-22.04]
         platform: [Linux]
         type: [test_profile]
 
@@ -78,10 +78,10 @@ jobs:
           ./python/get_python.sh
 
           echo "Installing desktop environment and tools"
-          sudo apt-get install ubuntu-desktop-minimal mesa-utils vulkan-tools gdm3 -y
+          sudo apt-get install ubuntu-desktop-minimal mesa-utils vulkan-tools gdm3 xvfb -y
           
           # Setup X desktop manager (Wayland needs to be turned off for GDM3)
-          sudo sed -i 's/#WaylandEnable=false/WaylandEnable=false/g' /etc/gdm3/custom.conf
+          sudo sed -i 's/#WaylandEnable=false/WaylandEnable=false/g' /etc/gdm3/custom.conf        
           
           sudo apt -y autoremove --purge
           sudo apt -y autoclean
@@ -94,11 +94,11 @@ jobs:
           CC:  ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang'   }}
           CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
           CMAKE_C_COMPILER_LAUNCHER: ccache
-          CMAKE_CXX_COMPILER_LAUNCHER: ccache
-          DISPLAY: ":0"
+          CMAKE_CXX_COMPILER_LAUNCHER: ccach
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          sudo systemctl restart gdm3
+          Xvfb :0 -screen 0 1024x768x16 &
+          export DISPLAY=:0
           python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
 
       - name: Get disk space

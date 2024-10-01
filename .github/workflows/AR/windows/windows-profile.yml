@@ -2,6 +2,7 @@ name: Windows Profile
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   Build:
@@ -90,7 +91,7 @@ jobs:
           key: O3DE-${{ matrix.platform }}-3p
 
   Build-Asset:
-    uses: ./.github/workflows/AR/windows/windows-asset.yml@test-gha-builds-ccache
+    uses: ./.github/workflows/AR/windows/windows-asset.yml
 
   Build-CPU-Test:
-    uses: ./.github/workflows/AR/windows/windows-cpu-test.yml@test-gha-builds-ccache
+    uses: ./.github/workflows/AR/windows/windows-cpu-test.yml

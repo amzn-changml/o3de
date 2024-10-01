@@ -2,6 +2,7 @@ name: Linux Profile CPU Test
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   Build:

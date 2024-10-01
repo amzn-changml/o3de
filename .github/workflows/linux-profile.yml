@@ -103,7 +103,7 @@ jobs:
           key: O3DE-${{ matrix.platform }}-3p
     
   Build-Asset:
-    uses: ./.github/workflows/AR/linux/linux-asset.yml
+    uses: ./.github/workflows/linux-asset.yml
 
   Build-CPU-Test:
-    uses: ./.github/workflows/AR/linux/linux-cpu-test.yml
+    uses: ./.github/workflows/linux-cpu-test.yml

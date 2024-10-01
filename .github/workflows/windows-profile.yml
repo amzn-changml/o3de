@@ -91,7 +91,7 @@ jobs:
           key: O3DE-${{ matrix.platform }}-3p
 
   Build-Asset:
-    uses: ./.github/workflows/AR/windows/windows-asset.yml
+    uses: ./.github/workflows/windows-asset.yml
 
   Build-CPU-Test:
-    uses: ./.github/workflows/AR/windows/windows-cpu-test.yml
+    uses: ./.github/workflows/windows-cpu-test.yml

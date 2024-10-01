@@ -13,29 +13,13 @@ jobs:
         compiler: [clang]
         config: [profile]
         image: [ubuntu-22.04]
+        platform: [Linux]
+        type: [profile]
 
     runs-on: ${{ matrix.image }}
 
     steps:
-      - name: Maximize build space - 1st pass
-        continue-on-error: true
-        run: |
-          sudo rm -rf \
-            "$AGENT_TOOLSDIRECTORY" \
-            /opt/google/chrome \
-            /opt/microsoft/msedge \
-            /opt/microsoft/powershell \
-            /opt/pipx \
-            /usr/lib/mono \
-            /usr/local/julia* \
-            /usr/local/lib/node_modules \
-            /usr/local/share/chromium \
-            /usr/local/share/powershell \
-            /usr/share/dotnet \
-            /usr/share/swift
-          df -h
-          
-      - name: Maximize build space - 2nd pass
+      - name: Maximize build space
         uses: easimon/maximize-build-space@v10
         with:
           root-reserve-mb: 8000
@@ -55,6 +39,9 @@ jobs:
           git lfs install
           git lfs fetch --include "*.ico,*.bmp"
           git lfs checkout
+      
+      - name: Restore timestamps
+        uses: chetan/git-restore-mtime-action@v2
           
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4.0.2
@@ -70,12 +57,13 @@ jobs:
         continue-on-error: true
         if: always()
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+          override_cache_key: O3DE-${{ matrix.platform }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
-            O3DE-${{ matrix.image }}-${{ matrix.config }}
+            O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           prepend_symlinks_to_path: false
           ccache_options: |
             max_size=5G
+            compression_level=2
             cache_dir=${{ github.workspace }}/.ccache
 
       - name: Configure environment
@@ -102,13 +90,7 @@ jobs:
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          python/python.sh -u scripts/build/ci_build.py --platform Linux --type profile
-
-      - name: Get disk space
-        continue-on-error: true
-        if: always()
-        run: |
-          df -h
+          python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
       
       - name: Save 3P Cache
         uses: actions/cache/save@v4.0.2
@@ -118,4 +100,4 @@ jobs:
           path: |
             ${{ github.workspace }}/3rdParty/packages
             ${{ github.workspace }}/python
-          key: O3DE-${{ matrix.image }}-3p     
+          key: O3DE-${{ matrix.platform }}-3p     

@@ -1,12 +1,10 @@
-name: Linux Asset Profile
+name: Linux Profile CPU Test
 
 on:
-  push:
-      paths: '.github/workflows/linux-asset.yml'
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 jobs:
-  build:
+  Build:
     strategy:
       fail-fast: false
       matrix:
@@ -14,7 +12,7 @@ jobs:
         config: [profile]
         image: [ubuntu-22.04]
         platform: [Linux]
-        type: [asset_profile]
+        type: [test_profile]
 
     runs-on: ${{ matrix.image }}
 
@@ -22,7 +20,7 @@ jobs:
       - name: Maximize build space
         uses: easimon/maximize-build-space@v10
         with:
-          root-reserve-mb: 8000
+          root-reserve-mb: 10000
           swap-size-mb: 200
           remove-dotnet: true
           remove-haskell: true
@@ -50,8 +48,7 @@ jobs:
           path: |
             ${{ github.workspace }}/3rdParty/packages
             ${{ github.workspace }}/python
-            ~/python
-          key: O3DE-${{ matrix.image }}-3p
+          key: O3DE-${{ matrix.platform }}-3p
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
@@ -60,7 +57,7 @@ jobs:
         with:
           override_cache_key: O3DE-${{ matrix.platform }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
-            O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+            O3DE-${{ matrix.image }}-${{ matrix.config }}
           prepend_symlinks_to_path: false
           store_cache: false
           ccache_options: |
@@ -77,7 +74,15 @@ jobs:
           popd
           echo "Getting python..."
           ./python/get_python.sh
-          sudo apt-get install -y libevdev2 libevdev-dev libudev-dev
+
+          echo "Installing desktop environment and tools"
+          sudo apt-get install ubuntu-desktop xorg mesa-utils vulkan-tools gdm3 xvfb -y
+          
+          # Setup X desktop manager (Wayland needs to be turned off for GDM3)
+          sudo sed -i 's/#WaylandEnable=false/WaylandEnable=false/g' /etc/gdm3/custom.conf
+
+          sudo systemctl restart gdm3
+          
           sudo apt -y autoremove --purge
           sudo apt -y autoclean
           sudo apt clean
@@ -91,31 +96,8 @@ jobs:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
-          output_file=$(mktemp)
-          bypass_errors=(
-            "AssetProcessor: JOB LOG: .* ERROR .* AssetBuilder .* failed to respond within 3600 seconds"
-          )
-          python/python.sh -u scripts/build/ci_build.py --platform "${{ matrix.platform }}" --type "${{ matrix.type }}" 2>&1 | tee "$output_file"
-          exit_code=${PIPESTATUS[0]}
-          bypass_exit_code=false
-          while IFS= read -r line; do
-            echo "$line"
-            for error_pattern in "${bypass_errors[@]}"; do
-              if [[ $line =~ $error_pattern ]]; then
-                bypass_exit_code=true
-                echo "::warning ::$line"
-                break
-              fi
-            done
-          done < "$output_file"
-          if [ "$bypass_exit_code" = true ]; then
-            exit 0
-          else
-            exit $exit_code
-          fi
-          rm "$output_file"
-
-      - name: Get disk space
-        if: always()
-        run: |
-          df -h
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          Xvfb :0 -screen 0 1024x768x16 &
+          export DISPLAY=:0
+          python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
+          

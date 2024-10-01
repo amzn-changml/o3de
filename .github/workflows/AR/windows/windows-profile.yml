@@ -1,13 +1,10 @@
 name: Windows Profile
 
 on:
-  push:
-      paths: '.github/workflows/windows-profile.yml'
-  workflow_dispatch: {}
-  pull_request:
+  workflow_dispatch:
 
 jobs:
-  build:
+  Build:
     strategy:
       fail-fast: false
       matrix:
@@ -61,6 +58,7 @@ jobs:
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
           prepend_symlinks_to_path: false
+          store_cache: ${{ contains(github.head_ref, 'test-gha-builds-ccache') && true || false }}
           ccache_options: |
             max_size=5G
             cache_dir=D:\.ccache
@@ -90,3 +88,9 @@ jobs:
             D:\python
             D:\3rdParty\packages
           key: O3DE-${{ matrix.platform }}-3p
+
+  Build-Asset:
+    uses: ./.github/workflows/AR/windows/windows-asset.yml
+
+  Build-CPU-Test:
+    uses: ./.github/workflows/AR/windows/windows-cpu-test.yml

@@ -1,13 +1,10 @@
-name: Windows Profile
+name: Windows CPU Test
 
 on:
-  push:
-      paths: '.github/workflows/windows-asset.yml'
   workflow_dispatch:
-  pull_request:
 
 jobs:
-  build:
+  Build:
     strategy:
       fail-fast: false
       matrix:
@@ -15,7 +12,7 @@ jobs:
         config: [profile]
         image: [windows-2022]
         platform: [Windows]        
-        type: [asset_profile]
+        type: [test_cpu_profile]
 
     runs-on: ${{ matrix.image }}
 
@@ -60,8 +57,8 @@ jobs:
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
-          store_cache: false
           prepend_symlinks_to_path: false
+          store_cache: false
           ccache_options: |
             max_size=5G
             cache_dir=D:\.ccache

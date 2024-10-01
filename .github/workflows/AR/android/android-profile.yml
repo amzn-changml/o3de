@@ -1,9 +1,7 @@
 name: Android Profile
 
 on:
-  push:
-      paths: '.github/workflows/android-profile.yml'
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 jobs:
   build:
@@ -11,10 +9,10 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [msvc]
-        type: [profile]
         config: [profile]
         image: [windows-2022]
         platform: [Android]
+        type: [profile]
 
     runs-on: ${{ matrix.image }}
 
@@ -61,6 +59,7 @@ jobs:
             O3DE-${{ matrix.platform }}-${{ matrix.config }}
           windows_compile_environment: msvc
           prepend_symlinks_to_path: false
+          store_cache: ${{ contains(github.head_ref, 'test-gha-builds-ccache') && true || false }}
           ccache_options: |
             max_size=5G
             cache_dir=D:\.ccache

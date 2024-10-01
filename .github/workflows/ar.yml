@@ -4,9 +4,12 @@ on:
   pull_request:
 
 jobs:
+    Startup:
+        - uses: actions/checkout@master
+          name: Checkout
     Build-Windows:
-        uses: ./.github/workflows/AR/windows/windows-profile.yml
+        uses: ./.github/workflows/AR/windows/windows-profile.yml@test-gha-builds-ccache
     Build-Linux:
-        uses: ./.github/workflows/AR/linux/linux-profile.yml
+        uses: ./.github/workflows/AR/linux/linux-profile.yml@test-gha-builds-ccache
     Build-Android:
-        uses: ./.github/workflows/AR/android/android-profile.yml
+        uses: ./.github/workflows/AR/android/android-profile.yml@test-gha-builds-ccache

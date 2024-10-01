@@ -1,9 +1,10 @@
-name: Windows Asset
+name: Windows Profile
 
 on:
   push:
       paths: '.github/workflows/windows-asset.yml'
-  workflow_dispatch: {}
+  workflow_dispatch:
+  pull_request:
 
 jobs:
   build:
@@ -11,9 +12,10 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [msvc]
-        type: [asset_profile]
         config: [profile]
         image: [windows-2022]
+        platform: [Windows]        
+        type: [asset_profile]
 
     runs-on: ${{ matrix.image }}
 
@@ -21,9 +23,8 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4.1.7
         with:
-          fetch-depth: 0
-          clean: false
-  
+          show-progress: false
+          
       - name: Git LFS fetch
         run: |
           git lfs install
@@ -38,28 +39,31 @@ jobs:
           "3rdParty", "build", ".o3de" | % {New-Item "D:\$_" -ItemType 'Directory' -Force}
           "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
           ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
-                     
-      - name: Cache 3p
-        uses: actions/cache@v4.0.2
+
+      - name: Restore 3p Cache
+        uses: actions/cache/restore@v4.0.2
         continue-on-error: true
+        if: always()
         with:
           path: |
             D:\.o3de\Python
             D:\python
             D:\3rdParty\packages
-          key: O3DE-${{ matrix.image }}-3p
-          save-always: true
+          key: O3DE-${{ matrix.platform }}-3p
 
       - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1.4.3
+        uses: Chocobo1/setup-ccache-action@v1.4.4
+        continue-on-error: true
+        if: always()
         with:
-          override_cache_key: O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
+          override_cache_key: O3DE-${{ matrix.platform }}-${{ matrix.config }}-ccache
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
+          store_cache: false
           prepend_symlinks_to_path: false
           ccache_options: |
-            max_size=15G
+            max_size=5G
             cache_dir=D:\.ccache
         
       - name: Configure environment
@@ -70,25 +74,9 @@ jobs:
           
       - name: Add msbuild to PATH
         uses: ilammy/msvc-dev-cmd@v1.13.0
-
-      - name: Get environment
-        run: |
-          dir env:
-          get-psdrive
           
       - name: Build
         env:
           LY_3RDPARTY_PATH: D:\3rdParty
-        run:
-          python\python.cmd -u scripts\build\ci_build.py --platform Windows --type ${{ matrix.type }} 
-          
-      - name: Save Builds
-        uses: actions/upload-artifact@v4.3.5
-        continue-on-error: true
-        if: always()
-        with:
-          path: |
-            D:\build
-            
-          name: O3DE-${{ matrix.image }}-${{ matrix.config }}-build-asset
-          compression-level: 1
+        run: 
+          python\python.cmd -u scripts\build\ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }} 

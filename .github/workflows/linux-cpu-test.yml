@@ -51,7 +51,7 @@ jobs:
           path: |
             ${{ github.workspace }}/3rdParty/packages
             ${{ github.workspace }}/python
-          key: O3DE-${{ matrix.image }}-3p
+          key: O3DE-${{ matrix.platform }}-3p
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
@@ -103,8 +103,4 @@ jobs:
           Xvfb :0 -screen 0 1024x768x32 &
           export DISPLAY=:0
           python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
-
-      - name: Get disk space
-        if: always()
-        run: |
-          df -h   
+          

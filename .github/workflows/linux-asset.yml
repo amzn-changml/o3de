@@ -5,7 +5,7 @@ on:
   workflow_call:
 
 jobs:
-  Build:
+  Build-Asset:
     strategy:
       fail-fast: false
       matrix:

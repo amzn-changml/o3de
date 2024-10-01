@@ -1,13 +1,13 @@
-name: Run AR
+name: AR
 
 on:
   pull_request:
   workflow_dispatch:
 
 jobs:
-    Build-Windows:
+    Windows:
         uses: ./.github/workflows/windows-profile.yml
-    Build-Linux:
+    Linux:
         uses: ./.github/workflows/linux-profile.yml
-    Build-Android:
+    Android:
         uses: ./.github/workflows/android-profile.yml

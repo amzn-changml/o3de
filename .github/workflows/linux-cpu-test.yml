@@ -78,7 +78,7 @@ jobs:
           ./python/get_python.sh
 
           echo "Installing desktop environment and tools"
-          sudo apt-get install ubuntu-desktop-minimal mesa-utils vulkan-tools gdm3 xvfb -y
+          sudo apt-get install xorg mesa-utils vulkan-tools gdm3 xvfb -y
           
           # Setup X desktop manager (Wayland needs to be turned off for GDM3)
           sudo sed -i 's/#WaylandEnable=false/WaylandEnable=false/g' /etc/gdm3/custom.conf        
@@ -97,7 +97,7 @@ jobs:
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          Xvfb :0 -screen 0 1024x768x16 &
+          Xvfb :0 -screen 0 1280x1024x32 &
           export DISPLAY=:0
           python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
 

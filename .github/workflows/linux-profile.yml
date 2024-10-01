@@ -3,7 +3,8 @@ name: Linux Profile
 on:
   push:
       paths: '.github/workflows/linux-profile.yml'
-  workflow_dispatch: {}
+  workflow_dispatch:
+  pull_request:
 
 jobs:
   build:
@@ -50,7 +51,7 @@ jobs:
           path: |
             ${{ github.workspace }}/3rdParty/packages
             ${{ github.workspace }}/python
-          key: O3DE-${{ matrix.image }}-3p
+          key: O3DE-${{ matrix.platform }}-3p
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3

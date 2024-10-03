@@ -100,7 +100,7 @@ jobs:
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          Xvfb :0 -screen 0 1366x768x16 &
+          Xvfb :1 -screen 0 1600x1200x24+32 &
           export DISPLAY=:0
           python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
           

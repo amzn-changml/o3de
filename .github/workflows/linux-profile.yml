@@ -53,6 +53,14 @@ jobs:
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.platform }}-3p
 
+      - name: Restore ccache
+        uses: actions/download-artifact@v4.1.8
+        continue-on-error: true
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ vars.LINUX_CCACHE_ARTIFACT_RUNID }}
+
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         continue-on-error: true
@@ -62,10 +70,9 @@ jobs:
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           prepend_symlinks_to_path: false
-          store_cache: ${{ contains(github.head_ref, 'test-gha-builds-ccache') && true || false }}
+          store_cache: false
           ccache_options: |
             max_size=5G
-            compression_level=2
             cache_dir=${{ github.workspace }}/.ccache
 
       - name: Configure environment
@@ -103,7 +110,19 @@ jobs:
             ${{ github.workspace }}/3rdParty/packages
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.platform }}-3p
-    
+
+
+      - name: Save ccache
+        uses: actions/upload-artifact@v4.4.0
+        continue-on-error: true
+        if: always()
+        with:
+          compression-level: 1
+          if-no-files-found: warn
+          path: ${{ github.workspace }}/.ccache
+
+      - name: Set ccache runid variable
+        run: echo "${{ matrix.platform }}_CCACHE_ARTIFACT_RUNID=${{ github.run_id }}" >> $GITHUB_ENV
   # Build-Asset:
   #   uses: ./.github/workflows/linux-asset.yml
 

@@ -105,5 +105,5 @@ jobs:
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           # xvfb-run --auto-servernum --server-args='-screen 0 1600x1200x24' python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
-          sudo xvfb-run --auto-servernum --server-num=1 --server-args="-screen 1 1600x1200x24 -ac +extension GLX" python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
+          xvfb-run --auto-servernum --server-num=1 --server-args="-screen 1 1600x1200x24 -ac +extension GLX" python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
           

@@ -101,8 +101,9 @@ jobs:
           CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
-          DISPLAY: :0
+          DISPLAY: :99
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          xvfb-run --auto-servernum --server-args='-screen 0 1600x1200x24' python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
+          # xvfb-run --auto-servernum --server-args='-screen 0 1600x1200x24' python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
+          sudo xvfb-run --auto-servernum --server-num=1 --server-args="-screen 1 1600x1200x24 -ac +extension GLX" python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
           

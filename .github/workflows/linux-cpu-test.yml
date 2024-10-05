@@ -92,7 +92,7 @@ jobs:
           df -h
 
           # Xvfb :99 -screen 0 1400x1050x16 &
-          Xvfb :1 -screen 0 1600x1200x24 &
+          Xvfb :99 -screen 0 1600x1200x24 &
           
       - name: Build
         env:

@@ -102,6 +102,7 @@ jobs:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
           DISPLAY: :99
+          QT_QPA_PLATFORM: offscreen
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           # xvfb-run --auto-servernum --server-args='-screen 0 1600x1200x24' python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}

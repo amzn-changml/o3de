@@ -59,7 +59,7 @@ jobs:
         if: always()
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ vars.${{ matrix.platform }}_CCACHE_ARTIFACT_RUNID }}
+          run-id: ${{ vars[format(matrix.platform, '{0}_CCACHE_ARTIFACT_RUNID')] }}
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
@@ -119,7 +119,7 @@ jobs:
         with:
           compression-level: 1
           if-no-files-found: warn
-          path: ${{ github.workspace }}/.ccache
+          path: ${{ github.workspace }}/.ccache/
 
       - name: Set ccache runid variable
         run: gh variable set ${{ matrix.platform }}_CCACHE_ARTIFACT_RUNID --body  ${{ github.run_id }}

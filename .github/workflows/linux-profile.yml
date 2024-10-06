@@ -111,12 +111,12 @@ jobs:
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.platform }}-3p
 
-
       - name: Save ccache
         uses: actions/upload-artifact@v4.4.0
         continue-on-error: true
         if: always()
         with:
+          naem: O3DE-${{ matrix.platform }}-ccache
           compression-level: 1
           if-no-files-found: warn
           include-hidden-files: true
@@ -124,7 +124,7 @@ jobs:
           
       - name: Set ccache runid variable
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh variable set ${{ matrix.platform }}_CCACHE_ARTIFACT_RUNID --body  ${{ github.run_id }}
   # Build-Asset:
   #   uses: ./.github/workflows/linux-asset.yml

@@ -119,9 +119,11 @@ jobs:
         with:
           compression-level: 1
           if-no-files-found: warn
-          path: ${{ github.workspace }}/.ccache/
+          path: .ccache/
 
       - name: Set ccache runid variable
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: gh variable set ${{ matrix.platform }}_CCACHE_ARTIFACT_RUNID --body  ${{ github.run_id }}
   # Build-Asset:
   #   uses: ./.github/workflows/linux-asset.yml

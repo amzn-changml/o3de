@@ -59,7 +59,7 @@ jobs:
         if: always()
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ vars.LINUX_CCACHE_ARTIFACT_RUNID }}
+          run-id: ${{ vars.${{ matrix.platform }}_CCACHE_ARTIFACT_RUNID }}
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
@@ -70,7 +70,7 @@ jobs:
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           prepend_symlinks_to_path: false
-          store_cache: false
+          # store_cache: false
           ccache_options: |
             max_size=5G
             cache_dir=${{ github.workspace }}/.ccache
@@ -122,7 +122,7 @@ jobs:
           path: ${{ github.workspace }}/.ccache
 
       - name: Set ccache runid variable
-        run: echo "${{ matrix.platform }}_CCACHE_ARTIFACT_RUNID=${{ github.run_id }}" >> $GITHUB_ENV
+        run: gh variable set ${{ matrix.platform }}_CCACHE_ARTIFACT_RUNID --body  ${{ github.run_id }}
   # Build-Asset:
   #   uses: ./.github/workflows/linux-asset.yml
 

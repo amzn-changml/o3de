@@ -117,7 +117,7 @@ jobs:
       - name: Save ccache
         uses: actions/upload-artifact@v4.4.0
         continue-on-error: true
-        if: always()
+        if: (contains(github.ref, 'development') || contains(github.ref, 'test-gha-builds-ccache')) && always()
         with:
           name: O3DE-${{ matrix.platform }}-ccache
           compression-level: 1
@@ -126,6 +126,7 @@ jobs:
           path: ${{ github.workspace }}/.ccache
           
       - name: Set ccache runid variable
+        if: (contains(github.ref, 'development') || contains(github.ref, 'test-gha-builds-ccache')) && always()
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: gh variable set Linux_CCACHE_ARTIFACT_RUNID --body  ${{ github.run_id }}

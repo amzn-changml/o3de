@@ -73,7 +73,7 @@ jobs:
         if: always()
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ vars.[format(matrix.platform, '{0}_CCACHE_ARTIFACT_RUNID')] }}
+          run-id: ${{ vars.Linux_CCACHE_ARTIFACT_RUNID }}
 
       - name: Configure environment
         continue-on-error: true
@@ -125,7 +125,7 @@ jobs:
       - name: Set ccache runid variable
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: gh variable set ${{ matrix.platform }}_CCACHE_ARTIFACT_RUNID --body  ${{ github.run_id }}
+        run: gh variable set Linux_CCACHE_ARTIFACT_RUNID --body  ${{ github.run_id }}
   # Build-Asset:
   #   uses: ./.github/workflows/linux-asset.yml
 

@@ -62,7 +62,8 @@ jobs:
           override_cache_key_fallback: |
             O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           prepend_symlinks_to_path: false
-          # store_cache: false
+          store_cache: false
+          restore_cache: false
           ccache_options: |
             max_size=5G
             cache_dir=${{ github.workspace }}/.ccache

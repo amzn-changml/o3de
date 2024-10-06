@@ -74,6 +74,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ vars.Linux_CCACHE_ARTIFACT_RUNID }}
+          path: ${{ github.workspace }}/.ccache
 
       - name: Configure environment
         continue-on-error: true
@@ -116,7 +117,7 @@ jobs:
         continue-on-error: true
         if: always()
         with:
-          naem: O3DE-${{ matrix.platform }}-ccache
+          name: O3DE-${{ matrix.platform }}-ccache
           compression-level: 1
           if-no-files-found: warn
           include-hidden-files: true

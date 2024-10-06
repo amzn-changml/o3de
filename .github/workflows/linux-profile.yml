@@ -53,14 +53,6 @@ jobs:
             ${{ github.workspace }}/python
           key: O3DE-${{ matrix.platform }}-3p
 
-      - name: Restore ccache
-        uses: actions/download-artifact@v4.1.8
-        continue-on-error: true
-        if: always()
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ vars[format(matrix.platform, '{0}_CCACHE_ARTIFACT_RUNID')] }}
-
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.3
         continue-on-error: true
@@ -74,6 +66,14 @@ jobs:
           ccache_options: |
             max_size=5G
             cache_dir=${{ github.workspace }}/.ccache
+
+      - name: Restore ccache
+        uses: actions/download-artifact@v4.1.8
+        continue-on-error: true
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ vars.[format(matrix.platform, '{0}_CCACHE_ARTIFACT_RUNID')] }}
 
       - name: Configure environment
         continue-on-error: true
@@ -124,7 +124,7 @@ jobs:
           
       - name: Set ccache runid variable
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: gh variable set ${{ matrix.platform }}_CCACHE_ARTIFACT_RUNID --body  ${{ github.run_id }}
   # Build-Asset:
   #   uses: ./.github/workflows/linux-asset.yml

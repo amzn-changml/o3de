@@ -119,8 +119,9 @@ jobs:
         with:
           compression-level: 1
           if-no-files-found: warn
-          path: .ccache/
-
+          include-hidden-files: true
+          path: ${{ github.workspace }}/.ccache
+          
       - name: Set ccache runid variable
         env:
           GH_TOKEN: ${{ github.token }}

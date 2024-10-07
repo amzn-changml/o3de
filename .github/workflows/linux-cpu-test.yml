@@ -90,7 +90,8 @@ jobs:
           echo "Getting python..."
           ./python/get_python.sh
           echo "Installing desktop environment and tools"
-          sudo apt-get install ubuntu-desktop xorg mesa-utils vulkan-tools gdm3 xvfb -y
+          sudo apt-get update -y
+          sudo apt-get install ubuntu-desktop xorg mesa-utils vulkan-tools gdm3 libevdev-dev libevdev2 -y
           
           # Setup X desktop manager (Wayland needs to be turned off for GDM3)
           sudo sed -i 's/#WaylandEnable=false/WaylandEnable=false/g' /etc/gdm3/custom.conf

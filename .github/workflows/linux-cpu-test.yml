@@ -98,9 +98,8 @@ jobs:
           sudo sed -i 's/#WaylandEnable=false/WaylandEnable=false/g' /etc/gdm3/custom.conf
 
           sudo apparmor_status
-          sudo systemctl disable apparmor
-          
-          # sudo aa-teardown
+          sudo aa-teardown
+          sudo apt-get --purge remove apparmor
           
           sudo apt -y autoremove --purge
           sudo apt -y autoclean

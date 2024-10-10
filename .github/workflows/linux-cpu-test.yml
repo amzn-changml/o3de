@@ -116,6 +116,6 @@ jobs:
           DISPLAY: :0
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          Xvfb :0 -screen 0 1400x1050x16 &
+          Xvfb :99 -screen 0 1400x1050x16 &
           python/python.sh -u scripts/build/ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }}
           

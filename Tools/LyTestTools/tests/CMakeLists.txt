@@ -27,7 +27,7 @@ if(PAL_TRAIT_BUILD_HOST_TOOLS AND PAL_TRAIT_BUILD_TESTS_SUPPORTED AND AutomatedT
         TEST_SUITE smoke
         RUNTIME_DEPENDENCIES
             Legacy::Editor
-  #          AssetProcessor
+            AssetProcessor
             AutomatedTesting.GameLauncher
             AutomatedTesting.ServerLauncher
             AutomatedTesting.Assets

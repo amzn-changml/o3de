@@ -62,9 +62,20 @@ jobs:
             O3DE-${{ matrix.image }}-${{ matrix.config }}-ccache
           prepend_symlinks_to_path: false
           store_cache: false
+          restore_cache: false
           ccache_options: |
             max_size=5G
             cache_dir=${{ github.workspace }}/.ccache
+            
+      - name: Restore ccache
+        uses: actions/download-artifact@v4.1.8
+        continue-on-error: true
+        if: always()
+        with:
+          name: O3DE-${{ matrix.platform }}-ccache
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ vars.Linux_CCACHE_ARTIFACT_RUNID }}
+          path: ${{ github.workspace }}/.ccache/
 
       - name: Configure environment
         continue-on-error: true
@@ -76,11 +87,18 @@ jobs:
           popd
           echo "Getting python..."
           ./python/get_python.sh
-          sudo apt-get install -y libevdev2 libevdev-dev libudev-dev
-          sudo apt -y autoremove --purge
-          sudo apt -y autoclean
+          
+          echo "Installing desktop environment and tools"
+          sudo apt-get update -qq -y
+          sudo apt-get install -qq ubuntu-desktop xorg mesa-utils vulkan-tools libevdev-dev libevdev2 -y
+          sudo apparmor_status
+          sudo aa-teardown
+          sudo apt-get --purge remove -qq apparmor
+          sudo ufw disable
+    
+          sudo apt autoremove --purge
+          sudo apt autoclean
           sudo apt clean
-          df -h
           
       - name: Build
         env:
@@ -114,7 +132,19 @@ jobs:
           fi
           rm "$output_file"
 
-      - name: Get disk space
-        if: always()
-        run: |
-          df -h
+      - name: Save build
+        uses: actions/upload-artifact@v4.4.0
+        continue-on-error: true
+        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }})) && always()
+        with:
+          name: O3DE-${{ matrix.platform }}-build
+          compression-level: 1
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ github.workspace }}/build
+            ${{ github.workspace }}/AutomatedTesting
+            ${{ github.workspace }}/Tools
+            ~/O3DE
+            ~/.o3de
+            

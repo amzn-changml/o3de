@@ -109,7 +109,9 @@ jobs:
           CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
+          DISPLAY: :0
         run: |
+          Xvfb :0 -screen 0 1400x1050x16 &
           output_file=$(mktemp)
           bypass_errors=(
             "AssetProcessor: JOB LOG: .* ERROR .* AssetBuilder .* failed to respond within 3600 seconds"

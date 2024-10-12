@@ -86,8 +86,14 @@ jobs:
         with:
           name: O3DE-${{ matrix.platform }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 11302259044
-          path: ${{ github.workspace }}/AutomatedTesting/cache
+         # run-id: 11302259044
+          path: ${{ github.workspace }}/cache.tar
+
+      - name: Extract build
+        continue-on-error: true
+        run: |
+          tar --atime-preserve -xvpf ${{ github.workspace }}/cache.tar
+          rm ${{ github.workspace }}/cache.tar
 
       - name: Configure environment
         continue-on-error: true
@@ -146,14 +152,20 @@ jobs:
           fi
           rm "$output_file"
 
+      - name: Compress build
+        continue-on-error: true
+        if: always()
+        run: |
+          tar --format=posix -cvpf ${{ github.workspace}}/cache.tar ${{ github.workspace }}/AutomatedTesting/cache
+
       - name: Save build
         uses: actions/upload-artifact@v4.4.0
         continue-on-error: true
-        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }})) && always()
+        if: always()
         with:
           name: O3DE-${{ matrix.platform }}-build
           compression-level: 1
           if-no-files-found: warn
           include-hidden-files: true
           path: |
-            ${{ github.workspace }}/AutomatedTesting/cache
+            ${{ github.workspace }}/cache.tar

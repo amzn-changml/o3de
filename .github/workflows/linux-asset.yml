@@ -79,6 +79,16 @@ jobs:
           run-id: ${{ vars.Linux_CCACHE_ARTIFACT_RUNID }}
           path: ${{ github.workspace }}/.ccache/
 
+      - name: Restore build
+        uses: actions/download-artifact@v4.1.8
+        continue-on-error: true
+        if: always()
+        with:
+          name: O3DE-${{ matrix.platform }}-build
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 11302259044
+          path: ${{ github.workspace }}/AutomatedTesting/cache
+
       - name: Configure environment
         continue-on-error: true
         if: always()
@@ -146,8 +156,4 @@ jobs:
           if-no-files-found: warn
           include-hidden-files: true
           path: |
-            ${{ github.workspace }}/build
-            ${{ github.workspace }}/AutomatedTesting
-            ${{ github.workspace }}/Tools
-            ~/O3DE
-            
+            ${{ github.workspace }}/AutomatedTesting/cache

@@ -109,8 +109,7 @@ jobs:
           ./python/get_python.sh
           
           echo "Installing desktop environment and tools"
-          sudo apt-get update -qq -y
-          sudo apt-get install -qq ubuntu-desktop xorg mesa-utils vulkan-tools libevdev-dev libevdev2 -y
+          sudo apt-get install -qq xorg mesa-utils vulkan-tools libevdev-dev libevdev2 -y
           sudo apparmor_status
           sudo aa-teardown
           sudo apt-get --purge remove -qq apparmor
@@ -130,30 +129,8 @@ jobs:
           DISPLAY: :0
         run: |
           Xvfb :0 -screen 0 1400x1050x16 &
-          output_file=$(mktemp)
-          bypass_errors=(
-            "AssetProcessor: JOB LOG: .* ERROR .* AssetBuilder .* failed to respond within 3600 seconds"
-          )
-          python/python.sh -u scripts/build/ci_build.py --platform "${{ matrix.platform }}" --type "${{ matrix.type }}" 2>&1 | tee "$output_file"
-          exit_code=${PIPESTATUS[0]}
-          bypass_exit_code=false
-          while IFS= read -r line; do
-            echo "$line"
-            for error_pattern in "${bypass_errors[@]}"; do
-              if [[ $line =~ $error_pattern ]]; then
-                bypass_exit_code=true
-                echo "::warning ::$line"
-                break
-              fi
-            done
-          done < "$output_file"
-          if [ "$bypass_exit_code" = true ]; then
-            exit 0
-          else
-            exit $exit_code
-          fi
-          rm "$output_file"
-
+          python/python.sh -u scripts/build/ci_build.py --platform "${{ matrix.platform }}" --type "${{ matrix.type }}" 
+          
       - name: Compress build
         continue-on-error: true
         if: always()

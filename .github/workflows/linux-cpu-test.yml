@@ -79,6 +79,24 @@ jobs:
           run-id: ${{ vars.Linux_CCACHE_ARTIFACT_RUNID }}
           path: ${{ github.workspace }}/.ccache/
 
+      - name: Restore build
+        uses: actions/download-artifact@v4.1.8
+        continue-on-error: true
+        if: always()
+        with:
+          name: O3DE-${{ matrix.platform }}-build
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 11312918872
+
+      - name: Extract build
+        continue-on-error: true
+        run: |
+          tar --atime-preserve -xvpf ${{ github.workspace }}/cache.tar
+          rm ${{ github.workspace }}/cache.tar
+          ls -lah
+          ls -lah build/
+          ls -lah AutomatedTesting/
+
       - name: Configure environment
         continue-on-error: true
         if: always()

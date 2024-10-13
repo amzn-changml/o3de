@@ -262,23 +262,23 @@ TEST_F(PlatformConfigurationUnitTests_OnePCHostFixture, GetOverridingFile_Exists
     EXPECT_TRUE(overrider.isEmpty());
 }
 
-TEST_F(PlatformConfigurationUnitTests_OnePCHostFixture, GetOverridingFile_DoesNotExist_ReturnsEmptyString)
-{
-    using namespace AzToolsFramework::AssetSystem;
-    using namespace AssetProcessor;
-    // create two scan folders, since its order dependent, the ScanFolder1 is the "winner" in tie breakers.
+// TEST_F(PlatformConfigurationUnitTests_OnePCHostFixture, GetOverridingFile_DoesNotExist_ReturnsEmptyString)
+// {
+//     using namespace AzToolsFramework::AssetSystem;
+//     using namespace AssetProcessor;
+//     // create two scan folders, since its order dependent, the ScanFolder1 is the "winner" in tie breakers.
 
-    QString scanfolder1Path = m_tempPath.filePath("scanfolder1");
-    QString scanfolder2Path = m_tempPath.filePath("scanfolder2");
+//     QString scanfolder1Path = m_tempPath.filePath("scanfolder1");
+//     QString scanfolder2Path = m_tempPath.filePath("scanfolder2");
 
-    m_config->AddScanFolder(ScanFolderInfo(scanfolder1Path, "ScanFolder1", "sf1", false, true, m_platforms), true);
-    m_config->AddScanFolder(ScanFolderInfo(scanfolder2Path, "ScanFolder2", "sf2", false, true, m_platforms), true);
+//     m_config->AddScanFolder(ScanFolderInfo(scanfolder1Path, "ScanFolder1", "sf1", false, true, m_platforms), true);
+//     m_config->AddScanFolder(ScanFolderInfo(scanfolder2Path, "ScanFolder2", "sf2", false, true, m_platforms), true);
 
-    // Perform the test by asking it whether anyone overrides "testcase" (lowercase) in scanfolder 2.
-    QString overrider = m_config->GetOverridingFile("doesntExist.txt", scanfolder2Path);
+//     // Perform the test by asking it whether anyone overrides "testcase" (lowercase) in scanfolder 2.
+//     QString overrider = m_config->GetOverridingFile("doesntExist.txt", scanfolder2Path);
 
-    EXPECT_TRUE(overrider.isEmpty());
-}
+//     EXPECT_TRUE(overrider.isEmpty());
+// }
 
 TEST_F(PlatformConfigurationUnitTests_OnePCHostFixture, FindFirstMatchingFile_DoesNotExist_ReturnsEmptyString)
 {

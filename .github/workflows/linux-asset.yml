@@ -108,8 +108,7 @@ jobs:
           echo "Getting python..."
           ./python/get_python.sh
           
-          echo "Installing desktop environment and tools"
-          sudo apt-get install -qq xorg mesa-utils vulkan-tools libevdev-dev libevdev2 -y
+          sudo apt-get install -qq libevdev-dev libevdev2 -y
           sudo apparmor_status
           sudo aa-teardown
           sudo apt-get --purge remove -qq apparmor
@@ -126,9 +125,7 @@ jobs:
           CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
-          DISPLAY: :0
         run: |
-          Xvfb :0 -screen 0 1400x1050x16 &
           python/python.sh -u scripts/build/ci_build.py --platform "${{ matrix.platform }}" --type "${{ matrix.type }}" 
           
       - name: Compress build

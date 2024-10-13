@@ -86,7 +86,7 @@ jobs:
         with:
           name: O3DE-${{ matrix.platform }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 11307973686
+          #run-id: 11307973686
 
       - name: Extract build
         continue-on-error: true
@@ -155,7 +155,7 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          tar --format=posix -cvpf ${{ github.workspace}}/cache.tar ${{ github.workspace }}/AutomatedTesting/Cache ${{ github.workspace }}/AutomatedTesting/user
+          tar --format=posix -cvpf ${{ github.workspace}}/cache.tar ${{ github.workspace }}/AutomatedTesting ${{ github.workspace }}/build
 
       - name: Save build
         uses: actions/upload-artifact@v4.4.0

@@ -93,6 +93,9 @@ jobs:
         run: |
           tar --atime-preserve -xvpf ${{ github.workspace }}/cache.tar
           rm ${{ github.workspace }}/cache.tar
+          ls -lah
+          ls -lah build/
+          ls -lah AutomatedTesting/
 
       - name: Configure environment
         continue-on-error: true

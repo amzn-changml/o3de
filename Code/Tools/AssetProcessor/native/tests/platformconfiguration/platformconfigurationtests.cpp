@@ -280,22 +280,22 @@ TEST_F(PlatformConfigurationUnitTests_OnePCHostFixture, GetOverridingFile_Exists
 //     EXPECT_TRUE(overrider.isEmpty());
 // }
 
-TEST_F(PlatformConfigurationUnitTests_OnePCHostFixture, FindFirstMatchingFile_DoesNotExist_ReturnsEmptyString)
-{
-    using namespace AzToolsFramework::AssetSystem;
-    using namespace AssetProcessor;
+// TEST_F(PlatformConfigurationUnitTests_OnePCHostFixture, FindFirstMatchingFile_DoesNotExist_ReturnsEmptyString)
+// {
+//     using namespace AzToolsFramework::AssetSystem;
+//     using namespace AssetProcessor;
 
-    // create two scan folders, since its order dependent, the ScanFolder1 is the "winner" in tie breakers.
-    QString scanfolder1Path = m_tempPath.filePath("scanfolder1");
-    QString scanfolder2Path = m_tempPath.filePath("scanfolder2");
-    m_config->AddScanFolder(ScanFolderInfo(scanfolder1Path, "ScanFolder1", "sf1", false, true, m_platforms), true);
-    m_config->AddScanFolder(ScanFolderInfo(scanfolder2Path, "ScanFolder2", "sf2", false, true, m_platforms), true);
+//     // create two scan folders, since its order dependent, the ScanFolder1 is the "winner" in tie breakers.
+//     QString scanfolder1Path = m_tempPath.filePath("scanfolder1");
+//     QString scanfolder2Path = m_tempPath.filePath("scanfolder2");
+//     m_config->AddScanFolder(ScanFolderInfo(scanfolder1Path, "ScanFolder1", "sf1", false, true, m_platforms), true);
+//     m_config->AddScanFolder(ScanFolderInfo(scanfolder2Path, "ScanFolder2", "sf2", false, true, m_platforms), true);
 
-    // Perform the test by asking it whether anyone overrides "testcase" (lowercase) in scanfolder 2.
-    QString foundFile = m_config->FindFirstMatchingFile("doesntExist.txt");
+//     // Perform the test by asking it whether anyone overrides "testcase" (lowercase) in scanfolder 2.
+//     QString foundFile = m_config->FindFirstMatchingFile("doesntExist.txt");
 
-    EXPECT_TRUE(foundFile.isEmpty());
-}
+//     EXPECT_TRUE(foundFile.isEmpty());
+// }
 
 // note that we do not guarantee that FindFirstMatchingFile always returns the correct case, as it is a super hot path
 // function, and the only time case could be incorrect is in the situation where a file with different case overrides

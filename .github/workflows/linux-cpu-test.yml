@@ -109,7 +109,6 @@ jobs:
           ./python/get_python.sh
           
           echo "Installing desktop environment and tools"
-          sudo apt-get update -qq -y
           sudo apt-get install -qq ubuntu-desktop xorg mesa-utils vulkan-tools libevdev-dev libevdev2 -y
 
           sudo apparmor_status

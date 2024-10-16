@@ -93,9 +93,6 @@ jobs:
         run: |
           tar --atime-preserve -xvpf ${{ github.workspace }}/cache.tar
           rm ${{ github.workspace }}/cache.tar
-          ls -lah
-          ls -lah build/
-          ls -lah AutomatedTesting/
 
       - name: Configure environment
         continue-on-error: true
@@ -111,10 +108,10 @@ jobs:
           echo "Installing desktop environment and tools"
           sudo apt-get install -qq ubuntu-desktop xorg mesa-utils vulkan-tools libevdev-dev libevdev2 -y
 
-          sudo apparmor_status
-          sudo aa-teardown
-          sudo apt-get --purge remove -qq apparmor
-          sudo ufw disable
+          # sudo apparmor_status
+          # sudo aa-teardown
+          # sudo apt-get --purge remove -qq apparmor
+          # sudo ufw disable
     
           sudo apt autoremove --purge
           sudo apt autoclean

@@ -34,9 +34,9 @@ jobs:
 
       - name: Setup 3p and build folder symlinks
         run: |
-          "3rdParty", "build", ".o3de" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
-          "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
-          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
+          "3rdParty", "build", ".o3de" | % {New-Item "D:\$_" -ItemType 'Directory' -Force}
+          "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
+          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
 
       - name: Restore 3p Cache
         uses: actions/cache/restore@v4.0.2
@@ -44,9 +44,9 @@ jobs:
         if: always()
         with:
           path: |
-            ${{ github.workspace }}\.o3de\Python
-            ${{ github.workspace }}\python
-            ${{ github.workspace }}\3rdParty\packages
+            D:\.o3de\Python
+            D:\python
+            D:\3rdParty\packages
           key: O3DE-${{ matrix.platform }}-3p
 
       - name: Restore build
@@ -61,8 +61,8 @@ jobs:
       - name: Extract build
         continue-on-error: true
         run: |
-          tar --atime-preserve -xvpf ${{ github.workspace }}/cache.tar
-          rm ${{ github.workspace }}/cache.tar
+          tar --atime-preserve -xvpf D:/cache.tar
+          rm D:/cache.tar
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.4
@@ -78,7 +78,7 @@ jobs:
           restore_cache: false
           ccache_options: |
             max_size=5G
-            cache_dir=${{ github.workspace }}\.ccache
+            cache_dir=D:\.ccache
         
       - name: Configure environment
         run: |
@@ -91,6 +91,6 @@ jobs:
           
       - name: Build
         env:
-          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
+          LY_3RDPARTY_PATH: D:\3rdParty
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }} 

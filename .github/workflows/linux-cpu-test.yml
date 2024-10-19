@@ -3,8 +3,8 @@ name: Linux Profile CPU Test
 on:
   workflow_dispatch:
   workflow_call:
-  push:
-      paths: '.github/workflows/linux-cpu-test.yml'
+  # push:
+  #     paths: '.github/workflows/linux-cpu-test.yml'
 
 jobs:
   Build-CPU-Test:

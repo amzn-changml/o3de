@@ -48,6 +48,7 @@ jobs:
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4.0.2
         continue-on-error: true
+        if: always()
         with:
           path: |
             ${{ github.workspace }}/3rdParty/packages
@@ -86,16 +87,13 @@ jobs:
         with:
           name: O3DE-${{ matrix.platform }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 11312918872
+          run-id: ${{ vars.Linux_CCACHE_ARTIFACT_RUNID }}
 
       - name: Extract build
         continue-on-error: true
         run: |
           tar --atime-preserve -xvpf ${{ github.workspace }}/cache.tar
           rm ${{ github.workspace }}/cache.tar
-          ls -lah
-          ls -lah build/
-          ls -lah AutomatedTesting/
 
       - name: Configure environment
         continue-on-error: true
@@ -132,10 +130,10 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          tar --format=posix -cvpf ${{ github.workspace}}/cache.tar AutomatedTesting
+          tar --format=posix -cvpf ${{ github.workspace}}/cache.tar AutomatedTesting .ccache
 
       - name: Save build
-        uses: actions/upload-artifact@v4.4.0
+        uses: actions/upload-artifact@v4.4.3
         continue-on-error: true
         if: always()
         with:

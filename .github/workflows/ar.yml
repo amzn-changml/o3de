@@ -7,6 +7,7 @@ on:
 jobs:
     Windows-Profile:
         uses: ./.github/workflows/windows-profile.yml
+    secrets: inherit
     Windows-Asset:
         needs: Windows-Profile
         uses: ./.github/workflows/windows-asset.yml
@@ -16,6 +17,7 @@ jobs:
         
     Linux-Profile:
         uses: ./.github/workflows/linux-profile.yml
+    secrets: inherit
     Linux-Asset:
         needs: Linux-Profile
         uses: ./.github/workflows/linux-asset.yml
@@ -25,6 +27,7 @@ jobs:
 
     Android-Profile:
         uses: ./.github/workflows/android-profile.yml
+    secrets: inherit
     # Android-Asset:
     #     uses: ./.github/workflows/android-asset.yml
     # Android-Gradle:

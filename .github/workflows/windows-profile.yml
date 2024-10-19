@@ -34,19 +34,19 @@ jobs:
 
       - name: Setup 3p and build folder symlinks
         run: |
-          "3rdParty", "build", ".o3de" | % {New-Item "D:\$_" -ItemType 'Directory' -Force}
-          "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
-          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target D:\$_ -Force}
+          "3rdParty", "build", ".o3de" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
+          "3rdParty", "build" | % {New-Item -Name .\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
+          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
 
       - name: Restore 3p Cache
-        uses: actions/cache/restore@v4.0.2
+        uses: actions/cache/restore@v4.1.1
         continue-on-error: true
         if: always()
         with:
           path: |
-            D:\.o3de\Python
-            D:\python
-            D:\3rdParty\packages
+            ${{ github.workspace }}\.o3de\Python
+            ${{ github.workspace }}\python
+            ${{ github.workspace }}\3rdParty\packages
           key: O3DE-${{ matrix.platform }}-3p
 
       - name: Setup ccache
@@ -59,10 +59,21 @@ jobs:
             O3DE-${{ matrix.image }}-${{ matrix.config }}
           windows_compile_environment: msvc
           prepend_symlinks_to_path: false
-          store_cache: ${{ contains(github.head_ref, 'test-gha-builds-ccache') && true || false }}
+          store_cache: false
+          restore_cache: false
           ccache_options: |
             max_size=5G
-            cache_dir=D:\.ccache
+            cache_dir=${{ github.workspace }}\.ccache
+
+      - name: Restore ccache
+        uses: actions/download-artifact@v4.1.8
+        continue-on-error: true
+        if: always()
+        with:
+          name: O3DE-${{ matrix.platform }}-ccache
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ vars.Windows_ARTIFACT_RUNID }}
+          path: ${{ github.workspace }}\.ccache
         
       - name: Configure environment
         run: |
@@ -75,17 +86,35 @@ jobs:
           
       - name: Build
         env:
-          LY_3RDPARTY_PATH: D:\3rdParty
+          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
         run: 
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ matrix.platform }} --type ${{ matrix.type }} 
           
       - name: Save 3p Cache
-        uses: actions/cache/save@v4.0.2
+        uses: actions/cache/save@v4.1.1
         continue-on-error: true
         if: always()
         with:
           path: |
-            D:\.o3de\Python
-            D:\python
-            D:\3rdParty\packages
+            ${{ github.workspace }}\.o3de\Python
+            ${{ github.workspace }}\python
+            ${{ github.workspace }}\3rdParty\packages
           key: O3DE-${{ matrix.platform }}-3p
+      
+      - name: Save ccache
+        uses: actions/upload-artifact@v4.4.3
+        continue-on-error: true
+        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }})) && always()
+        with:
+          name: O3DE-${{ matrix.platform }}-ccache
+          compression-level: 1
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: ${{ github.workspace }}\.ccache
+          
+      - name: Set ccache runid variable
+        if: (contains(github.ref, 'development') || contains(github.ref,  ${{ vars.STABILIZATION_BRANCH }})) && always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: gh variable set Windows_ARTIFACT_RUNID --body  ${{ github.run_id }}

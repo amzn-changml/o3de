@@ -86,7 +86,7 @@ jobs:
         with:
           name: O3DE-${{ matrix.platform }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 11358787829
+          run-id: ${{ vars.Linux_CCACHE_ARTIFACT_RUNID }}
 
       - name: Extract build
         continue-on-error: true

@@ -5,9 +5,27 @@ on:
   workflow_dispatch:
 
 jobs:
-    Windows:
+    Windows-Profile:
         uses: ./.github/workflows/windows-profile.yml
-    Linux:
+    Windows-Asset:
+        needs: Windows-Profile
+        uses: ./.github/workflows/windows-asset.yml
+    Windows-Test:
+        needs: Windows-Asset
+        uses: ./.github/workflows/windows-cpu-test.yml
+        
+    Linux-Profile:
         uses: ./.github/workflows/linux-profile.yml
-    Android:
+    Linux-Asset:
+        needs: Linux-Profile
+        uses: ./.github/workflows/linux-asset.yml
+    Linux-Test:
+        needs: Linux-Asset
+        uses: ./.github/workflows/linux-cpu-test.yml
+
+    Android-Profile:
         uses: ./.github/workflows/android-profile.yml
+    # Android-Asset:
+    #     uses: ./.github/workflows/android-asset.yml
+    # Android-Gradle:
+    #     uses: ./.github/workflows/android-gradle.yml

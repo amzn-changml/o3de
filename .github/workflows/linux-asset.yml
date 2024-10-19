@@ -1,11 +1,11 @@
 name: Linux Asset Profile
 
 on:
-  push:
-    paths: '.github/workflows/linux-asset.yml'
   workflow_dispatch:
   workflow_call:
-
+  # push:
+  #   paths: '.github/workflows/linux-asset.yml'
+    
 jobs:
   Build-Asset:
     strategy:

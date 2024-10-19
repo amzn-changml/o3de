@@ -1,10 +1,10 @@
 name: Linux Profile
 
 on:
-  push:
-    paths: '.github/workflows/linux-profile.yml'
   workflow_dispatch:
   workflow_call:
+  # push:
+  #   paths: '.github/workflows/linux-profile.yml'
 
 jobs:
   Build-Profile:
@@ -130,8 +130,3 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: gh variable set Linux_CCACHE_ARTIFACT_RUNID --body  ${{ github.run_id }}
-  # Build-Asset:
-  #   uses: ./.github/workflows/linux-asset.yml
-
-  # Build-CPU-Test:
-  #   uses: ./.github/workflows/linux-cpu-test.yml

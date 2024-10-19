@@ -89,9 +89,3 @@ jobs:
             D:\python
             D:\3rdParty\packages
           key: O3DE-${{ matrix.platform }}-3p
-
-  Build-Asset:
-    uses: ./.github/workflows/windows-asset.yml
-
-  Build-CPU-Test:
-    uses: ./.github/workflows/windows-cpu-test.yml

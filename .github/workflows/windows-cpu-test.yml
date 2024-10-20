@@ -61,8 +61,8 @@ jobs:
       - name: Extract build
         continue-on-error: true
         run: |
-          tar --atime-preserve -xvpf D:/cache.tar
-          rm D:/cache.tar
+          tar --atime-preserve -xvpf D:\cache.tar
+          rm D:\cache.tar
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1.4.4

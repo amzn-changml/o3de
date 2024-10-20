@@ -88,6 +88,7 @@ jobs:
           popd
           echo "Getting python..."
           ./python/get_python.sh
+          
           sudo apt -y autoremove --purge
           sudo apt -y autoclean
           sudo apt clean
@@ -107,7 +108,7 @@ jobs:
       - name: Save 3P Cache
         uses: actions/cache/save@v4.1.1
         continue-on-error: true
-        if: always()
+        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }})) && always()
         with:
           path: |
             ${{ github.workspace }}/3rdParty/packages

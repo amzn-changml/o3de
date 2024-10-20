@@ -107,14 +107,14 @@ jobs:
           
       - name: Compress build
         continue-on-error: true
-        if: always()
+        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }})) && always()
         run: |
-          tar --format=posix -cvpf ${{ github.workspace}}\cache.tar AutomatedTesting .ccache
+          tar --format=posix -cvpf D:\cache.tar AutomatedTesting .ccache
   
       - name: Save build
         uses: actions/upload-artifact@v4.4.3
         continue-on-error: true
-        if: always()
+        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }})) && always()
         with:
           name: O3DE-${{ matrix.platform }}-build
           compression-level: 1

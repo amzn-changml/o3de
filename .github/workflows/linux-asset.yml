@@ -48,7 +48,6 @@ jobs:
       - name: Restore 3P Cache
         uses: actions/cache/restore@v4.0.2
         continue-on-error: true
-        if: always()
         with:
           path: |
             ${{ github.workspace }}/3rdParty/packages
@@ -77,7 +76,7 @@ jobs:
         with:
           name: O3DE-${{ matrix.platform }}-ccache
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ vars.Linux_CCACHE_ARTIFACT_RUNID }}
+          run-id: ${{ vars.Linux_ARTIFACT_RUNID }}
           path: ${{ github.workspace }}/.ccache/
 
       - name: Restore build
@@ -87,7 +86,7 @@ jobs:
         with:
           name: O3DE-${{ matrix.platform }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ vars.Linux_CCACHE_ARTIFACT_RUNID }}
+          run-id: ${{ vars.Linux_ARTIFACT_RUNID }}
 
       - name: Extract build
         continue-on-error: true
@@ -107,10 +106,10 @@ jobs:
           ./python/get_python.sh
           
           sudo apt-get install -qq libevdev-dev libevdev2 -y
-          sudo apparmor_status
-          sudo aa-teardown
-          sudo apt-get --purge remove -qq apparmor
-          sudo ufw disable
+          # sudo apparmor_status
+          # sudo aa-teardown
+          # sudo apt-get --purge remove -qq apparmor
+          # sudo ufw disable
     
           sudo apt autoremove --purge
           sudo apt autoclean
@@ -128,14 +127,14 @@ jobs:
           
       - name: Compress build
         continue-on-error: true
-        if: always()
+        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }})) && always()
         run: |
-          tar --format=posix -cvpf ${{ github.workspace}}/cache.tar AutomatedTesting .ccache
+          tar --format=posix -cvpf ${{ github.workspace }}/cache.tar AutomatedTesting .ccache
 
       - name: Save build
         uses: actions/upload-artifact@v4.4.3
         continue-on-error: true
-        if: always()
+        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }})) && always()
         with:
           name: O3DE-${{ matrix.platform }}-build
           compression-level: 1

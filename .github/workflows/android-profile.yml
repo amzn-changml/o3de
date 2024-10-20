@@ -89,11 +89,6 @@ jobs:
           
       - name: Add msbuild to PATH
         uses: ilammy/msvc-dev-cmd@v1.13.0
-
-      - name: Get environment
-        run: |
-          dir env:
-          get-psdrive
           
       - name: Build
         env:
@@ -106,7 +101,7 @@ jobs:
       - name: Save 3p Cache
         uses: actions/cache/save@v4.0.2
         continue-on-error: true
-        if: always()
+        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }})) && always()
         with:
           path: |
             D:\.o3de\Python

@@ -52,7 +52,7 @@ jobs:
       - name: Get last run
         uses: dawidd6/action-download-artifact@v6
         with:
-          workflow_search: completed
+          workflow_search: true
           dry_run: true
           if_no_artifact_found: warn
     

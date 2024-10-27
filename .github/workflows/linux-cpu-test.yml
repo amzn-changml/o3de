@@ -132,7 +132,7 @@ jobs:
       - name: Extract build
         continue-on-error: true
         run: |
-          tar --atime-preserve -xvpf ${{ github.workspace }}/cache.tar
+          tar -xvpf ${{ github.workspace }}/cache.tar
           rm ${{ github.workspace }}/cache.tar
 
       - name: Configure environment

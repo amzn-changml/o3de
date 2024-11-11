@@ -24,7 +24,6 @@ If Git LFS is not installed, download and run the installer from: [https://git-l
 git lfs install
 ```
 
-
 ### Clone the repository 
 
 ```shell

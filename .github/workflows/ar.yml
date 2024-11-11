@@ -1,13 +1,13 @@
 name: AR
 
 on:
-  pull_request:
+#   pull_request:
   workflow_dispatch:
-  push:
-    branches:
-        - main
-        - development
-# - ${{ vars.STABILIZATION_BRANCH }}
+#   push:
+#     branches:
+#         - main
+#         - development
+# # - ${{ vars.STABILIZATION_BRANCH }}
 
 jobs:
     Cache-LFS:

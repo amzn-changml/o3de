@@ -3,8 +3,8 @@ name: Windows Profile
 on:
   workflow_dispatch:
   workflow_call:
-  push:
-    paths: '.github/workflows/windows-profile.yml'
+#  push:
+#    paths: '.github/workflows/windows-profile.yml'
 
 jobs:
   Build:

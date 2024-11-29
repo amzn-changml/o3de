@@ -28,101 +28,109 @@ jobs:
         uses: ./.github/workflows/windows-build.yml
         with:
             compiler: msvc
-            config: profile
             image: windows-2022
             platform: Windows
-            type: profile
-            last-artifact: true
+            config: profile
+            load-artifacts: last-build
+            save-artifacts: true
     
     Windows-Asset:
         needs: Windows-Profile
         uses: ./.github/workflows/windows-build.yml
         with:
             compiler: msvc
-            config: profile
             image: windows-2022
             platform: Windows
-            type: asset_profile
+            config: asset_profile
+            load-artifacts: current-build
+            load-assets: last-build
+            save-assets: true
 
     Windows-Test:
         needs: Windows-Asset
         uses: ./.github/workflows/windows-build.yml
         with:
             compiler: msvc
-            config: profile
             image: windows-2022
             platform: Windows
-            type: test_cpu_profile
+            config: test_cpu_profile
+            load-artifacts: current-build
+            load-assets: current-build
 
     Windows-Release:
         uses: ./.github/workflows/windows-build.yml
         with:
             compiler: msvc
-            config: release
             image: windows-2022
             platform: Windows
-            type: release
-            last-artifact: true
+            config: release
+            load-artifacts: last-build
+            save-artifacts: true
 
 #### Linux Build ####
     Linux-Profile:
         uses: ./.github/workflows/linux-build.yml
         with:
             compiler: clang
-            config: profile
             image: ubuntu-22.04
             platform: Linux
-            type: profile
-            last-artifact: true
+            config: profile
+            load-artifacts: last-build
+            save-artifacts: true
 
     Linux-Asset:
         needs: Linux-Profile
         uses: ./.github/workflows/linux-build.yml
         with:
             compiler: clang
-            config: profile
             image: ubuntu-22.04
             platform: Linux
-            type: asset_profile
+            config: asset_profile
+            load-artifacts: current-build
+            load-assets: last-build
+            save-assets: true
 
     Linux-Test:
         needs: Linux-Asset
         uses: ./.github/workflows/linux-build.yml
         with:
             compiler: clang
-            config: profile
             image: ubuntu-22.04
             platform: Linux
-            type: test_profile
+            config: test_profile
             desktop: true
+            load-artifacts: current-build
+            load-assets: current-build
 
 #### Android Build ####
     Android-Profile:
         uses: ./.github/workflows/android-build.yml
         with:
             compiler: clang
-            config: profile
             image: windows-2022
             platform: Android
-            type: profile
-            last-artifact: true
+            config: profile
+            load-artifacts: last-build
+            save-artifacts: true
 
     Android-Asset:
         uses: ./.github/workflows/android-build.yml
         with:
             compiler: msvc
-            config: asset_profile
             image: windows-2022
             platform: Android
-            type: asset_profile
-            last-artifact: true
+            config: asset_profile
+            load-artifacts: last-build
+            save-artifacts: true
+            load-assets: last-build
+            save-assets: true
             
     Android-Gradle:
         uses: ./.github/workflows/android-build.yml
         with:
             compiler: clang
-            config: gradle
             image: windows-2022
             platform: Android
-            type: gradle
-            last-artifact: true
+            config: gradle
+            load-artifacts: last-build
+            save-artifacts: true

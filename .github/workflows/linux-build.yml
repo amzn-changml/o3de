@@ -16,16 +16,21 @@ on:
       platform: 
         required: true
         type: string
-      type: 
-        required: true
-        type: string
       desktop:
         required: false
         type: boolean
-      last-artifact: 
+      load-artifacts:
         required: false
-        type: boolean
-
+        type: string
+      save-artifacts:
+        required: false
+        type: string
+      load-assets:
+        required: false
+        type: string
+      save-assets:
+        required: false
+        type: string
 run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 
 jobs:
@@ -79,7 +84,7 @@ jobs:
           workflow_search: true
           workflow_conclusion: ""
           search_artifacts: true
-          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
+          name: O3DE-${{ inputs.platform }}-${{ inputs.type }}-build
           dry_run: true
           if_no_artifact_found: warn
         
@@ -87,7 +92,7 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
+          name: O3DE-${{ inputs.platform }}-${{ inputs.type }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.last-artifact == true && fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id || github.run_id }}
 
@@ -162,7 +167,7 @@ jobs:
         continue-on-error: true
         if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }}))
         with:
-          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
+          name: O3DE-${{ inputs.platform }}-${{ inputs.type }}-build
           compression-level: 1
           overwrite: true
           path: |

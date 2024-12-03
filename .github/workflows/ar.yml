@@ -42,7 +42,7 @@ jobs:
             image: windows-2022
             platform: Windows
             config: asset_profile
-            load-artifacts: current-build
+            load-artifacts: Windows-profile
             load-assets: last-build
             save-assets: true
 
@@ -54,8 +54,8 @@ jobs:
             image: windows-2022
             platform: Windows
             config: test_cpu_profile
-            load-artifacts: current-build
-            load-assets: current-build
+            load-artifacts: Windows-profile
+            load-assets: Windows-asset_profile
 
     Windows-Release:
         uses: ./.github/workflows/windows-build.yml
@@ -86,7 +86,7 @@ jobs:
             image: ubuntu-22.04
             platform: Linux
             config: asset_profile
-            load-artifacts: current-build
+            load-artifacts: Linux-profile
             load-assets: last-build
             save-assets: true
 
@@ -99,8 +99,8 @@ jobs:
             platform: Linux
             config: test_profile
             desktop: true
-            load-artifacts: current-build
-            load-assets: current-build
+            load-artifacts: Linux-profile
+            load-assets: Linux-asset_profile
 
 #### Android Build ####
     Android-Profile:

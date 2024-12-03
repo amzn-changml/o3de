@@ -21,13 +21,13 @@ on:
         type: string
       save-artifacts:
         required: false
-        type: string
+        type: boolean
       load-assets:
         required: false
         type: string
       save-assets:
         required: false
-        type: string
+        type: boolean
 
 run-name: ${{ inputs.platform }} - ${{ inputs.config }}
 
@@ -85,7 +85,16 @@ jobs:
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.last-artifact == true && fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id || github.run_id }}
-      
+
+      - name: Extract artifact cache
+        continue-on-error: true
+        run: |        
+          tar -xvpf ${{ github.workspace }}\cache.tar `
+            python `
+            3rdParty/packages `
+            .ccache
+          rm ${{ github.workspace }}\cache.tar
+
       - name: Restore asset cache
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -94,19 +103,13 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.last-artifact == true && fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id || github.run_id }}
 
-      - name: Extract artifact
+      - name: Extract asset cache
         continue-on-error: true
         run: |
-          echo "Current Runid: ${{ github.run_id }}"
-          echo "${{ inputs.platform }}_ARTIFACT_RUNID: ${{ vars[format('{0}_ARTIFACT_RUNID', inputs.platform)] }}"
-          echo "Last run id: ${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}"
-          
-          tar -xvpf ${{ github.workspace }}\cache.tar `
-            3rdParty/packages `
+          tar -xvpf ${{ github.workspace }}\asset.tar `
             AutomatedTesting/Cache `
-            AutomatedTesting/user `
-            .ccache
-          rm ${{ github.workspace }}\cache.tar
+            AutomatedTesting/user
+          rm ${{ github.workspace }}\asset.tar
 
       - name: Setup cmake
         uses: lukka/get-cmake@latest
@@ -191,3 +194,4 @@ jobs:
           overwrite: true
           path: |
             ${{ github.workspace }}\cache.tar
+            ${{ github.workspace }}\asset.tar

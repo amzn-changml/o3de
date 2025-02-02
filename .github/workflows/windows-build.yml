@@ -31,6 +31,9 @@ on:
 
 run-name: ${{ inputs.platform }} - ${{ inputs.config }}
 
+env:
+  O3DE_ENABLE_COMPILER_CACHE: true
+
 jobs:
   Build:
     strategy:

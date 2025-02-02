@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - AR-development-newworkflow
+      - development
   workflow_dispatch:
   push:
     branches:

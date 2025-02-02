@@ -31,9 +31,6 @@ on:
 
 run-name: ${{ inputs.platform }} - ${{ inputs.config }}
 
-env:
-  O3DE_ENABLE_COMPILER_CACHE: true
-
 jobs:
   Build:
     strategy:
@@ -167,6 +164,7 @@ jobs:
       - name: Build ${{ inputs.config }}
         env:
           LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
+          O3DE_ENABLE_COMPILER_CACHE: true
         run: |
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.config }} 
       

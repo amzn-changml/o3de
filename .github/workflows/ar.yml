@@ -1,0 +1,139 @@
+name: AR
+
+on:
+  pull_request:
+    branches:
+      - AR-development-newworkflow
+      - development
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - development
+
+
+jobs:
+    # Cache-LFS:
+    #     runs-on: ubuntu-latest
+    #     name: Update LFS data cache
+    #     outputs:
+    #       lfs_sha: ${{ steps.lfs_sha_recover.outputs.lfs_sha }}
+    #     steps:
+    
+    #     - name: Checkout
+    #       uses: actions/checkout@v4
+    #       with:
+    #         fetch-depth: 1
+    #         lfs: false
+
+#### Windows Build ####
+    Windows-Profile:
+        uses: ./.github/workflows/windows-build.yml
+        with:
+            compiler: msvc
+            image: windows-2022
+            platform: Windows
+            config: profile
+            load-artifacts: last-build
+            save-artifacts: true
+    
+    Windows-Asset:
+        needs: Windows-Profile
+        uses: ./.github/workflows/windows-build.yml
+        with:
+            compiler: msvc
+            image: windows-2022
+            platform: Windows
+            config: asset_profile
+            load-artifacts: Windows-profile
+            load-assets: last-build
+            save-assets: true
+
+    Windows-Test:
+        needs: Windows-Asset
+        uses: ./.github/workflows/windows-build.yml
+        with:
+            compiler: msvc
+            image: windows-2022
+            platform: Windows
+            config: test_cpu_profile
+            load-artifacts: Windows-profile
+            load-assets: Windows-asset_profile
+
+    Windows-Release:
+        uses: ./.github/workflows/windows-build.yml
+        with:
+            compiler: msvc
+            image: windows-2022
+            platform: Windows
+            config: release
+            load-artifacts: last-build
+            save-artifacts: true
+
+#### Linux Build ####
+    Linux-Profile:
+        uses: ./.github/workflows/linux-build.yml
+        with:
+            compiler: clang
+            image: ubuntu-22.04
+            platform: Linux
+            config: profile
+            load-artifacts: last-build
+            save-artifacts: true
+
+    Linux-Asset:
+        needs: Linux-Profile
+        uses: ./.github/workflows/linux-build.yml
+        with:
+            compiler: clang
+            image: ubuntu-22.04
+            platform: Linux
+            config: asset_profile
+            load-artifacts: Linux-profile
+            load-assets: last-build
+            save-assets: true
+
+    Linux-Test:
+        needs: Linux-Asset
+        uses: ./.github/workflows/linux-build.yml
+        with:
+            compiler: clang
+            image: ubuntu-22.04
+            platform: Linux
+            config: test_profile
+            desktop: true
+            load-artifacts: Linux-profile
+            load-assets: Linux-asset_profile
+
+#### Android Build ####
+    Android-Profile:
+        uses: ./.github/workflows/android-build.yml
+        with:
+            compiler: clang
+            image: windows-2022
+            platform: Android
+            config: profile
+            load-artifacts: last-build
+            save-artifacts: true
+
+    Android-Asset:
+        uses: ./.github/workflows/android-build.yml
+        with:
+            compiler: msvc
+            image: windows-2022
+            platform: Android
+            config: asset_profile
+            load-artifacts: last-build
+            save-artifacts: true
+            load-assets: last-build
+            save-assets: true
+            
+    Android-Gradle:
+        uses: ./.github/workflows/android-build.yml
+        with:
+            compiler: clang
+            image: windows-2022
+            platform: Android
+            config: gradle
+            load-artifacts: last-build
+            save-artifacts: true

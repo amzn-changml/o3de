@@ -165,6 +165,7 @@ jobs:
         env:
           LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
           O3DE_ENABLE_COMPILER_CACHE: true
+          O3DE_COMPILER_CACHE_PATH: 'C:/ProgramData/chocolatey/lib/ccache/tools/ccache-4.10.2-windows-x86_64/ccache.exe'
         run: |
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.config }} 
       

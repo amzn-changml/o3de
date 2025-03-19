@@ -203,58 +203,53 @@ endif()
 if(o3de_compiler_cache_enabled)
     # Check for custom compiler cache path, CMake variable takes precedence over environment
     if(DEFINED O3DE_COMPILER_CACHE_PATH)
-        set(o3de_compiler_cache_exe ${O3DE_COMPILER_CACHE_PATH})
+        set(o3de_compiler_cache_exe_path ${O3DE_COMPILER_CACHE_PATH})
     elseif(DEFINED ENV{O3DE_COMPILER_CACHE_PATH})
-        set(o3de_compiler_cache_exe $ENV{O3DE_COMPILER_CACHE_PATH})
+        set(o3de_compiler_cache_exe_path $ENV{O3DE_COMPILER_CACHE_PATH})
     else()
-        # Search common Windows installation paths recursively
-        find_program(o3de_compiler_cache_exe 
-            NAMES 
-                ccache.exe 
-                sccache.exe
-            PATHS 
-                "C:/ProgramData"
-                "C:/Program Files"
-                "C:/Program Files (x86)"
-            PATH_SUFFIXES
-                "*/*/*"  # Handle nested directory structures
-                "*/*"    # Handle shallower directory structures
-                "*"      # Handle direct placement
-            NO_DEFAULT_PATH
-        )
+        message(FATAL_ERROR "[COMPILER CACHE] O3DE_COMPILER_CACHE_PATH not provided. This required if compiler cache is enabled.")
     endif()
 
-    # Validate executable exists and resolve any symlinks
+    # Search common Windows installation paths recursively in the event a partial path is provided
+    find_program(o3de_compiler_cache_exe 
+        NAMES 
+            ccache.exe 
+            sccache.exe
+        PATHS 
+            "${o3de_compiler_cache_exe_path}"
+        PATH_SUFFIXES
+            "*/*/*"  # Handle nested directory structures
+            "*/*"    # Handle shallower directory structures
+            "*"      # Handle direct placement
+        NO_DEFAULT_PATH
+    )        
+
+    # Validate executable exists
     if(o3de_compiler_cache_exe)
         if(NOT EXISTS ${o3de_compiler_cache_exe})
-            message(WARNING "[COMPILER CACHE] Specified path ${o3de_compiler_cache_exe} does not exist")
+            message(FATAL_ERROR "[COMPILER CACHE] Specified path ${o3de_compiler_cache_exe_path} does not contain a executable for ccache or sccache")
             set(o3de_compiler_cache_exe "")
         else()
-            # Resolve symlinks to get the actual executable path
-            get_filename_component(o3de_compiler_cache_exe "${o3de_compiler_cache_exe}" REALPATH)
             message(STATUS "[COMPILER CACHE] Found at ${o3de_compiler_cache_exe}, using it for this build")
         endif()
     endif()
 
-    if(o3de_compiler_cache_exe)
-        file(COPY_FILE
-            ${o3de_compiler_cache_exe} ${CMAKE_BINARY_DIR}/cl.exe
-            ONLY_IF_DIFFERENT)
+    # Copy cache executable as an alternative cl.exe. This will act as a wrapper for the real cl.exe
+    file(COPY_FILE
+        ${o3de_compiler_cache_exe} ${CMAKE_BINARY_DIR}/cl.exe
+        ONLY_IF_DIFFERENT)
 
-        # Set debug information format for compiler cache compatibility
-        cmake_policy(SET CMP0141 NEW)
-        set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
+    # Set debug information format for compiler cache compatibility
+    cmake_policy(SET CMP0141 NEW)
+    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
         
-        # Set the tool path and execution settings
-        set(CMAKE_VS_GLOBALS
-            "CLToolExe=cl.exe"
-            "CLToolPath=${CMAKE_BINARY_DIR}"
-            "TrackFileAccess=false"
-            "UseMultiToolTask=true"
-        )
-    else()
-        message(STATUS "[COMPILER CACHE] No compatible compiler cache found or not properly configured")
-    endif()
+    # Set the tool path and execution settings
+    set(CMAKE_VS_GLOBALS
+        "CLToolExe=cl.exe"
+        "CLToolPath=${CMAKE_BINARY_DIR}"
+        "TrackFileAccess=false"
+        "UseMultiToolTask=true"
+    )
 else()
     message(STATUS "[COMPILER CACHE] Compiler cache is disabled")
 endif()

@@ -147,6 +147,7 @@ jobs:
       - name: Build ${{ inputs.type }}
         env:
           O3DE_ENABLE_COMPILER_CACHE: true
+          O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\Chocolatey\bin\ccache.exe'
           LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
         run: |
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }} 

@@ -210,7 +210,7 @@ if(o3de_compiler_cache_enabled)
     message(STATUS "[COMPILER CACHE] Cache is enabled")
     # Check for custom compiler cache path, CMake variable takes precedence over environment
     if(DEFINED O3DE_COMPILER_CACHE_PATH)
-        set(o3de_compiler_cache_path ${O3DE_COMPILER_CACHE_PATH}
+        set(o3de_compiler_cache_path ${O3DE_COMPILER_CACHE_PATH})
     elseif(DEFINED ENV{O3DE_COMPILER_CACHE_PATH})
         set(o3de_compiler_cache_path $ENV{O3DE_COMPILER_CACHE_PATH})
     else()

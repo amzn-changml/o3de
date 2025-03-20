@@ -37,8 +37,6 @@ Start-Process -FilePath $sdkmanager -ArgumentList $ndk -NoNewWindow -Wait
 # Set the NDK environment
 Install-ChocolateyEnvironmentVariable "LY_NDK_DIR" "C:\AndroidSdk\ndk\25.1.8937393" -VariableType 'Machine'
 
-tree "C:\AndroidSdk\"
-
 $gradle_version = '8.7'
 $gradle_checksum = '194717442575a6f96e1c1befa2c30e9a4fc90f701d7aee33eb879b79e7ff05c0'
 Write-Host "Installing Gradle $gradle_version"

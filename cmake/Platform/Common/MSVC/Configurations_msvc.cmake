@@ -179,6 +179,7 @@ include(cmake/Platform/Common/TargetIncludeSystemDirectories_unsupported.cmake)
 # Set new SDK search policy if the WindowsSDK environment variable is set
 if(DEFINED ENV{WindowsSDKVersion})
    cmake_policy(SET CMP0149 NEW)
+   set(CMAKE_SYSTEM_VERSION $ENV{WindowsSDKVersion})
 endif()
 
 if(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION VERSION_LESS_EQUAL "10.0.19041.0")
@@ -206,15 +207,18 @@ else()
 endif()
 
 if(o3de_compiler_cache_enabled)
+    message(STATUS "[COMPILER CACHE] Cache is enabled")
     # Check for custom compiler cache path, CMake variable takes precedence over environment
     if(DEFINED O3DE_COMPILER_CACHE_PATH)
-        set(o3de_compiler_cache_exe_path ${O3DE_COMPILER_CACHE_PATH})
+        set(o3de_compiler_cache_path ${O3DE_COMPILER_CACHE_PATH}
     elseif(DEFINED ENV{O3DE_COMPILER_CACHE_PATH})
-        set(o3de_compiler_cache_exe_path $ENV{O3DE_COMPILER_CACHE_PATH})
+        set(o3de_compiler_cache_path $ENV{O3DE_COMPILER_CACHE_PATH})
     else()
         message(FATAL_ERROR "[COMPILER CACHE] O3DE_COMPILER_CACHE_PATH not provided. This required if compiler cache is enabled.")
     endif()
 
+    message(STATUS "[COMPILER CACHE] Cache path set to ${o3de_compiler_cache_path}")
+    
     if(NOT EXISTS "${o3de_compiler_cache_path}")
         message(FATAL_ERROR "[COMPILER CACHE] Path does not exist: ${o3de_compiler_cache_path}")
     endif()

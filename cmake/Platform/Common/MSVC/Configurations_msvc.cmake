@@ -210,29 +210,33 @@ if(o3de_compiler_cache_enabled)
         message(FATAL_ERROR "[COMPILER CACHE] O3DE_COMPILER_CACHE_PATH not provided. This required if compiler cache is enabled.")
     endif()
 
-    # Search common Windows installation paths recursively in the event a partial path is provided
-    find_program(o3de_compiler_cache_exe 
-        NAMES 
-            ccache.exe 
-            sccache.exe
-        PATHS 
-            "${o3de_compiler_cache_exe_path}"
-        PATH_SUFFIXES
-            "*/*/*"  # Handle nested directory structures
-            "*/*"    # Handle shallower directory structures
-            "*"      # Handle direct placement
-        NO_DEFAULT_PATH
-    )        
-
-    # Validate executable exists
-    if(o3de_compiler_cache_exe)
-        if(NOT EXISTS ${o3de_compiler_cache_exe})
-            message(FATAL_ERROR "[COMPILER CACHE] Specified path ${o3de_compiler_cache_exe_path} does not contain a executable for ccache or sccache")
-            set(o3de_compiler_cache_exe "")
+    if(NOT EXISTS "${o3de_compiler_cache_path}")
+        message(FATAL_ERROR "[COMPILER CACHE] Path does not exist: ${o3de_compiler_cache_path}")
+    endif()
+    
+    # If direct executable path
+    if(NOT IS_DIRECTORY "${o3de_compiler_cache_path}")
+        set(o3de_compiler_cache_exe "${o3de_compiler_cache_path}")
+    else()
+        # Search for executable using glob
+        file(GLOB_RECURSE potential_exes 
+            "${o3de_compiler_cache_path}/**/ccache.exe" 
+            "${o3de_compiler_cache_path}/**/sccache.exe")
+        
+        if(potential_exes)
+            list(GET potential_exes 0 o3de_compiler_cache_exe)
         else()
-            message(STATUS "[COMPILER CACHE] Found at ${o3de_compiler_cache_exe}, using it for this build")
+            message(FATAL_ERROR "[COMPILER CACHE] Could not find ccache.exe or sccache.exe in directory: ${o3de_compiler_cache_path}")
         endif()
     endif()
+
+    # Check for symlink
+    get_filename_component(real_path "${o3de_compiler_cache_exe}" REALPATH)
+    if(NOT "${real_path}" STREQUAL "${o3de_compiler_cache_exe}")
+        message(FATAL_ERROR "[COMPILER CACHE] Detected symlink at ${o3de_compiler_cache_exe}. Please provide the direct path to the actual executable.")
+    endif()
+
+    message(STATUS "[COMPILER CACHE] Found at ${o3de_compiler_cache_exe}, using it for this build")
 
     # Copy cache executable as an alternative cl.exe. This will act as a wrapper for the real cl.exe
     file(COPY_FILE

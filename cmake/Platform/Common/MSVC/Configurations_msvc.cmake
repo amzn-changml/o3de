@@ -176,6 +176,11 @@ endif()
 
 include(cmake/Platform/Common/TargetIncludeSystemDirectories_unsupported.cmake)
 
+# Set new SDK search policy if the WindowsSDK environment variable is set
+if(DEFINED ENV{WindowsSDKVersion})
+   cmake_policy(SET CMP0149 NEW)
+endif()
+
 if(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION VERSION_LESS_EQUAL "10.0.19041.0")
   # Suppresses warning C5105 which triggers with Windows 10 SDK 10.0.19041 and below when using the /Zc:preprocessor option
   # https://developercommunity.visualstudio.com/t/stdc17-generates-warning-compiling-windowsh/1249671

@@ -135,7 +135,7 @@ jobs:
           O3DE_ENABLE_COMPILER_CACHE: true
           O3DE_COMPILER_CACHE_PATH: 'C:/ProgramData/chocolatey/lib/ccache/tools/ccache-4.11.1-windows-x86_64/ccache.exe'
           LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
-          WindowsSDKVersion: 10.0.22621.0
+          WindowsSDKVersion: '10.0.22621.0'
         run: |
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }}
       

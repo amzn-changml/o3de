@@ -268,7 +268,14 @@ if(o3de_compiler_cache_enabled)
     set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
     
     set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
-        
+    
+    ly_append_configurations_options(
+        COMPILATION_PROFILE
+            /Z7
+        COMPILATION_RELEASE
+            /Z7  
+    )
+
     # Set the tool path and execution settings
     set(CMAKE_VS_GLOBALS
         "CLToolExe=cl.exe"

@@ -192,12 +192,6 @@ endif()
 
 include(cmake/Platform/Common/TargetIncludeSystemDirectories_unsupported.cmake)
 
-# Set new SDK search policy if the WindowsSDK environment variable is set
-if(DEFINED ENV{WindowsSDKVersion})
-   cmake_policy(SET CMP0149 NEW)
-   set(CMAKE_SYSTEM_VERSION $ENV{WindowsSDKVersion})
-endif()
-
 if(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION VERSION_LESS_EQUAL "10.0.19041.0")
   # Suppresses warning C5105 which triggers with Windows 10 SDK 10.0.19041 and below when using the /Zc:preprocessor option
   # https://developercommunity.visualstudio.com/t/stdc17-generates-warning-compiling-windowsh/1249671
@@ -270,7 +264,12 @@ if(o3de_compiler_cache_enabled)
 
     # Set debug information format for compiler cache compatibility
     cmake_policy(SET CMP0141 NEW)
-    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
+    set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
+    
+    # set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
+    
+    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
         
     # Set the tool path and execution settings
     set(CMAKE_VS_GLOBALS
@@ -278,6 +277,7 @@ if(o3de_compiler_cache_enabled)
         "CLToolPath=${CMAKE_BINARY_DIR}"
         "TrackFileAccess=false"
         "UseMultiToolTask=true"
+        "DebugInformationFormat=OldStyle"
     )
 else()
     message(STATUS "[COMPILER CACHE] Compiler cache is disabled")

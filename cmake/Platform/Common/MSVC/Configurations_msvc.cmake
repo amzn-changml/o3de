@@ -267,9 +267,7 @@ if(o3de_compiler_cache_enabled)
     set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
     set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
     
-    # set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
-    
-    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
+    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
         
     # Set the tool path and execution settings
     set(CMAKE_VS_GLOBALS

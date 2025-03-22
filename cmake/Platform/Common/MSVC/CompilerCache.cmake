@@ -34,7 +34,7 @@
 # - This is primarily used for AR/CI processes but can also be used for local builds
 #
 
-function(o3de_compile_cache_activation)
+function(o3de_compiler_cache_activation)
     message(STATUS "[COMPILER CACHE] Cache is enabled")
 
     # Check for custom compiler cache path, CMake variable takes precedence over environment

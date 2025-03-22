@@ -34,6 +34,7 @@ endif()
 
 include(cmake/Platform/Common/Configurations_common.cmake)
 include(cmake/Platform/Common/MSVC/VisualStudio_common.cmake)
+include(cmake/Platform/Common/MSVC/CompilerCache.cmake)
 
 # Verify that it wasn't invoked with an unsupported target/host architecture. Currently only supports x64/x64
 if(CMAKE_VS_PLATFORM_NAME AND NOT CMAKE_VS_PLATFORM_NAME STREQUAL "x64")
@@ -102,7 +103,6 @@ ly_append_configurations_options(
         /O2             # Maximinize speed, equivalent to /Og /Oi /Ot /Oy /Ob2 /GF /Gy
         /Zc:inline      # Removes unreferenced functions or data that are COMDATs or only have internal linkage
         /Zc:wchar_t     # Use compiler native wchar_t
-     #   /Zi             # Generate debugging information (no Edit/Continue)
     COMPILATION_RELEASE
         /Ox             # Full optimization
         /Ob2            # Inline any suitable function
@@ -202,65 +202,11 @@ if(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION VERSION_LESS_EQUAL "10.0.19041.0")
     )
 endif()
 
-# Look for compiler cache (currently cccache or sccache) based on variables
-# Check both CMake variables and environment variables, with CMake variables taking precedence
-# Examples for CMake can be found here: 
-# https://github.com/ccache/ccache/wiki/MS-Visual-Studio
-# https://github.com/mozilla/sccache?tab=readme-ov-file#usage 
-# This is primarily used for AR/CI processes, but can be used for local builds
-if(DEFINED O3DE_ENABLE_COMPILER_CACHE)
-    set(o3de_compiler_cache_enabled ${O3DE_ENABLE_COMPILER_CACHE})
-elseif(DEFINED ENV{O3DE_ENABLE_COMPILER_CACHE})
-    set(o3de_compiler_cache_enabled $ENV{O3DE_ENABLE_COMPILER_CACHE})
-else()
-    set(o3de_compiler_cache_enabled FALSE)
-endif()
+# Look for O3DE_ENABLE_COMPILER_CACHE as a CMake flag or environment variable, then sets the appropriate compatible flags for caching
+# More details about the compiler cache can be found in CompilerCache.cmake
 
-if(o3de_compiler_cache_enabled)
-    message(STATUS "[COMPILER CACHE] Cache is enabled")
-    # Check for custom compiler cache path, CMake variable takes precedence over environment
-    if(DEFINED O3DE_COMPILER_CACHE_PATH)
-        set(o3de_compiler_cache_path ${O3DE_COMPILER_CACHE_PATH})
-    elseif(DEFINED ENV{O3DE_COMPILER_CACHE_PATH})
-        set(o3de_compiler_cache_path $ENV{O3DE_COMPILER_CACHE_PATH})
-    else()
-        message(FATAL_ERROR "[COMPILER CACHE] O3DE_COMPILER_CACHE_PATH not provided. This required if compiler cache is enabled.")
-    endif()
-
-    message(STATUS "[COMPILER CACHE] Cache path set to ${o3de_compiler_cache_path}")
-    
-    if(NOT EXISTS "${o3de_compiler_cache_path}")
-        message(FATAL_ERROR "[COMPILER CACHE] Path does not exist: ${o3de_compiler_cache_path}")
-    endif()
-    
-    # If direct executable path
-    if(NOT IS_DIRECTORY "${o3de_compiler_cache_path}")
-        set(o3de_compiler_cache_exe "${o3de_compiler_cache_path}")
-    else()
-        # Search for executable using glob
-        file(GLOB_RECURSE potential_exes 
-            "${o3de_compiler_cache_path}/**/ccache.exe" 
-            "${o3de_compiler_cache_path}/**/sccache.exe")
-        
-        if(potential_exes)
-            list(GET potential_exes 0 o3de_compiler_cache_exe)
-        else()
-            message(FATAL_ERROR "[COMPILER CACHE] Could not find ccache.exe or sccache.exe in directory: ${o3de_compiler_cache_path}")
-        endif()
-    endif()
-
-    # Check for symlink
-    get_filename_component(real_path "${o3de_compiler_cache_exe}" REALPATH)
-    if(NOT "${real_path}" STREQUAL "${o3de_compiler_cache_exe}")
-        message(FATAL_ERROR "[COMPILER CACHE] Detected symlink at ${o3de_compiler_cache_exe}. Please provide the direct path to the actual executable.")
-    endif()
-
-    message(STATUS "[COMPILER CACHE] Found at ${o3de_compiler_cache_exe}, using it for this build")
-
-    # Copy cache executable as an alternative cl.exe. This will act as a wrapper for the real cl.exe
-    file(COPY_FILE
-        ${o3de_compiler_cache_exe} ${CMAKE_BINARY_DIR}/cl.exe
-        ONLY_IF_DIFFERENT)
+if((O3DE_ENABLE_COMPILER_CACHE OR "$ENV{O3DE_ENABLE_COMPILER_CACHE}" STREQUAL "true"))
+    o3de_compiler_cache_activation()
 
     # Set debug information format for compiler cache compatibility
     cmake_policy(SET CMP0141 NEW)
@@ -269,11 +215,12 @@ if(o3de_compiler_cache_enabled)
     
     set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
     
+    # Fallback to compiler flags if the debug format doesn't work, which can depend on CMake version
     ly_append_configurations_options(
         COMPILATION_PROFILE
-            /Z7
+            /Z7             # Use embedded debug info instead of PDB
         COMPILATION_RELEASE
-            /Z7  
+            /Z7
     )
 
     # Set the tool path and execution settings
@@ -285,9 +232,8 @@ if(o3de_compiler_cache_enabled)
         "DebugInformationFormat=OldStyle"
     )
 else()
-    message(STATUS "[COMPILER CACHE] Compiler cache is disabled")
     ly_append_configurations_options(
         COMPILATION_PROFILE
-            /Zi
+            /Zi             # Generate debugging information (no Edit/Continue)
     )
 endif()

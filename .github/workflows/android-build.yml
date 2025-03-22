@@ -24,9 +24,6 @@ on:
         type: boolean
 
 run-name: ${{ inputs.platform }} - ${{ inputs.type }}
-env: 
-  O3DE_ENABLE_COMPILER_CACHE: true
-  O3DE_COMPILER_CACHE_PATH: 'C:/ProgramData/chocolatey/lib/ccache/tools/ccache-4.11.1-windows-x86_64/ccache.exe'
 
 jobs:
   Build:
@@ -121,13 +118,10 @@ jobs:
           
       - name: Build ${{ inputs.type }}
         env:
-          USE_CCACHE: 1
-          CCACHE_EXEC: ${{ env.O3DE_COMPILER_CACHE_PATH }}
-          CMAKE_C_COMPILER_LAUNCHER: ${{ env.O3DE_COMPILER_CACHE_PATH }}
-          CMAKE_CXX_COMPILER_LAUNCHER: ${{ env.O3DE_COMPILER_CACHE_PATH }}
+          O3DE_ENABLE_COMPILER_CACHE: true
+          O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\chocolatey\lib\ccache\tools\ccache-4.11.1-windows-x86_64\ccache.exe'
           LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
         run: |
-          scripts\o3de.bat register --this-engine
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }} 
       
       - name: Compress artifacts
@@ -139,7 +133,6 @@ jobs:
             3rdParty\packages `
             AutomatedTesting\Cache `
             AutomatedTesting\user `
-            build `
             .ccache
   
       - name: Save artifacts

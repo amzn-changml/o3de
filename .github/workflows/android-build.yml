@@ -118,10 +118,10 @@ jobs:
           
       - name: Build ${{ inputs.type }}
         env:
-          CC:  ${{ inputs.compiler == 'gcc' && 'gcc' || 'clang'   }}
-          CXX: ${{ inputs.compiler == 'gcc' && 'g++' || 'clang++' }}
-          CMAKE_C_COMPILER_LAUNCHER: ccache
-          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+          O3DE_ENABLE_COMPILER_CACHE: true
+          O3DE_COMPILER_CACHE_PATH: 'C:/ProgramData/chocolatey/lib/ccache/tools/ccache-4.11.1-windows-x86_64/ccache.exe'
+          USE_CCACHE: 1
+          CCACHE_EXEC: 'C:/ProgramData/chocolatey/lib/ccache/tools/ccache-4.11.1-windows-x86_64/ccache.exe'
           LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
         run: |
           scripts\o3de.bat register --this-engine

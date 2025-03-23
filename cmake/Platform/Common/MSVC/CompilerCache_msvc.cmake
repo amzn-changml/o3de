@@ -76,4 +76,8 @@ function(o3de_compiler_cache_activation)
 
     message(STATUS "[COMPILER CACHE] Found at ${o3de_compiler_cache_exe}, using it for this build")
 
+    # Copy cache executable as an alternative cl.exe. This will act as a wrapper for the real cl.exe
+    file(COPY_FILE
+        ${o3de_compiler_cache_exe} ${CMAKE_BINARY_DIR}/cl.exe
+        ONLY_IF_DIFFERENT)
 endfunction()

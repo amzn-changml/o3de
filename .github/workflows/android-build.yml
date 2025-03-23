@@ -25,6 +25,10 @@ on:
 
 run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 
+env: 
+  O3DE_ENABLE_COMPILER_CACHE: true
+  O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\chocolatey\lib\ccache\tools\'
+
 jobs:
   Build:
     strategy:
@@ -92,7 +96,6 @@ jobs:
             AutomatedTesting/Cache `
             AutomatedTesting/user `
             .ccache `
-            build
           rm ${{ github.workspace }}\cache.tar
   
       - name: Set MSBuild options
@@ -118,10 +121,13 @@ jobs:
           
       - name: Build ${{ inputs.type }}
         env:
-          O3DE_ENABLE_COMPILER_CACHE: true
-          O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\chocolatey\lib\ccache\tools\ccache-4.11.1-windows-x86_64\ccache.exe'
+          USE_CCACHE: 1
+          CCACHE_EXEC: ${{ env.O3DE_COMPILER_CACHE_PATH }}
+          CMAKE_C_COMPILER_LAUNCHER: ${{ env.O3DE_COMPILER_CACHE_PATH }}
+          CMAKE_CXX_COMPILER_LAUNCHER: ${{ env.O3DE_COMPILER_CACHE_PATH }}
           LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
         run: |
+          scripts\o3de.bat register --this-engine
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }} 
       
       - name: Compress artifacts

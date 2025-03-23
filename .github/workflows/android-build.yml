@@ -122,7 +122,7 @@ jobs:
       - name: Build ${{ inputs.type }}
         env:
           USE_CCACHE: 1
-          CCACHE_EXEC: ${{ env.O3DE_COMPILER_CACHE_PATH }}
+          NDK_CCACHE: ${{ env.O3DE_COMPILER_CACHE_PATH }}
           CMAKE_C_COMPILER_LAUNCHER: ${{ env.O3DE_COMPILER_CACHE_PATH }}
           CMAKE_CXX_COMPILER_LAUNCHER: ${{ env.O3DE_COMPILER_CACHE_PATH }}
           LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty

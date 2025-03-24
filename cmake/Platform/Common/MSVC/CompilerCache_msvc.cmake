@@ -30,7 +30,6 @@
 #   - Environment variable: O3DE_COMPILER_CACHE_PATH=<path> O3DE_ENABLE_COMPILER_CACHE=true
 #
 # - CMake variables take precedence over environment variables
-# - Symlinks are not supported - you must provide the direct path to the actual executable
 # - This is primarily used for AR/CI processes but can also be used for local builds
 #
 
@@ -39,45 +38,38 @@ function(o3de_compiler_cache_activation)
 
     # Check for custom compiler cache path, CMake variable takes precedence over environment
     if(DEFINED O3DE_COMPILER_CACHE_PATH)
-        set(o3de_compiler_cache_path ${O3DE_COMPILER_CACHE_PATH})
+        set(cache_path ${O3DE_COMPILER_CACHE_PATH})
     elseif(DEFINED ENV{O3DE_COMPILER_CACHE_PATH})
-        set(o3de_compiler_cache_path $ENV{O3DE_COMPILER_CACHE_PATH})
+        set(cache_path $ENV{O3DE_COMPILER_CACHE_PATH})
     else()
         message(FATAL_ERROR "[COMPILER CACHE] O3DE_COMPILER_CACHE_PATH not provided. This required if compiler cache is enabled.")
     endif()
 
-    message(STATUS "[COMPILER CACHE] Cache path set to ${o3de_compiler_cache_path}")
+    # Convert to absolute path and normalize to forward slashes
+    cmake_path(ABSOLUTE_PATH cache_path NORMALIZE OUTPUT_VARIABLE cache_path)
     
-    if(NOT EXISTS "${o3de_compiler_cache_path}")
-        message(FATAL_ERROR "[COMPILER CACHE] Path does not exist: ${o3de_compiler_cache_path}")
+    if(NOT EXISTS "${cache_path}")
+        message(FATAL_ERROR "[COMPILER CACHE] Path does not exist: ${cache_path}")
     endif()
     
-    # If direct executable path
-    if(NOT IS_DIRECTORY "${o3de_compiler_cache_path}")
-        set(o3de_compiler_cache_exe "${o3de_compiler_cache_path}")
-    else()
-        # Search for executable using glob if a partial path is given
+    # If path is a directory, search for ccache or sccache executable
+    if(IS_DIRECTORY "${cache_path}")
         file(GLOB_RECURSE potential_exes 
-            "${o3de_compiler_cache_path}/**/ccache.exe" 
-            "${o3de_compiler_cache_path}/**/sccache.exe")
+            "${cache_path}/**/ccache.exe" 
+            "${cache_path}/**/sccache.exe")
         
         if(potential_exes)
-            list(GET potential_exes 0 o3de_compiler_cache_exe)
+            list(GET potential_exes 0 cache_exe)
+            cmake_path(ABSOLUTE_PATH cache_exe NORMALIZE OUTPUT_VARIABLE cache_exe)
         else()
-            message(FATAL_ERROR "[COMPILER CACHE] Could not find ccache.exe or sccache.exe in directory: ${o3de_compiler_cache_path}")
+            message(FATAL_ERROR "[COMPILER CACHE] Could not find ccache.exe or sccache.exe in directory: ${cache_path}")
         endif()
+    else()
+        set(cache_exe "${cache_path}")
     endif()
 
-    # Normalize paths to use forward slashes
-    string(REPLACE "\\" "/" o3de_compiler_cache_exe "${o3de_compiler_cache_exe}")
-    
-    # Get the real path of the compiler cache executable
-    get_filename_component(o3de_compiler_cache_exe "${o3de_compiler_cache_exe}" REALPATH)
-
-    message(STATUS "[COMPILER CACHE] Found at ${o3de_compiler_cache_exe}, using it for this build")
+    message(STATUS "[COMPILER CACHE] Found at ${cache_exe}, using it for this build")
 
     # Copy cache executable as an alternative cl.exe. This will act as a wrapper for the real cl.exe
-    file(COPY_FILE
-        ${o3de_compiler_cache_exe} ${CMAKE_BINARY_DIR}/cl.exe
-        ONLY_IF_DIFFERENT)
+    file(COPY_FILE ${cache_exe} ${CMAKE_BINARY_DIR}/cl.exe ONLY_IF_DIFFERENT)
 endfunction()

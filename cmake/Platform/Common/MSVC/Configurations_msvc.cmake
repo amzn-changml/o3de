@@ -123,6 +123,39 @@ ly_append_configurations_options(
         /INCREMENTAL:NO
 )
 
+# Look for O3DE_ENABLE_COMPILER_CACHE as a CMake flag or environment variable, then sets the appropriate compatible flags for caching
+# More details about the compiler cache can be found in CompilerCache.cmake
+
+if((O3DE_ENABLE_COMPILER_CACHE OR "$ENV{O3DE_ENABLE_COMPILER_CACHE}" STREQUAL "true"))
+    o3de_compiler_cache_activation() # Activates the compiler cache
+
+    # Configure debug info format and compiler launcher for cache compatibility
+    cmake_policy(SET CMP0141 NEW)
+    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
+    set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
+
+    # Fallback to compiler flags if the debug format doesn't work, which can depend on CMake version
+    ly_append_configurations_options(
+        COMPILATION_PROFILE
+            /Z7             # Use embedded debug info instead of PDB
+        COMPILATION_RELEASE
+            /Z7
+    )
+
+    # Set required VS globals for compiler cache
+    set(CMAKE_VS_GLOBALS
+        "CLToolExe=cl.exe"
+        "CLToolPath=${CMAKE_BINARY_DIR}"
+        "TrackFileAccess=false"
+    )
+else()
+    ly_append_configurations_options(
+        COMPILATION_PROFILE
+            /Zi             # Generate debugging information (no Edit/Continue)
+    )
+endif()
+
 set(LY_BUILD_WITH_ADDRESS_SANITIZER FALSE CACHE BOOL "Builds using AddressSanitizer (ASan). Will disable Edit/Continue, Incremental building and Run-Time checks (default = FALSE)")
 if(LY_BUILD_WITH_ADDRESS_SANITIZER)
     set(LY_BUILD_WITH_INCREMENTAL_LINKING_DEBUG FALSE)
@@ -199,40 +232,5 @@ if(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION VERSION_LESS_EQUAL "10.0.19041.0")
         COMPILATION
             /wd5104
             /wd5105
-    )
-endif()
-
-# Look for O3DE_ENABLE_COMPILER_CACHE as a CMake flag or environment variable, then sets the appropriate compatible flags for caching
-# More details about the compiler cache can be found in CompilerCache.cmake
-
-if((O3DE_ENABLE_COMPILER_CACHE OR "$ENV{O3DE_ENABLE_COMPILER_CACHE}" STREQUAL "true"))
-    o3de_compiler_cache_activation() # Activates the compiler cache
-
-    # Set debug information format for compiler cache compatibility
-    cmake_policy(SET CMP0141 NEW)
-    set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
-    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
-    
-    # Fallback to compiler flags if the debug format doesn't work, which can depend on CMake version
-    ly_append_configurations_options(
-        COMPILATION_PROFILE
-            /Z7             # Use embedded debug info instead of PDB
-        COMPILATION_RELEASE
-            /Z7
-    )
-
-    # Set the tool path and execution settings
-    set(CMAKE_VS_GLOBALS
-        "CLToolExe=cl.exe"
-        "CLToolPath=${CMAKE_BINARY_DIR}"
-        "TrackFileAccess=false"
-        "UseMultiToolTask=true"
-        "DebugInformationFormat=OldStyle"
-    )
-else()
-    ly_append_configurations_options(
-        COMPILATION_PROFILE
-            /Zi             # Generate debugging information (no Edit/Continue)
     )
 endif()

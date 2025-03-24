@@ -54,14 +54,14 @@ function(o3de_compiler_cache_activation)
     endif()
 
     # If it's a Chocolatey shim or directory, search for the actual executable
-    if(cache_path MATCHES "^C:/ProgramData/chocolatey/bin/" OR IS_DIRECTORY "${cache_path}")
+    if(cache_path MATCHES "(?i).*ProgramData/Chocolatey/bin/" OR IS_DIRECTORY "${cache_path}")
         set(search_path "${cache_path}")
         
         # If it's a Chocolatey shim, convert bin path to lib path
-        if(cache_path MATCHES "^C:/ProgramData/chocolatey/bin/")
+        if(cache_path MATCHES "(?i).*ProgramData/Chocolatey/bin/")
             string(REPLACE "/bin/" "/lib/" search_path "${cache_path}")
             get_filename_component(search_path "${search_path}" DIRECTORY)
-            message(STATUS "[COMPILER CACHE] Detected Chocolatey shim, searching in lib directory")
+            message(STATUS "[COMPILER CACHE] Detected Chocolatey shim path, searching in lib directory")
         endif()
 
         file(GLOB_RECURSE potential_exes 

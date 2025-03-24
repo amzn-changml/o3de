@@ -48,17 +48,18 @@ function(o3de_compiler_cache_activation)
     # Convert to absolute path and normalize slashes
     cmake_path(ABSOLUTE_PATH cache_path OUTPUT_VARIABLE cache_path)
     string(REPLACE "\\" "/" cache_path "${cache_path}")
+    string(TOLOWER "${cache_path}" cache_path)
     
     if(NOT EXISTS "${cache_path}")
         message(FATAL_ERROR "[COMPILER CACHE] Path does not exist: ${cache_path}")
     endif()
 
     # If it's a Chocolatey shim or directory, search for the actual executable
-    if(cache_path MATCHES "(?i).*ProgramData/Chocolatey/bin/" OR IS_DIRECTORY "${cache_path}")
+    if(cache_path MATCHES "*/chocolatey/bin/" OR IS_DIRECTORY "${cache_path}")
         set(search_path "${cache_path}")
         
         # If it's a Chocolatey shim, convert bin path to lib path
-        if(cache_path MATCHES "(?i).*ProgramData/Chocolatey/bin/")
+        if(cache_path MATCHES "*/chocolatey/bin/")
             string(REPLACE "/bin/" "/lib/" search_path "${cache_path}")
             get_filename_component(search_path "${search_path}" DIRECTORY)
             message(STATUS "[COMPILER CACHE] Detected Chocolatey shim path, searching in lib directory")

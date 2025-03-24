@@ -22,7 +22,7 @@ on:
       desktop:
         required: false
         type: boolean
-      last-artifact: 
+      last_artifact: 
         required: false
         type: boolean
 

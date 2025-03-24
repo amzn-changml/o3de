@@ -10,18 +10,16 @@ on:
         - AR-development
 
 jobs:
-    # Cache-LFS:
-    #     runs-on: ubuntu-latest
-    #     name: Update LFS data cache
-    #     outputs:
-    #       lfs_sha: ${{ steps.lfs_sha_recover.outputs.lfs_sha }}
-    #     steps:
-    
-    #     - name: Checkout
-    #       uses: actions/checkout@v4
-    #       with:
-    #         fetch-depth: 1
-    #         lfs: false
+
+# The following jobs are used to build the project for the different platforms.
+# The parameters are the following:
+# - compiler: The compiler to use (msvc, clang)
+# - config: The configuration to use (profile, asset_profile, test_profile, test_cpu_profile, release)
+# - image: The image to use (windows-2022, ubuntu-22.04)
+# - platform: The platform to use (Windows, Linux, Android)
+# - type: The type of build to use (profile, asset_profile, test_profile, test_cpu_profile, release)
+# - last_artifact: Whether to use the artifact from the last run.
+# - desktop: Whether to use the desktop environment for tests
 
 #### Windows Build ####
     Windows-Profile:
@@ -32,7 +30,7 @@ jobs:
             image: windows-2022
             platform: Windows
             type: profile
-            last-artifact: true
+            last_artifact: true
     
     Windows-Asset:
         needs: Windows-Profile
@@ -62,7 +60,7 @@ jobs:
             image: windows-2022
             platform: Windows
             type: release
-            last-artifact: true
+            last_artifact: true
 
 #### Linux Build ####
     Linux-Profile:
@@ -73,7 +71,7 @@ jobs:
             image: ubuntu-22.04
             platform: Linux
             type: profile
-            last-artifact: true
+            last_artifact: true
 
     Linux-Asset:
         needs: Linux-Profile
@@ -105,7 +103,7 @@ jobs:
             image: windows-2022
             platform: Android
             type: profile
-            last-artifact: true
+            last_artifact: true
 
     Android-Asset:
         uses: ./.github/workflows/android-build.yml
@@ -115,7 +113,7 @@ jobs:
             image: windows-2022
             platform: Android
             type: asset_profile
-            last-artifact: true
+            last_artifact: true
             
     Android-Gradle:
         uses: ./.github/workflows/android-build.yml
@@ -125,4 +123,4 @@ jobs:
             image: windows-2022
             platform: Android
             type: gradle
-            last-artifact: true
+            last_artifact: true

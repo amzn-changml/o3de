@@ -19,11 +19,18 @@ on:
       type: 
         required: true
         type: string
-      last-artifact: 
+      last_artifact: 
+        required: false
+        type: boolean
+      treat_warnings_as_errors:
         required: false
         type: boolean
 
 run-name: ${{ inputs.platform }} - ${{ inputs.type }}
+
+env:          
+  O3DE_ENABLE_COMPILER_CACHE: true
+  O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\Chocolatey\bin\ccache.exe'
 
 jobs:
   Build:
@@ -112,8 +119,6 @@ jobs:
           
       - name: Build ${{ inputs.type }}
         env:
-          O3DE_ENABLE_COMPILER_CACHE: true
-          O3DE_COMPILER_CACHE_PATH: 'C:/ProgramData/chocolatey/lib/ccache/tools/ccache-4.11.1-windows-x86_64/ccache.exe'
           LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
         run: |
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }}

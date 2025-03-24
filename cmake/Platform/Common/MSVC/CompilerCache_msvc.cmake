@@ -68,15 +68,11 @@ function(o3de_compiler_cache_activation)
         endif()
     endif()
 
-    # Check for symlink
     # Normalize paths to use forward slashes
     string(REPLACE "\\" "/" o3de_compiler_cache_exe "${o3de_compiler_cache_exe}")
-    get_filename_component(real_path "${o3de_compiler_cache_exe}" REALPATH)
-    string(REPLACE "\\" "/" real_path "${real_path}")
-
-    if(NOT "${real_path}" STREQUAL "${o3de_compiler_cache_exe}")
-        message(FATAL_ERROR "[COMPILER CACHE] Detected symlink at ${o3de_compiler_cache_exe} to ${real_path}. Please provide the direct path to the actual executable.")
-    endif()
+    
+    # Get the real path of the compiler cache executable
+    get_filename_component(o3de_compiler_cache_exe "${o3de_compiler_cache_exe}" REALPATH)
 
     message(STATUS "[COMPILER CACHE] Found at ${o3de_compiler_cache_exe}, using it for this build")
 

@@ -206,13 +206,12 @@ endif()
 # More details about the compiler cache can be found in CompilerCache.cmake
 
 if((O3DE_ENABLE_COMPILER_CACHE OR "$ENV{O3DE_ENABLE_COMPILER_CACHE}" STREQUAL "true"))
-    o3de_compiler_cache_activation()
+    o3de_compiler_cache_activation() # Activates the compiler cache
 
     # Set debug information format for compiler cache compatibility
     cmake_policy(SET CMP0141 NEW)
     set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
     set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_BINARY_DIR}/cl.exe)
-    
     set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
     
     # Fallback to compiler flags if the debug format doesn't work, which can depend on CMake version

@@ -45,8 +45,9 @@ function(o3de_compiler_cache_activation)
         message(FATAL_ERROR "[COMPILER CACHE] O3DE_COMPILER_CACHE_PATH not provided. This required if compiler cache is enabled.")
     endif()
 
-    # First get the absolute path of the input
-    cmake_path(ABSOLUTE_PATH cache_path NORMALIZE OUTPUT_VARIABLE cache_path)
+    # Convert to absolute path and normalize slashes
+    cmake_path(ABSOLUTE_PATH cache_path OUTPUT_VARIABLE cache_path)
+    string(REPLACE "\\" "/" cache_path "${cache_path}")
     
     if(NOT EXISTS "${cache_path}")
         message(FATAL_ERROR "[COMPILER CACHE] Path does not exist: ${cache_path}")
@@ -61,17 +62,17 @@ function(o3de_compiler_cache_activation)
         if(potential_exes)
             list(GET potential_exes 0 cache_exe)
             # Get the directory containing the executable to use as base for symlink resolution
-            cmake_path(GET cache_exe PARENT_PATH exe_dir)
+            get_filename_component(exe_dir "${cache_exe}" DIRECTORY)
             file(REAL_PATH "${cache_exe}" cache_exe BASE_DIRECTORY "${exe_dir}")
-            cmake_path(NORMALIZE cache_exe OUTPUT_VARIABLE cache_exe)
+            string(REPLACE "\\" "/" cache_exe "${cache_exe}")
         else()
             message(FATAL_ERROR "[COMPILER CACHE] Could not find ccache.exe or sccache.exe in directory: ${cache_path}")
         endif()
     else()
         # Get the directory containing the executable to use as base for symlink resolution
-        cmake_path(GET cache_path PARENT_PATH exe_dir)
+        get_filename_component(exe_dir "${cache_path}" DIRECTORY)
         file(REAL_PATH "${cache_path}" cache_exe BASE_DIRECTORY "${exe_dir}")
-        cmake_path(NORMALIZE cache_exe OUTPUT_VARIABLE cache_exe)
+        string(REPLACE "\\" "/" cache_exe "${cache_exe}")
     endif()
 
     message(STATUS "[COMPILER CACHE] Found at ${cache_exe}, using it for this build")

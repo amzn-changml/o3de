@@ -52,36 +52,30 @@ function(o3de_compiler_cache_activation)
     if(NOT EXISTS "${cache_path}")
         message(FATAL_ERROR "[COMPILER CACHE] Path does not exist: ${cache_path}")
     endif()
-    
-    # If path is a directory, search for ccache or sccache executable
-    if(IS_DIRECTORY "${cache_path}")
+
+    # If it's a Chocolatey shim or directory, search for the actual executable
+    if(cache_path MATCHES "^C:/ProgramData/chocolatey/bin/" OR IS_DIRECTORY "${cache_path}")
+        set(search_path "${cache_path}")
+        
+        # If it's a Chocolatey shim, convert bin path to lib path
+        if(cache_path MATCHES "^C:/ProgramData/chocolatey/bin/")
+            string(REPLACE "/bin/" "/lib/" search_path "${cache_path}")
+            get_filename_component(search_path "${search_path}" DIRECTORY)
+            message(STATUS "[COMPILER CACHE] Detected Chocolatey shim, searching in lib directory")
+        endif()
+
         file(GLOB_RECURSE potential_exes 
-            "${cache_path}/**/ccache.exe" 
-            "${cache_path}/**/sccache.exe")       
+            "${search_path}/**/ccache.exe" 
+            "${search_path}/**/sccache.exe")
+        
         if(potential_exes)
             list(GET potential_exes 0 cache_exe)
+            string(REPLACE "\\" "/" cache_exe "${cache_exe}")
         else()
-            message(FATAL_ERROR "[COMPILER CACHE] Could not find ccache.exe or sccache.exe in directory: ${cache_path}")
+            message(FATAL_ERROR "[COMPILER CACHE] Could not find ccache.exe or sccache.exe in directory: ${search_path}")
         endif()
     else()
         set(cache_exe "${cache_path}")
-    endif()
-
-    # Check if this is a Chocolatey shim by looking at the path
-    if(cache_exe MATCHES "^C:/ProgramData/chocolatey/bin/")
-        # Convert bin path to lib path to find actual executable
-        string(REPLACE "/bin/" "/lib/" lib_dir "${cache_exe}")
-        get_filename_component(lib_dir "${lib_dir}" DIRECTORY)
-        
-        file(GLOB_RECURSE real_exes 
-            "${lib_dir}/**/ccache.exe" 
-            "${lib_dir}/**/sccache.exe")
-        
-        if(real_exes)
-            list(GET real_exes 0 cache_exe)
-            string(REPLACE "\\" "/" cache_exe "${cache_exe}")
-            message(STATUS "[COMPILER CACHE] Detected Chocolatey shim, using actual executable at: ${cache_exe}")
-        endif()
     endif()
 
     message(STATUS "[COMPILER CACHE] Found at ${cache_exe}, using it for this build")

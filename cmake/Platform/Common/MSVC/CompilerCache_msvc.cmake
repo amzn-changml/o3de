@@ -67,22 +67,20 @@ function(o3de_compiler_cache_activation)
         set(cache_exe "${cache_path}")
     endif()
 
-    # Check if this is a Chocolatey shim (they're typically < 1MB)
-    file(SIZE "${cache_exe}" exe_size)
-    if(exe_size LESS 1048576) # 1MB
-        get_filename_component(exe_dir "${cache_exe}" DIRECTORY)
-        if(exe_dir MATCHES "chocolatey")
-            # Try to find the actual executable in the lib directory
-            string(REPLACE "/bin/" "/lib/" lib_dir "${exe_dir}")
-            file(GLOB_RECURSE real_exes 
-                "${lib_dir}/**/ccache.exe" 
-                "${lib_dir}/**/sccache.exe")
-            
-            if(real_exes)
-                list(GET real_exes 0 cache_exe)
-                string(REPLACE "\\" "/" cache_exe "${cache_exe}")
-                message(STATUS "[COMPILER CACHE] Detected Chocolatey shim, using actual executable at: ${cache_exe}")
-            endif()
+    # Check if this is a Chocolatey shim by looking at the path
+    if(cache_exe MATCHES "^C:/ProgramData/chocolatey/bin/")
+        # Convert bin path to lib path to find actual executable
+        string(REPLACE "/bin/" "/lib/" lib_dir "${cache_exe}")
+        get_filename_component(lib_dir "${lib_dir}" DIRECTORY)
+        
+        file(GLOB_RECURSE real_exes 
+            "${lib_dir}/**/ccache.exe" 
+            "${lib_dir}/**/sccache.exe")
+        
+        if(real_exes)
+            list(GET real_exes 0 cache_exe)
+            string(REPLACE "\\" "/" cache_exe "${cache_exe}")
+            message(STATUS "[COMPILER CACHE] Detected Chocolatey shim, using actual executable at: ${cache_exe}")
         endif()
     endif()
 

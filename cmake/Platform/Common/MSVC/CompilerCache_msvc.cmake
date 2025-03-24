@@ -57,22 +57,33 @@ function(o3de_compiler_cache_activation)
     if(IS_DIRECTORY "${cache_path}")
         file(GLOB_RECURSE potential_exes 
             "${cache_path}/**/ccache.exe" 
-            "${cache_path}/**/sccache.exe")
-        
+            "${cache_path}/**/sccache.exe")       
         if(potential_exes)
             list(GET potential_exes 0 cache_exe)
-            # Get the directory containing the executable to use as base for symlink resolution
-            get_filename_component(exe_dir "${cache_exe}" DIRECTORY)
-            file(REAL_PATH "${cache_exe}" cache_exe BASE_DIRECTORY "${exe_dir}")
-            string(REPLACE "\\" "/" cache_exe "${cache_exe}")
         else()
             message(FATAL_ERROR "[COMPILER CACHE] Could not find ccache.exe or sccache.exe in directory: ${cache_path}")
         endif()
     else()
-        # Get the directory containing the executable to use as base for symlink resolution
-        get_filename_component(exe_dir "${cache_path}" DIRECTORY)
-        file(REAL_PATH "${cache_path}" cache_exe BASE_DIRECTORY "${exe_dir}")
-        string(REPLACE "\\" "/" cache_exe "${cache_exe}")
+        set(cache_exe "${cache_path}")
+    endif()
+
+    # Check if this is a Chocolatey shim (they're typically < 1MB)
+    file(SIZE "${cache_exe}" exe_size)
+    if(exe_size LESS 1048576) # 1MB
+        get_filename_component(exe_dir "${cache_exe}" DIRECTORY)
+        if(exe_dir MATCHES "chocolatey")
+            # Try to find the actual executable in the lib directory
+            string(REPLACE "/bin/" "/lib/" lib_dir "${exe_dir}")
+            file(GLOB_RECURSE real_exes 
+                "${lib_dir}/**/ccache.exe" 
+                "${lib_dir}/**/sccache.exe")
+            
+            if(real_exes)
+                list(GET real_exes 0 cache_exe)
+                string(REPLACE "\\" "/" cache_exe "${cache_exe}")
+                message(STATUS "[COMPILER CACHE] Detected Chocolatey shim, using actual executable at: ${cache_exe}")
+            endif()
+        endif()
     endif()
 
     message(STATUS "[COMPILER CACHE] Found at ${cache_exe}, using it for this build")

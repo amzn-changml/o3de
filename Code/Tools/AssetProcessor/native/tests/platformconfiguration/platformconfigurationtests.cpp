@@ -297,11 +297,11 @@ TEST_F(PlatformConfigurationUnitTests_OnePCHostFixture, FindFirstMatchingFile_Do
     EXPECT_TRUE(foundFile.isEmpty());
 }
 
-note that we do not guarantee that FindFirstMatchingFile always returns the correct case, as it is a super hot path
-function, and the only time case could be incorrect is in the situation where a file with different case overrides
-an underlying file, ie,
-Engine/EngineAssets/Textures/StartScreen.tif
-MyGame/EngineAssets/textures/startscreen.tif <-- would override the above because game has higher / more important priority.
+// note that we do not guarantee that FindFirstMatchingFile always returns the correct case, as it is a super hot path
+// function, and the only time case could be incorrect is in the situation where a file with different case overrides
+// an underlying file, ie,
+// Engine/EngineAssets/Textures/StartScreen.tif
+// MyGame/EngineAssets/textures/startscreen.tif <-- would override the above because game has higher / more important priority.
 
 // ensures that exact matches take priority over subfolder matches
 TEST_F(PlatformConfigurationUnitTests_OnePCHostFixture, GetScanFolderForFile_SubFolder_ExactMatch_IsFound)

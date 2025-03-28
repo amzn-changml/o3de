@@ -1,4 +1,14 @@
+#
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+#
+
 name: Linux Build
+
+# These jobs are to be triggered by ar.yml and generally not manually
 
 on:
   workflow_dispatch:
@@ -28,6 +38,9 @@ on:
 
 run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 
+# Note: All 3P Github Actions use the commit hash for security reasons 
+# Do not use the tag version, which is vulnerable to supply chain attacks
+
 jobs:
   Build:
     strategy:
@@ -37,6 +50,7 @@ jobs:
 
     steps:
       - name: Maximize build space
+        # Resize and combine disks as LVM in order to maximize the amount of space for builds. This yields 80GB free instead of 18GB
         uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c # v10
         with:
           root-reserve-mb: 6000
@@ -73,17 +87,20 @@ jobs:
             cache_dir=${{ github.workspace }}/.ccache
 
       - name: Get last run
+        # Get the last runid of the target branch of a PR or the current branch
         uses: dawidd6/action-download-artifact@07ab29fd4a977ae4d2b275087cf67563dfdf0295 # v9
         id: last-run-id
         with:
           workflow_search: true
           workflow_conclusion: ""
+          branch: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.ref_name }}
           search_artifacts: true
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           dry_run: true
           if_no_artifact_found: warn
         
       - name: Restore artifact cache
+        # Restore the artifact from the "Get last run" step or from the current run
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         continue-on-error: true
         with:
@@ -92,6 +109,7 @@ jobs:
           run-id: ${{ inputs.last_artifact == true && fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id || github.run_id }}
 
       - name: Extract artifact
+        # Extract the tar file from the artifact
         continue-on-error: true
         run: |
           echo "Current Runid: ${{ github.run_id }}"
@@ -102,15 +120,17 @@ jobs:
             3rdParty/packages \
             AutomatedTesting/Cache \
             AutomatedTesting/user \
-            .ccache
+            .ccache || true
           rm ${{ github.workspace }}/cache.tar
 
       - name: Setup cmake
+        # Pin the version of cmake
         uses: lukka/get-cmake@56d043d188c3612951d8755da8f4b709ec951ad6 # v3.31.6
         with:
           cmakeVersion: "~3.30.0"
 
       - name: Configure environment
+        # Install dependencies. The desktop packages are for tests and assetprocessor
         continue-on-error: true
         run: |
           echo "Installing dependancies"
@@ -132,6 +152,7 @@ jobs:
           df -h
           
       - name: Build ${{ inputs.type }}
+        # Builds with presets in ../scripts/build/Platform/Linux/build_config.json
         env:
           LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
           CC:  ${{ inputs.compiler == 'gcc' && 'gcc' || 'clang'   }}
@@ -148,7 +169,6 @@ jobs:
 
       - name: Compress artifacts
         continue-on-error: true
-        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }}))
         run: |
           tar --format=posix -cvpf ${{ github.workspace }}/cache.tar \
             python \
@@ -160,7 +180,6 @@ jobs:
       - name: Save artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         continue-on-error: true
-        if: (contains(github.ref, 'development') || contains(github.ref, ${{ vars.STABILIZATION_BRANCH }}))
         with:
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           compression-level: 1

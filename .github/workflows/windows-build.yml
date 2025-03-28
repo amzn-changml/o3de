@@ -112,13 +112,20 @@ jobs:
           echo "${{ inputs.platform }}_ARTIFACT_RUNID: ${{ vars[format('{0}_ARTIFACT_RUNID', inputs.platform)] }}"
           echo "Last run id: ${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}"
           
-          tar -xvpf ${{ github.workspace }}\cache.tar `
-            3rdParty/packages `
-            AutomatedTesting/Cache `
-            AutomatedTesting/user `
-            .ccache || exit 0
-          rm ${{ github.workspace }}\cache.tar
-
+          try {
+            tar -xvpf ${{ github.workspace }}\cache.tar `
+              python `
+              3rdParty/packages `
+              AutomatedTesting/Cache `
+              AutomatedTesting/user `
+              .ccache
+          } catch {
+            Write-Host "Warning: Error extracting tar archive: $_"
+          }
+          if (Test-Path ${{ github.workspace }}\cache.tar) {
+            Remove-Item ${{ github.workspace }}\cache.tar
+          }
+      
       - name: Setup cmake
         # Pin the version of cmake
         uses: lukka/get-cmake@56d043d188c3612951d8755da8f4b709ec951ad6 # v3.31.6

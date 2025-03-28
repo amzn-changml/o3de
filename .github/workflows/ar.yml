@@ -12,10 +12,6 @@ on:
   pull_request:
   workflow_dispatch:
   push:
-    branches:
-        - main
-        - development
-        - ${{ vars.STABILIZATION_BRANCH }} # Set by the repository settings under Settings > Secrets and variables > Actions > variables
 
 jobs:
 

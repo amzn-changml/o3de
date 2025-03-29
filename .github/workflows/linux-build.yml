@@ -106,7 +106,7 @@ jobs:
         id: set-artifact-run-id
         if: steps.last-run-id.outcome == 'success' && inputs.last_artifact == true
         run: |
-          artifacts=$(jq -r '.[0].workflow_run.id' <<< "${{ steps.last-run-id.outputs.artifacts }}")
+          artifacts=$(echo ${{ steps.last-run-id.outputs.artifacts }} | jq -r '.[0].workflow_run.id')
           runId=$artifacts
           echo "artifact_run_id=$runId" >> $GITHUB_OUTPUT
           echo "Using artifacts from previous run: $runId"

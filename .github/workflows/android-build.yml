@@ -39,9 +39,10 @@ run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 env: 
   O3DE_ENABLE_COMPILER_CACHE: true
   O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\Chocolatey\bin\ccache.exe'
+  NDK_VERSION: 25.1.8937393
 
 # Note: All 3P Github Actions use the commit hash for security reasons 
-# Do not use the tag version, which is vulnerable to supply chain attacks
+# Avoid using the tag version, which is vulnerable to supply chain attacks
 
 jobs:
   Build:
@@ -57,11 +58,13 @@ jobs:
           show-progress: false
 
       - name: Git LFS pull
+        # Minimal pull for profile builds, otherwise pull all
         run: |
           git lfs install
           if ("${{ inputs.type }}" -eq "profile") { git lfs pull --include "*.ico,*.bmp" } else { git lfs pull }
 
       - name: Setup 3p, user, and build folders
+        # Symlink the .o3de folder to the github workspace to avoid permission issues
         run: |
           "3rdParty", "build", ".o3de" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
           ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
@@ -151,8 +154,8 @@ jobs:
           echo "Getting python..."
           python\get_python.bat
 
-          & "$env:ANDROID_HOME\cmdline-tools\latest\bin\sdkmanager.bat" --install 'ndk;25.1.8937393' --sdk_root=$env:ANDROID_HOME
-          echo "LY_NDK_DIR=$env:ANDROID_HOME\ndk\25.1.8937393" >> $env:GITHUB_ENV
+          & "$env:ANDROID_HOME\cmdline-tools\latest\bin\sdkmanager.bat" --install 'ndk;$env:NDK_VERSION' --sdk_root=$env:ANDROID_HOME
+          echo "LY_NDK_DIR=$env:ANDROID_HOME\ndk\$env:NDK_VERSION" >> $env:GITHUB_ENV
           echo "JDK_HOME=$env:JAVA_HOME_17_X64" >> $env:GITHUB_ENV
           echo "JAVA_HOME=$env:JAVA_HOME_17_X64" >> $env:GITHUB_ENV
           echo "GRADLE_BUILD_HOME=$env:GRADLE_HOME" >> $env:GITHUB_ENV
@@ -160,24 +163,39 @@ jobs:
       - name: Build ${{ inputs.type }}
         # Builds with presets in ../scripts/build/Platform/Android/build_config.json
         env:
+          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
           USE_CCACHE: 1
           NDK_CCACHE: ${{ env.O3DE_COMPILER_CACHE_PATH }}
           CMAKE_C_COMPILER_LAUNCHER: ${{ env.O3DE_COMPILER_CACHE_PATH }}
           CMAKE_CXX_COMPILER_LAUNCHER: ${{ env.O3DE_COMPILER_CACHE_PATH }}
-          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
+
         run: |
-          scripts\o3de.bat register --this-engine
+          scripts\o3de.bat register --this-engine # Resolves registration issue with gradle build
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }} 
       
       - name: Compress artifacts
+        # Compress with posix format to preserve permissions and timestamps at nanosecond precision
         continue-on-error: true
         run: |
-          tar --format=posix -cvpf ${{ github.workspace }}\cache.tar `
-            python `
-            3rdParty\packages `
-            AutomatedTesting\Cache `
-            AutomatedTesting\user `
-            .ccache
+          try {
+            $dirs = @(
+              "python",
+              "3rdParty/packages",
+              "AutomatedTesting/Cache",
+              "AutomatedTesting/user",
+              ".ccache"
+            )
+            
+            foreach ($dir in $dirs) {
+              try {
+                tar --format=posix -cvpf ${{ github.workspace }}\cache.tar $dir
+              } catch {
+                Write-Host "Warning: Could not compress $dir: $_"
+              }
+            }
+          } catch {
+            Write-Host "Warning: Error during tar compression: $_"
+          }
   
       - name: Save artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -86,6 +86,7 @@ jobs:
         # Get the last runid of the target branch of a PR or the current branch
         uses: dawidd6/action-download-artifact@07ab29fd4a977ae4d2b275087cf67563dfdf0295 # v9
         id: last-run-id
+        if: ${{ inputs.last_artifact }}
         with:
           workflow_search: true
           workflow_conclusion: ""

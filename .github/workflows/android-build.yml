@@ -95,6 +95,19 @@ jobs:
           dry_run: true
           if_no_artifact_found: warn
 
+      - name: Set run ID
+        id: set-run-id
+        continue-on-error: true
+        run: |
+          if ("${{ steps.last-run-id.outputs.artifacts }}" -ne "") {
+            echo "last-run-id.outputs.artifacts: ${{ steps.last-run-id.outputs.artifacts }}"
+            $artifacts = ${{ steps.last-run-id.outputs.artifacts }} | ConvertFrom-Json
+            $runId = $artifacts[0].workflow_run.id
+            echo "run_id=$runId" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "run_id=${{ github.run_id }}" >> $env:GITHUB_OUTPUT
+          }
+      
       - name: Restore artifact cache
         # Restore the artifact from the "Get last run" step or from the current run
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
@@ -102,15 +115,15 @@ jobs:
         with:
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ inputs.last_artifact == true && fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id != '' && fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id || github.run_id }}
-  
+          run-id: ${{ steps.set-run-id.outputs.run_id }}
+
       - name: Extract artifact
         # Extract the tar file from the artifact
         continue-on-error: true
         run: |
           echo "Current Runid: ${{ github.run_id }}"
-          if ("${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}" -ne "") {
-            echo "Last run id: ${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}"
+          if ("${{ steps.last-run-id.outputs.artifacts }}" -ne "") {
+            echo "Using artifacts from previous run: ${{ steps.set-run-id.outputs.run_id }}"
           } else {
             echo "No previous artifacts found, using current run"
           }
@@ -192,7 +205,7 @@ jobs:
               try {
                 tar --format=posix -cvpf ${{ github.workspace }}\cache.tar $dir
               } catch {
-                Write-Host "Warning: Could not compress $dir: $_"
+                Write-Host "Warning: Could not compress $dir $_"
               }
             }
           } catch {

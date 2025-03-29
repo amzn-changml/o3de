@@ -104,11 +104,10 @@ jobs:
         id: set-run-id
         continue-on-error: true
         run: |
-          echo "last-run-id.outputs: ${{ steps.last-run-id.outputs }}"
-          if [ ! -z "${{ steps.last-run-id.outputs.artifacts }}" ]; then
+          if [ ! -z "${{ steps.last-run-id.outputs.artifacts }}" && "${{ inputs.last_artifact }}" == "true" ]; then
             echo "last-run-id.outputs.artifacts: ${{ steps.last-run-id.outputs.artifacts }}"
             echo ${{ steps.last-run-id.outputs.artifacts }}
-            artifacts = $(jq -r '.[0].workflow_run.id' <<< "${{ steps.last-run-id.outputs.artifacts }}")
+            artifacts=$(jq -r '.[0].workflow_run.id' <<< "${{ steps.last-run-id.outputs.artifacts }}")
             echo "run_id=$artifacts" >> $env:GITHUB_OUTPUT
           else
             echo "run_id=${{ github.run_id }}" >> $env:GITHUB_OUTPUT
@@ -128,7 +127,7 @@ jobs:
         continue-on-error: true
         run: |
           echo "Current Runid: ${{ github.run_id }}"
-          if [ -n "${{ steps.set-run-id.outputs.run_id }}" ]; then
+          if [ "${{ steps.set-run-id.outputs.run_id }}" != ${{ github.run_id }} ]; then
             echo "Using artifacts from previous run: ${{ steps.set-run-id.outputs.run_id }}"
           else
             echo "No previous artifacts found, using current run"

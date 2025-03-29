@@ -99,8 +99,7 @@ jobs:
         id: set-run-id
         continue-on-error: true
         run: |
-          echo "last-run-id.outputs: ${{ steps.last-run-id.outputs }}"
-          if ("${{ steps.last-run-id.outputs.artifacts }}" -ne $null) {
+          if (![string]::IsNullOrEmpty("${{ steps.last-run-id.outputs.artifacts }}") -And "${{ inputs.last_artifact }}" == "true") {
             echo "last-run-id.outputs.artifacts: ${{ steps.last-run-id.outputs.artifacts }}"
             $artifacts = ${{ steps.last-run-id.outputs.artifacts }} | ConvertFrom-Json
             $runId = $artifacts[0].workflow_run.id

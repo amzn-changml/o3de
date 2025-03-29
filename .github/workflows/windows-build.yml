@@ -98,8 +98,8 @@ jobs:
         id: set-run-id
         continue-on-error: true
         run: |
-          echo "last-run-id.outputs: ${{ steps.last-run-id.outputs }}"
-          if ("${{ steps.last-run-id.outputs.artifacts }}" -ne $null) {
+          if (![string]::IsNullOrEmpty("${{ steps.last-run-id.outputs.artifacts }}") -And "${{ inputs.last_artifact }}" == "true") {
+            echo "last-run-id.outputs.artifacts: ${{ steps.last-run-id.outputs.artifacts }}"
             $artifacts = ${{ steps.last-run-id.outputs.artifacts }} | ConvertFrom-Json
             $runId = $artifacts[0].workflow_run.id
             echo "run_id=$runId" >> $env:GITHUB_OUTPUT
@@ -121,8 +121,8 @@ jobs:
         continue-on-error: true
         run: |
           echo "Current Runid: ${{ github.run_id }}"
-          if ("${{ steps.last-run-id.outputs.artifacts }}" -ne "") {
-            echo "Using artifacts from previous run: ${{ steps.set-run-id.outputs.run_id }}"
+          if ("${{ steps.set-run-id.outputs.run_id }}" -ne ${{ github.run_id }} {
+            echo "Using artifacts from run: ${{ steps.set-run-id.outputs.run_id }}"
           } else {
             echo "No previous artifacts found, using current run"
           }

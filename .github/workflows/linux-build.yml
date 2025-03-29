@@ -100,26 +100,16 @@ jobs:
           dry_run: true
           if_no_artifact_found: warn
         
-      - name: Set run ID
-        id: set-run-id
-        continue-on-error: true
+      - name: Set artifact run ID
+        # Set the run ID of the artifact to be used for the download step
+        id: set-artifact-run-id
+        if: steps.last-run-id.outcome == 'success' && inputs.last_artifact == true
         run: |
-          if [ "${{ steps.last-run-id.outputs.artifacts }}" =~ "id" ] && [ "${{ inputs.last_artifact }}" ]; then
-            echo "last-run-id.outputs.artifacts: ${{ steps.last-run-id.outputs.artifacts }}"
-            echo ${{ steps.last-run-id.outputs.artifacts }}
-            artifacts=$(jq -r '.[0].workflow_run.id' <<< "${{ steps.last-run-id.outputs.artifacts }}")
-            echo "run_id=$artifacts" >> $env:GITHUB_OUTPUT
-          else
-            echo "run_id=${{ github.run_id }}" >> $env:GITHUB_OUTPUT
-          fi
-
-          echo "Current Runid: ${{ github.run_id }}"
-          if [ "$run_id" != ${{ github.run_id }} ]; then
-            echo "Using artifacts from previous run: $run_id"
-          else
-            echo "No previous artifacts found, using current run"
-          fi
-
+          artifacts=$(jq -r '.[] | .workflow_run.id' <<< "${{ steps.last-run-id.outputs.artifacts }}")
+          runId=$artifacts
+          echo "artifact_run_id=$runId" >> $env:GITHUB_OUTPUT
+          echo "Using artifacts from previous run: $runId"
+      
       - name: Restore artifact cache
         # Restore the artifact from the "Get last run" step or from the current run
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
@@ -127,7 +117,7 @@ jobs:
         with:
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.set-run-id.outputs.run_id }}
+          run-id: ${{ steps.set-artifact-run-id.outputs.artifact_run_id || github.run_id }}
 
       - name: Extract artifact
         # Extract the tar file from the artifact

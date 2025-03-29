@@ -94,25 +94,15 @@ jobs:
           dry_run: true
           if_no_artifact_found: warn
     
-      - name: Set run ID
-        id: set-run-id
-        continue-on-error: true
+      - name: Set artifact run ID
+        # Set the run ID of the artifact to be used for the download step
+        id: set-artifact-run-id
+        if: steps.last-run-id.outcome == 'success' && inputs.last_artifact == true
         run: |
-          if ("${{ steps.last-run-id.outputs.artifacts }}" -contains "id" -And "${{ inputs.last_artifact }}") {
-            echo "last-run-id.outputs.artifacts: ${{ steps.last-run-id.outputs.artifacts }}"
-            $artifacts = ${{ steps.last-run-id.outputs.artifacts }} | ConvertFrom-Json
-            $runId = $artifacts[0].workflow_run.id
-            echo "run_id=$runId" >> $env:GITHUB_OUTPUT
-          } else {
-            echo "run_id=${{ github.run_id }}" >> $env:GITHUB_OUTPUT
-          }
-
-          echo "Current Runid: ${{ github.run_id }}"
-          if ($run_id -ne ${{ github.run_id }} {
-            echo "Using artifacts from run: $run_id"
-          } else {
-            echo "No previous artifacts found, using current run"
-          }
+          $artifacts = ${{ steps.last-run-id.outputs.artifacts }} | ConvertFrom-Json
+          $runId = $artifacts[0].workflow_run.id
+          echo "artifact_run_id=$runId" >> $env:GITHUB_OUTPUT
+          echo "Using artifacts from previous run: $runId"
     
       - name: Restore artifact cache
         # Restore the artifact from the "Get last run" step or from the current run
@@ -121,7 +111,7 @@ jobs:
         with:
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.set-run-id.outputs.run_id }}
+          run-id: ${{ steps.set-artifact-run-id.outputs.artifact_run_id || github.run_id }}
 
       - name: Extract artifact
         # Extract the tar file from the artifact

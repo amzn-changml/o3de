@@ -101,41 +101,41 @@ jobs:
         with:
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ inputs.last_artifact == true && steps.last-run-id.outputs.artifacts != '' && fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id || github.run_id }}
+          run-id: ${{ inputs.last_artifact == true && fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id != '' && fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id || github.run_id }}
 
       - name: Extract artifact
         # Extract the tar file from the artifact
         continue-on-error: true
         run: |
           echo "Current Runid: ${{ github.run_id }}"
-          if ("${{ steps.last-run-id.outputs.artifacts }}" -ne "") {
+          if ("${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}" -ne "") {
             echo "Last run id: ${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}"
           } else {
             echo "No previous artifacts found, using current run"
           }
           
-          try {
-            $dirs = @(
-              "python",
-              "3rdParty/packages",
-              "AutomatedTesting/Cache",
-              "AutomatedTesting/user",
-              ".ccache"
-            )
-            foreach ($dir in $dirs) {
-              try {
-                tar -xvpf ${{ github.workspace }}\cache.tar $dir
-              } catch {
-                Write-Host "Warning: Could not extract $dir from archive: $_"
+          if (Test-Path ${{ github.workspace }}\cache.tar) {          
+            try {
+              $dirs = @(
+                "python",
+                "3rdParty/packages",
+                "AutomatedTesting/Cache",
+                "AutomatedTesting/user",
+                ".ccache"
+              )
+              foreach ($dir in $dirs) {
+                try {
+                  tar -xvpf ${{ github.workspace }}\cache.tar $dir
+                } catch {
+                  Write-Host "Warning: Could not extract $dir from archive: $_"
+                }
               }
+            } catch {
+              Write-Host "Warning: Error during tar extraction: $_"
             }
-          } catch {
-            Write-Host "Warning: Error during tar extraction: $_"
-          }
-          
-          if (Test-Path ${{ github.workspace }}\cache.tar) {
+
             Remove-Item ${{ github.workspace }}\cache.tar
-          }   
+          }
       
       - name: Setup cmake
         # Pin the version of cmake

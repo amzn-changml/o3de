@@ -106,9 +106,9 @@ jobs:
         id: set-artifact-run-id
         if: steps.last-run-id.outcome == 'success' && inputs.last_artifact == true
         run: |
-          artifacts=$(jq -r '.[0]] | .workflow_run.id' <<< "${{ steps.last-run-id.outputs.artifacts }}")
+          artifacts=$(jq -r '.[0].workflow_run.id' <<< "${{ steps.last-run-id.outputs.artifacts }}")
           runId=$artifacts
-          echo "artifact_run_id=$runId" >> $env:GITHUB_OUTPUT
+          echo "artifact_run_id=$runId" >> $GITHUB_OUTPUT
           echo "Using artifacts from previous run: $runId"
       
       - name: Restore artifact cache

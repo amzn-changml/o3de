@@ -99,13 +99,20 @@ jobs:
         id: set-run-id
         continue-on-error: true
         run: |
-          if (![string]::IsNullOrEmpty("${{ steps.last-run-id.outputs.artifacts }}") -And "${{ inputs.last_artifact }}" == "true") {
+          if ("${{ steps.last-run-id.outputs.artifacts }}" -contains "id" -And "${{ inputs.last_artifact }}") {
             echo "last-run-id.outputs.artifacts: ${{ steps.last-run-id.outputs.artifacts }}"
             $artifacts = ${{ steps.last-run-id.outputs.artifacts }} | ConvertFrom-Json
             $runId = $artifacts[0].workflow_run.id
             echo "run_id=$runId" >> $env:GITHUB_OUTPUT
           } else {
             echo "run_id=${{ github.run_id }}" >> $env:GITHUB_OUTPUT
+          }
+
+          echo "Current Runid: ${{ github.run_id }}"
+          if ($run_id -ne ${{ github.run_id }} {
+            echo "Using artifacts from run: $run_id"
+          } else {
+            echo "No previous artifacts found, using current run"
           }
       
       - name: Restore artifact cache
@@ -121,13 +128,6 @@ jobs:
         # Extract the tar file from the artifact
         continue-on-error: true
         run: |
-          echo "Current Runid: ${{ github.run_id }}"
-          if ("${{ steps.last-run-id.outputs.artifacts }}" -ne "") {
-            echo "Using artifacts from previous run: ${{ steps.set-run-id.outputs.run_id }}"
-          } else {
-            echo "No previous artifacts found, using current run"
-          }
-
           if (Test-Path ${{ github.workspace }}\cache.tar) {          
             try {
               $dirs = @(
@@ -141,11 +141,11 @@ jobs:
                 try {
                   tar -xvpf ${{ github.workspace }}\cache.tar $dir
                 } catch {
-                  Write-Host "Warning: Could not extract $dir from archive: $_"
+                  echo "Warning: Could not extract $dir from archive: $_"
                 }
               }
             } catch {
-              Write-Host "Warning: Error during tar extraction: $_"
+              echo "Warning: Error during tar extraction: $_"
             }
 
             Remove-Item ${{ github.workspace }}\cache.tar
@@ -205,11 +205,11 @@ jobs:
               try {
                 tar --format=posix -cvpf ${{ github.workspace }}\cache.tar $dir
               } catch {
-                Write-Host "Warning: Could not compress $dir $_"
+                echo "Warning: Could not compress $dir $_"
               }
             }
           } catch {
-            Write-Host "Warning: Error during tar compression: $_"
+            echo "Warning: Error during tar compression: $_"
           }
   
       - name: Save artifacts

@@ -100,8 +100,7 @@ jobs:
         id: set-artifact-run-id
         if: steps.last-run-id.outcome == 'success' && inputs.last_artifact == true
         run: |
-          $artifacts = ${{ steps.last-run-id.outputs.artifacts }} | ConvertFrom-Json
-          $runId = $artifacts[0].workflow_run.id
+          runId = ${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}
           echo "artifact_run_id=$runId" >> $env:GITHUB_OUTPUT
           echo "Using artifacts from previous run: $runId"
     

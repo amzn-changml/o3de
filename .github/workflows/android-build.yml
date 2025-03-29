@@ -87,6 +87,7 @@ jobs:
         uses: dawidd6/action-download-artifact@07ab29fd4a977ae4d2b275087cf67563dfdf0295 # v9
         id: last-run-id
         if: ${{ inputs.last_artifact }}
+        continue-on-error: true
         with:
           workflow_search: true
           workflow_conclusion: ""
@@ -94,7 +95,6 @@ jobs:
           search_artifacts: true
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           dry_run: true
-          if_no_artifact_found: warn
 
       - name: Set artifact run ID
         # Set the run ID of the artifact to be used for the download step

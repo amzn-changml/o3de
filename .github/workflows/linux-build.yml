@@ -104,7 +104,8 @@ jobs:
         id: set-run-id
         continue-on-error: true
         run: |
-          if [ -n "${{ steps.last-run-id.outputs.artifacts }}" ]; then
+          echo "last-run-id.outputs: ${{ steps.last-run-id.outputs }}"
+          if [ ! -z "${{ steps.last-run-id.outputs.artifacts }}" ]; then
             echo "last-run-id.outputs.artifacts: ${{ steps.last-run-id.outputs.artifacts }}"
             echo ${{ steps.last-run-id.outputs.artifacts }}
             artifacts = $(jq -r '.[0].workflow_run.id' <<< "${{ steps.last-run-id.outputs.artifacts }}")

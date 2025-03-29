@@ -98,8 +98,8 @@ jobs:
         id: set-run-id
         continue-on-error: true
         run: |
-          if ("${{ steps.last-run-id.outputs.artifacts }}" -ne "") {
-            echo "last-run-id.outputs.artifacts: ${{ steps.last-run-id.outputs.artifacts }}"
+          echo "last-run-id.outputs: ${{ steps.last-run-id.outputs }}"
+          if ("${{ steps.last-run-id.outputs.artifacts }}" -ne $null) {
             $artifacts = ${{ steps.last-run-id.outputs.artifacts }} | ConvertFrom-Json
             $runId = $artifacts[0].workflow_run.id
             echo "run_id=$runId" >> $env:GITHUB_OUTPUT

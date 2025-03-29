@@ -8,7 +8,7 @@
 
 name: Windows Build
 
-# These jobs are to be triggered by ar.yml and generally not manually
+# These jobs are to be triggered by ar.yml
 
 on:
   workflow_dispatch:
@@ -108,7 +108,6 @@ jobs:
         continue-on-error: true
         run: |
           echo "Current Runid: ${{ github.run_id }}"
-          echo "${{ inputs.platform }}_ARTIFACT_RUNID: ${{ vars[format('{0}_ARTIFACT_RUNID', inputs.platform)] }}"
           echo "Last run id: ${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}"
           
           try {
@@ -119,7 +118,6 @@ jobs:
               "AutomatedTesting/user",
               ".ccache"
             )
-            
             foreach ($dir in $dirs) {
               try {
                 tar -xvpf ${{ github.workspace }}\cache.tar $dir
@@ -133,8 +131,7 @@ jobs:
           
           if (Test-Path ${{ github.workspace }}\cache.tar) {
             Remove-Item ${{ github.workspace }}\cache.tar
-          }
-      
+          }   
       
       - name: Setup cmake
         # Pin the version of cmake
@@ -173,7 +170,6 @@ jobs:
               "AutomatedTesting/user",
               ".ccache"
             )
-            
             foreach ($dir in $dirs) {
               try {
                 tar --format=posix -cvpf ${{ github.workspace }}\cache.tar $dir

@@ -8,7 +8,7 @@
 
 name: Android Build
 
-# These jobs are to be triggered by ar.yml and generally not manually
+# These jobs are to be triggered by ar.yml
 
 on:
   workflow_dispatch:
@@ -109,7 +109,6 @@ jobs:
         continue-on-error: true
         run: |
           echo "Current Runid: ${{ github.run_id }}"
-          echo "${{ inputs.platform }}_ARTIFACT_RUNID: ${{ vars[format('{0}_ARTIFACT_RUNID', inputs.platform)] }}"
           echo "Last run id: ${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}"
           
           try {
@@ -152,8 +151,8 @@ jobs:
           echo "Installing dependancies"
           echo "Getting python..."
           python\get_python.bat
-          
-          echo "Installing NDK ${{ env.NDK_VERSION }}"
+
+          echo "Installing NDK ${{ env.NDK_VERSION }}..."
           & "$env:ANDROID_HOME\cmdline-tools\latest\bin\sdkmanager.bat" --install 'ndk;${{ env.NDK_VERSION }}' --sdk_root=$env:ANDROID_HOME
           echo "LY_NDK_DIR=$env:ANDROID_HOME\ndk\${{ env.NDK_VERSION }}" >> $env:GITHUB_ENV
           echo "JDK_HOME=$env:JAVA_HOME_17_X64" >> $env:GITHUB_ENV

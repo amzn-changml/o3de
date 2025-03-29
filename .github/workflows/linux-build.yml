@@ -8,7 +8,7 @@
 
 name: Linux Build
 
-# These jobs are to be triggered by ar.yml and generally not manually
+# These jobs are to be triggered by ar.yml
 
 on:
   workflow_dispatch:
@@ -114,7 +114,6 @@ jobs:
         continue-on-error: true
         run: |
           echo "Current Runid: ${{ github.run_id }}"
-          echo "${{ inputs.platform }}_ARTIFACT_RUNID: ${{ vars[format('{0}_ARTIFACT_RUNID', inputs.platform)] }}"
           echo "Last run id: ${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}"
           
           tar -xvpf ${{ github.workspace }}/cache.tar --ignore-failed-read \
@@ -167,7 +166,7 @@ jobs:
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           if [ "${{ inputs.desktop }}" == "true" ]; then 
-            Xvfb :0 -screen 0 1400x1050x16 &
+            Xvfb :0 -screen 0 1400x1050x16 & # Start X virtual framebuffer for tests
           fi
           python/python.sh -u scripts/build/ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }}
 

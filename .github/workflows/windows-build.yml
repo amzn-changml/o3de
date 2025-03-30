@@ -122,24 +122,15 @@ jobs:
         run: |        
           if (Test-Path ${{ github.workspace }}\cache.tar) {          
             try {
-              $dirs = @(
-                "python",
-                "3rdParty\packages",
-                "AutomatedTesting\Cache",
-                "AutomatedTesting\user",
-                ".ccache"
-              )
-              foreach ($dir in $dirs) {
-                try {
-                  tar -xvpf ${{ github.workspace }}\cache.tar $dir
-                } catch {
-                  echo "Warning: Could not extract $dir from archive: $_"
-                }
-              }
+              tar -xvpf ${{ github.workspace }}\cache.tar `
+                python `
+                3rdParty/packages `
+                AutomatedTesting/Cache `
+                AutomatedTesting/user `
+                .ccache
             } catch {
               echo "Warning: Error during tar extraction: $_"
             }
-
             Remove-Item ${{ github.workspace }}\cache.tar
           }
       
@@ -174,22 +165,14 @@ jobs:
         continue-on-error: true
         run: |
           try {
-            $dirs = @(
-              "python",
-              "3rdParty\packages",
-              "AutomatedTesting\Cache",
-              "AutomatedTesting\user",
-              ".ccache"
-            )
-            foreach ($dir in $dirs) {
-              try {
-                tar --format=posix -cvpf ${{ github.workspace }}\cache.tar $dir
-              } catch {
-                echo "Warning: Could not compress $dir $_"
-              }
-            }
+            tar --format=posix -cvpf ${{ github.workspace }}\cache.tar `
+              python `
+              3rdParty\packages `
+              AutomatedTesting\Cache `
+              AutomatedTesting\user `
+              .ccache
           } catch {
-            echo "Warning: Error during tar compression: $_"
+            echo "Warning: Error during tar compression"
           }
   
       - name: Save artifacts

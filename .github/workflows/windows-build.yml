@@ -124,9 +124,9 @@ jobs:
             try {
               $dirs = @(
                 "python",
-                "3rdParty/packages",
-                "AutomatedTesting/Cache",
-                "AutomatedTesting/user",
+                "3rdParty\packages",
+                "AutomatedTesting\Cache",
+                "AutomatedTesting\user",
                 ".ccache"
               )
               foreach ($dir in $dirs) {
@@ -176,9 +176,9 @@ jobs:
           try {
             $dirs = @(
               "python",
-              "3rdParty/packages",
-              "AutomatedTesting/Cache",
-              "AutomatedTesting/user",
+              "3rdParty\packages",
+              "AutomatedTesting\Cache",
+              "AutomatedTesting\user",
               ".ccache"
             )
             foreach ($dir in $dirs) {

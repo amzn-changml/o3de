@@ -186,7 +186,7 @@ jobs:
         if: ${{ steps.extract-artifact.outcome == 'success' && !cancelled() }}
         continue-on-error: true
         run: |
-          tar --format=posix -cvpf ${{ github.workspace }}/cache.tar \
+          tar --format=posix -cvpf ${{ github.workspace }}/cache.tar --ignore-failed-read \
             python \
             3rdParty/packages \
             AutomatedTesting/Cache \

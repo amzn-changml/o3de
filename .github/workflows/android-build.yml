@@ -117,6 +117,7 @@ jobs:
 
       - name: Extract artifact
         # Extract the tar file from the artifact
+        id: extract-artifact
         if: ${{ steps.restore-artifact-cache.outcome == 'success' }}
         continue-on-error: true
         run: |
@@ -183,7 +184,7 @@ jobs:
       
       - name: Compress artifacts
         # Compress with posix format to preserve permissions and timestamps at nanosecond precision
-        if: always()
+        if: ${{ steps.extract-artifact.outcome == 'success' && !cancelled() }}
         continue-on-error: true
         run: |
           try {
@@ -207,7 +208,7 @@ jobs:
   
       - name: Save artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
+        if: ${{ steps.extract-artifact.outcome == 'success' && !cancelled() }}
         continue-on-error: true
         with:
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build

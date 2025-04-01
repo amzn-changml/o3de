@@ -176,7 +176,6 @@ jobs:
               3rdParty\packages `
               AutomatedTesting\Cache `
               AutomatedTesting\user `
-              build
               .ccache
           } catch {
             echo "Warning: Error during tar compression"

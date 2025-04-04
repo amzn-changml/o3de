@@ -11,12 +11,22 @@ name: AR
 on:
   pull_request:
   workflow_dispatch:
+    # inputs:
+    #     clean_artifacts:
+    #         options:
+    #             - no
+    #             - assets
+    #             - all
+    #         default: no
+    #         required: false
+    #         type: choice
   push:
     branches:
       - main
       - development
       - stabilization/**
       - hotfix/**
+      - AR-development-final
 
 jobs:
 

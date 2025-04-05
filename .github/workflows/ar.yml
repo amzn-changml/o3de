@@ -11,15 +11,15 @@ name: AR
 on:
   pull_request:
   workflow_dispatch:
-    # inputs:
-    #     clean_artifacts:
-    #         options:
-    #             - no
-    #             - assets
-    #             - all
-    #         default: no
-    #         required: false
-    #         type: choice
+    inputs:
+        clean_artifacts:
+            options:
+                - no
+                - assets
+                - all
+            default: no
+            required: false
+            type: choice
   push:
     branches:
       - main
@@ -50,6 +50,7 @@ jobs:
             platform: Windows
             type: profile
             last_artifact: true
+            clean_artifacts: ${{ inputs.clean_artifacts }}
     
     Windows-Asset:
         needs: Windows-Profile
@@ -60,6 +61,7 @@ jobs:
             image: windows-2022
             platform: Windows
             type: asset_profile
+            clean_artifacts: ${{ inputs.clean_artifacts }}
 
     Windows-Test:
         needs: Windows-Asset
@@ -70,6 +72,7 @@ jobs:
             image: windows-2022
             platform: Windows
             type: test_cpu_profile
+            clean_artifacts: ${{ inputs.clean_artifacts }}
 
     Windows-Release:
         uses: ./.github/workflows/windows-build.yml
@@ -80,6 +83,7 @@ jobs:
             platform: Windows
             type: release
             last_artifact: true
+            clean_artifacts: ${{ inputs.clean_artifacts }}
 
 #### Linux Build ####
     Linux-Profile:
@@ -91,6 +95,7 @@ jobs:
             platform: Linux
             type: profile
             last_artifact: true
+            clean_artifacts: ${{ inputs.clean_artifacts }}
 
     Linux-Asset:
         needs: Linux-Profile
@@ -101,6 +106,7 @@ jobs:
             image: ubuntu-22.04
             platform: Linux
             type: asset_profile
+            clean_artifacts: ${{ inputs.clean_artifacts }}
 
     Linux-Test:
         needs: Linux-Asset
@@ -112,6 +118,7 @@ jobs:
             platform: Linux
             type: test_profile
             desktop: true
+            clean_artifacts: ${{ inputs.clean_artifacts }}
 
 #### Android Build ####
     Android-Profile:
@@ -123,6 +130,7 @@ jobs:
             platform: Android
             type: profile
             last_artifact: true
+            clean_artifacts: ${{ inputs.clean_artifacts }}
 
     Android-Asset:
         uses: ./.github/workflows/android-build.yml
@@ -133,6 +141,7 @@ jobs:
             platform: Android
             type: asset_profile
             last_artifact: true
+            clean_artifacts: ${{ inputs.clean_artifacts }}
             
     Android-Gradle:
         uses: ./.github/workflows/android-build.yml
@@ -143,3 +152,4 @@ jobs:
             platform: Android
             type: gradle
             last_artifact: true
+            clean_artifacts: ${{ inputs.clean_artifacts }}

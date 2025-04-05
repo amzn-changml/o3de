@@ -32,6 +32,10 @@ on:
       last_artifact: 
         required: false
         type: boolean
+      clean_artifacts:
+        required: false
+        type: string
+        default: no
 
 run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 
@@ -122,8 +126,17 @@ jobs:
         if: ${{ steps.restore-artifact-cache.outcome == 'success' }}
         continue-on-error: true
         run: |        
-          if (Test-Path ${{ github.workspace }}\cache.tar) {          
-            tar -xvpf ${{ github.workspace }}\cache.tar
+          if (Test-Path ${{ github.workspace }}\cache.tar) {
+            if ("${{ inputs.clean_artifacts }}" -eq "assets") {
+              # Skip AutomatedTesting folders
+              tar -xvpf ${{ github.workspace }}\cache.tar --exclude="AutomatedTesting/*"
+            } elseif ("${{ inputs.clean_artifacts }}" -eq "all") {
+              # Only extract python and 3rdParty folders
+              tar -xvpf ${{ github.workspace }}\cache.tar python 3rdParty/*
+            } else {
+              # Extract everything (default behavior)
+              tar -xvpf ${{ github.workspace }}\cache.tar
+            }
             rm ${{ github.workspace }}\cache.tar
           }
       

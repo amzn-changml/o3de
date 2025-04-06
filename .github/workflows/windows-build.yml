@@ -230,8 +230,8 @@ jobs:
       - name: Compress artifacts
         # Compress with posix format
         id: compress-artifacts
-        # Run if extraction succeeded or was skipped (no artifact downloaded) AND job not cancelled
-        if: ${{ (steps.extract-artifact.outcome == 'success' || steps.extract-artifact.outcome == 'skipped') && !cancelled() }}
+        # Run if not cancelled
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: |
           try {

@@ -75,8 +75,7 @@ jobs:
       - name: Setup Dev Drive
         uses: samypr100/setup-dev-drive@v3
         with:
-          drive-size: 85GB
-          drive-type: Fixed
+          drive-size: 150GB
           drive-format: NTFS
           trusted-dev-drive: true
 

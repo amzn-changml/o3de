@@ -86,8 +86,20 @@ jobs:
             max_size=15G
             cache_dir=${{ github.workspace }}\.ccache
       
+      - name: Determine Artifact Name
+        # Set artifact name based on job type
+        id: artifact-name
+        run: |
+          $baseName = "O3DE-${{ inputs.platform }}-${{ inputs.config }}"
+          if ("${{ inputs.type }}" -match "test") {
+            $artifactName = "$baseName-test-build"
+          } else {
+            $artifactName = "$baseName-build"
+          }
+          echo "name=$artifactName" >> $env:GITHUB_OUTPUT
+      
       - name: Get last run
-        # Get the last runid of the target branch of a PR or the current branch
+        # Get the last runid of the target branch of a PR or the current branch for the specific artifact type
         uses: dawidd6/action-download-artifact@07ab29fd4a977ae4d2b275087cf67563dfdf0295 # v9
         id: last-run-id
         if: ${{ inputs.last_artifact }}
@@ -97,43 +109,52 @@ jobs:
           workflow_conclusion: ""
           branch: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.ref_name }}
           search_artifacts: true
-          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
+          name: ${{ steps.artifact-name.outputs.name }} # Use dynamic name
           dry_run: true
     
       - name: Set artifact run ID
-        # Set the run ID of the artifact to be used for the download step
         id: set-artifact-run-id
         if: steps.last-run-id.outcome == 'success' && inputs.last_artifact == true
         run: |
           $runId = ${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}
           echo "artifact_run_id=$runId" >> $env:GITHUB_OUTPUT
-          echo "Using artifacts from previous run: $runId"
+          echo "Using artifacts from previous run: $runId for artifact ${{ steps.artifact-name.outputs.name }}"
     
-      - name: Restore artifact cache
-        # Restore the artifact from the "Get last run" step or from the current run
+      - name: Restore last artifact cache
+        # Restore the specific artifact from the "Get last run" step or from the current run
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        id: restore-artifact-cache
+        id: restore-last-artifact-cache
         continue-on-error: true
         with:
-          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
+          name: ${{ steps.artifact-name.outputs.name }} # Use dynamic name
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.set-artifact-run-id.outputs.artifact_run_id || github.run_id }}
+          run-id: ${{ steps.set-artifact-run-id.outputs.artifact_run_id || github.run_id }} # Fallback to current run_id if last run not found
+
+      - name: Restore asset cache for Test (if needed)
+        # If this is a test job AND the specific test artifact wasn't restored, try restoring the asset artifact from the current run
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        id: restore-asset-cache-for-test
+        if: contains(inputs.type, 'test') && steps.restore-last-artifact-cache.outcome != 'success'
+        continue-on-error: true
+        with:
+          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build # Explicitly request the non-test asset artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.run_id }} # Use current run ID
 
       - name: Extract artifact
-        # Extract the tar file from the artifact based on clean_artifacts option
+        # Extract the tar file from the artifact (either test or asset)
         id: extract-artifact
         continue-on-error: true
-        if: ${{ steps.restore-artifact-cache.outcome == 'success' }}
+        # Run if either restore step was successful
+        if: steps.restore-last-artifact-cache.outcome == 'success' || steps.restore-asset-cache-for-test.outcome == 'success'
         run: |        
           if (Test-Path ${{ github.workspace }}\cache.tar) {
+            # Existing extraction logic based on clean_artifacts
             if ("${{ inputs.clean_artifacts }}" -eq "assets") {
-              # Skip AutomatedTesting folders
               tar -xvpf ${{ github.workspace }}\cache.tar --exclude="AutomatedTesting/*"
             } elseif ("${{ inputs.clean_artifacts }}" -eq "all") {
-              # Only extract python and 3rdParty folders
               tar -xvpf ${{ github.workspace }}\cache.tar python 3rdParty/*
             } else {
-              # Extract everything (default behavior)
               tar -xvpf ${{ github.workspace }}\cache.tar
             }
             rm ${{ github.workspace }}\cache.tar
@@ -165,10 +186,10 @@ jobs:
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }}
       
       - name: Compress artifacts
-        # Compress with posix format to preserve permissions and timestamps at nanosecond precision
-        # Skip compression and upload if the type is a test to reduce dirty build artifacts from previous runs
+        # Compress with posix format
         id: compress-artifacts
-        if: ${{ (steps.extract-artifact.outcome == 'success' || steps.extract-artifact.outcome == 'skipped') && !cancelled() && !contains(inputs.type, 'test') }}
+        # Run if extraction succeeded or was skipped (no artifact downloaded) AND job not cancelled
+        if: ${{ (steps.extract-artifact.outcome == 'success' || steps.extract-artifact.outcome == 'skipped') && !cancelled() }}
         continue-on-error: true
         run: |
           try {
@@ -184,10 +205,10 @@ jobs:
   
       - name: Save artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: ${{ steps.compress-artifacts.conclusion == 'success' && !cancelled() && !contains(inputs.type, 'test') }}
+        if: ${{ steps.compress-artifacts.conclusion == 'success' && !cancelled() }}
         continue-on-error: true
         with:
-          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
+          name: ${{ steps.artifact-name.outputs.name }} # Use dynamic name
           compression-level: 1
           overwrite: true
           path: |

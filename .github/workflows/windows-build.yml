@@ -156,32 +156,36 @@ jobs:
           echo "Using artifacts from previous run: $runId for artifact ${{ steps.artifact-name.outputs.name }}"
     
       - name: Restore last artifact cache
-        # Restore the specific artifact from the "Get last run" step or from the current run
+        # Restore the specific artifact from the "Get last run" step if last_artifact is enabled
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         id: restore-last-artifact-cache
-        continue-on-error: true
+        if: inputs.last_artifact == true # Only run if cross-run cache is enabled
+        continue-on-error: true # Allow fallback to current run dependency
         with:
-          name: ${{ steps.artifact-name.outputs.name }} # Use dynamic name
+          name: ${{ steps.artifact-name.outputs.name }} # Use dynamic name (either *-build or *-test-build)
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.set-artifact-run-id.outputs.artifact_run_id || github.run_id }} # Fallback to current run_id if last run not found
+          run-id: ${{ steps.set-artifact-run-id.outputs.artifact_run_id }} # Use the ID from the last run
 
-      - name: Restore asset cache for Test (if needed)
-        # If this is a test job AND the specific test artifact wasn't restored, try restoring the asset artifact from the current run
+      - name: Restore current run dependency artifact
+        # If last artifact restore failed/skipped, AND this job type needs an artifact from a previous job in this run
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        id: restore-asset-cache-for-test
-        if: contains(inputs.type, 'test') && steps.restore-last-artifact-cache.outcome != 'success'
+        id: restore-current-run-dependency-artifact
+        if: >
+          steps.restore-last-artifact-cache.outcome != 'success' && 
+          (contains(inputs.type, 'asset') || contains(inputs.type, 'test'))
         continue-on-error: true
         with:
-          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build # Explicitly request the non-test asset artifact
+          # Asset and Test jobs depend on the non-test artifact from the previous stage
+          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build 
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.run_id }} # Use current run ID
 
       - name: Extract artifact
-        # Extract the tar file from the artifact (either test or asset)
+        # Extract the tar file from the artifact (either from last run or current run dependency)
         id: extract-artifact
         continue-on-error: true
         # Run if either restore step was successful
-        if: steps.restore-last-artifact-cache.outcome == 'success' || steps.restore-asset-cache-for-test.outcome == 'success'
+        if: steps.restore-last-artifact-cache.outcome == 'success' || steps.restore-current-run-dependency-artifact.outcome == 'success'
         run: |        
           if (Test-Path ${{ github.workspace }}\cache.tar) {
             # Existing extraction logic based on clean_artifacts

@@ -60,18 +60,50 @@ jobs:
         with:
           show-progress: false
 
+      - name: Display System Info
+        run: |
+          Get-ComputerInfo -Property OsName, OsVersion, CsProcessors, CsTotalPhysicalMemory | Format-List
+          Get-Volume | Format-Table -AutoSize DriveLetter, FileSystemLabel, FileSystem, DriveType, HealthStatus, SizeRemaining, Size
+
       - name: Git LFS pull
         # Minimal pull for profile builds, otherwise pull all
         run: |
             git lfs install
             if ("${{ inputs.type }}" -eq "profile") { git lfs pull --include "*.ico,*.bmp" } else { git lfs pull }
           
-      - name: Setup 3p, user, and build folders
-        # Symlink the .o3de folder to the github workspace to avoid permission issues
+      - name: Setup Dev Drive
+        uses: samypr100/setup-dev-drive@v3
+        with:
+          drive-size: 50GB # Adjust size if needed
+
+      - name: Setup Dev Drive Directories and Symlinks
+        # Create target folders on Dev Drive (E:) and symlink them from the workspace (D:)
         run: |
-          "3rdParty", "build", ".o3de" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
-          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
-          "AutomatedTesting\Cache", "AutomatedTesting\user" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
+          $workspace = "${{ github.workspace }}"
+          $devDrive = "${{ env.DEV_DRIVE }}"
+          
+          # Directories to move/symlink
+          $dirsToLink = @("3rdParty", "build", ".o3de", "AutomatedTesting\Cache", "AutomatedTesting\user", ".ccache")
+          
+          echo "Creating base directories on Dev Drive ($devDrive)..."
+          foreach ($dir in $dirsToLink) {
+            $targetPath = Join-Path $devDrive $dir
+            echo "Creating $targetPath..."
+            New-Item -Path $targetPath -ItemType Directory -Force | Out-Null
+          }
+          
+          echo "Creating symlinks in workspace ($workspace)..."
+          foreach ($dir in $dirsToLink) {
+            $linkPath = Join-Path $workspace $dir
+            $targetPath = Join-Path $devDrive $dir
+            echo "Creating symlink $linkPath -> $targetPath"
+            New-Item -ItemType SymbolicLink -Path $linkPath -Target $targetPath -Force | Out-Null
+          }
+          
+          echo "Updating USERPROFILE\.o3de symlink..."
+          $userProfileO3deLink = Join-Path $env:USERPROFILE ".o3de"
+          $o3deTarget = Join-Path $devDrive ".o3de"
+          New-Item -ItemType SymbolicLink -Path $userProfileO3deLink -Target $o3deTarget -Force | Out-Null
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@f84f86840109403e0fe0ded8b0766c9633affa16 # v1.4.7
@@ -171,12 +203,15 @@ jobs:
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
 
       - name: Configure environment
+        # This script creates the python directory within the workspace
         run: |
           echo "Installing dependancies"
           echo "Getting python..."
           python\get_python.bat
           echo "Installing additional python dependancies..."
-          python\pip.sh install tempfile2 PyGithub
+          python\pip.sh install `
+            tempfile2==0.1.2 `
+            PyGithub==2.6.1
           
       - name: Build ${{ inputs.type }}
         # Builds with presets in ../scripts/build/Platform/Windows/build_config.json

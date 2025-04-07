@@ -69,7 +69,7 @@ jobs:
       - name: Setup 3p, user, and build folders
         # Symlink the .o3de folder to the github workspace to avoid permission issues
         run: |
-          "3rdParty", "build", ".o3de", "AutomatedTesting\Cache", "AutomatedTesting\user" `| % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
+          "3rdParty", "build", ".o3de", "AutomatedTesting\Cache", "AutomatedTesting\user" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
           ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
 
       - name: Setup ccache

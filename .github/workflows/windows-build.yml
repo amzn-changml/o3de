@@ -90,7 +90,7 @@ jobs:
           
           echo "Creating base directories on Dev Drive ($devDrive)..."
           foreach ($dir in $dirsToLink) {
-            $targetPath = Join-Path $devDrive $dir
+            $targetPath = Join-Path $workspace $dir
             echo "Creating $targetPath..."
             New-Item -Path $targetPath -ItemType Directory -Force | Out-Null
           }
@@ -105,7 +105,7 @@ jobs:
           
           echo "Updating USERPROFILE\.o3de symlink..."
           $userProfileO3deLink = Join-Path $env:USERPROFILE ".o3de"
-          $o3deTarget = Join-Path $devDrive ".o3de"
+          $o3deTarget = Join-Path $workspace ".o3de"
           New-Item -ItemType SymbolicLink -Path $userProfileO3deLink -Target $o3deTarget -Force | Out-Null
 
       - name: Setup ccache

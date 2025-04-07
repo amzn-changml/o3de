@@ -72,20 +72,20 @@ jobs:
             git lfs install
             if ("${{ inputs.type }}" -eq "profile") { git lfs pull --include "*.ico,*.bmp" } else { git lfs pull }
           
-      - name: Setup Dev Drive
-        uses: samypr100/setup-dev-drive@v3
-        with:
-          drive-size: 150GB
-          drive-format: NTFS
-          trusted-dev-drive: true
+      # - name: Setup Dev Drive
+      #   uses: samypr100/setup-dev-drive@v3
+      #   with:
+      #     drive-size: 150GB
+      #     drive-format: NTFS
+      #     trusted-dev-drive: true
 
       - name: Setup Dev Drive Directories and Symlinks
         # Create target folders on Dev Drive (E:) and symlink them from the workspace (D:)
         run: |
           $workspace = "${{ github.workspace }}"
-          $devDrive = "${{ env.DEV_DRIVE }}"
+          # $devDrive = "${{ env.DEV_DRIVE }}"
           
-          # Directories to move/symlink
+          # Directories to create/symlink
           $dirsToLink = @("3rdParty", "build", ".o3de", "AutomatedTesting\Cache", "AutomatedTesting\user", ".ccache")
           
           echo "Creating base directories on Dev Drive ($devDrive)..."
@@ -95,13 +95,13 @@ jobs:
             New-Item -Path $targetPath -ItemType Directory -Force | Out-Null
           }
           
-          echo "Creating symlinks in workspace ($workspace)..."
-          foreach ($dir in $dirsToLink) {
-            $linkPath = Join-Path $workspace $dir
-            $targetPath = Join-Path $devDrive $dir
-            echo "Creating symlink $linkPath -> $targetPath"
-            New-Item -ItemType SymbolicLink -Path $linkPath -Target $targetPath -Force | Out-Null
-          }
+          # echo "Creating symlinks in workspace ($workspace)..."
+          # foreach ($dir in $dirsToLink) {
+          #   $linkPath = Join-Path $workspace $dir
+          #   $targetPath = Join-Path $devDrive $dir
+          #   echo "Creating symlink $linkPath -> $targetPath"
+          #   New-Item -ItemType SymbolicLink -Path $linkPath -Target $targetPath -Force | Out-Null
+          # }
           
           echo "Updating USERPROFILE\.o3de symlink..."
           $userProfileO3deLink = Join-Path $env:USERPROFILE ".o3de"
@@ -118,7 +118,7 @@ jobs:
           store_cache: false
           restore_cache: false
           ccache_options: |
-            max_size=15G
+            max_size=5G
             cache_dir=${{ github.workspace }}\.ccache
       
       - name: Determine Artifact Name

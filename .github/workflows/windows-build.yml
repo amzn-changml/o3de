@@ -60,53 +60,17 @@ jobs:
         with:
           show-progress: false
 
-      - name: Display System Info
-        run: |
-          Get-ComputerInfo -Property OsName, OsVersion, CsProcessors, CsTotalPhysicalMemory | Format-List
-          Get-Volume | Format-Table -AutoSize DriveLetter, FileSystemLabel, FileSystem, DriveType, HealthStatus, SizeRemaining, Size
-
       - name: Git LFS pull
         # Minimal pull for profile builds, otherwise pull all
         run: |
-            git config --global core.symlink true
             git lfs install
             if ("${{ inputs.type }}" -eq "profile") { git lfs pull --include "*.ico,*.bmp" } else { git lfs pull }
-          
-      # - name: Setup Dev Drive
-      #   uses: samypr100/setup-dev-drive@v3
-      #   with:
-      #     drive-size: 150GB
-      #     drive-format: NTFS
-      #     trusted-dev-drive: true
 
-      - name: Setup Dev Drive Directories and Symlinks
-        # Create target folders on Dev Drive (E:) and symlink them from the workspace (D:)
+      - name: Setup 3p, user, and build folders
+        # Symlink the .o3de folder to the github workspace to avoid permission issues
         run: |
-          $workspace = "${{ github.workspace }}"
-          # $devDrive = "${{ env.DEV_DRIVE }}"
-          
-          # Directories to create/symlink
-          $dirsToLink = @("3rdParty", "build", ".o3de", "AutomatedTesting\Cache", "AutomatedTesting\user", ".ccache")
-          
-          echo "Creating base directories on Dev Drive ($devDrive)..."
-          foreach ($dir in $dirsToLink) {
-            $targetPath = Join-Path $workspace $dir
-            echo "Creating $targetPath..."
-            New-Item -Path $targetPath -ItemType Directory -Force | Out-Null
-          }
-          
-          # echo "Creating symlinks in workspace ($workspace)..."
-          # foreach ($dir in $dirsToLink) {
-          #   $linkPath = Join-Path $workspace $dir
-          #   $targetPath = Join-Path $devDrive $dir
-          #   echo "Creating symlink $linkPath -> $targetPath"
-          #   New-Item -ItemType SymbolicLink -Path $linkPath -Target $targetPath -Force | Out-Null
-          # }
-          
-          echo "Updating USERPROFILE\.o3de symlink..."
-          $userProfileO3deLink = Join-Path $env:USERPROFILE ".o3de"
-          $o3deTarget = Join-Path $workspace ".o3de"
-          New-Item -ItemType SymbolicLink -Path $userProfileO3deLink -Target $o3deTarget -Force | Out-Null
+          "3rdParty", "build", ".o3de", "AutomatedTesting\Cache", "AutomatedTesting\user" `| % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
+          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@f84f86840109403e0fe0ded8b0766c9633affa16 # v1.4.7
@@ -121,20 +85,8 @@ jobs:
             max_size=5G
             cache_dir=${{ github.workspace }}\.ccache
       
-      - name: Determine Artifact Name
-        # Set artifact name based on job type
-        id: artifact-name
-        run: |
-          $baseName = "O3DE-${{ inputs.platform }}-${{ inputs.config }}"
-          if ("${{ inputs.type }}" -match "test") {
-            $artifactName = "$baseName-test-build"
-          } else {
-            $artifactName = "$baseName-build"
-          }
-          echo "name=$artifactName" >> $env:GITHUB_OUTPUT
-      
       - name: Get last run
-        # Get the last runid of the target branch of a PR or the current branch for the specific artifact type
+        # Get the last runid of the target branch of a PR or the current branch
         uses: dawidd6/action-download-artifact@07ab29fd4a977ae4d2b275087cf67563dfdf0295 # v9
         id: last-run-id
         if: ${{ inputs.last_artifact }}
@@ -144,60 +96,48 @@ jobs:
           workflow_conclusion: ""
           branch: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.ref_name }}
           search_artifacts: true
-          name: ${{ steps.artifact-name.outputs.name }} # Use dynamic name
+          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           dry_run: true
-    
+
       - name: Set artifact run ID
+        # Set the run ID of the artifact to be used for the download step
         id: set-artifact-run-id
         if: steps.last-run-id.outcome == 'success' && inputs.last_artifact == true
         run: |
           $runId = ${{ fromJSON(steps.last-run-id.outputs.artifacts)[0].workflow_run.id }}
           echo "artifact_run_id=$runId" >> $env:GITHUB_OUTPUT
-          echo "Using artifacts from previous run: $runId for artifact ${{ steps.artifact-name.outputs.name }}"
-    
-      - name: Restore last artifact cache
-        # Restore the specific artifact from the "Get last run" step if last_artifact is enabled
+          echo "Using artifacts from previous run: $runId"
+      
+      - name: Restore artifact cache
+        # Restore the artifact from the "Get last run" step or from the current run
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        id: restore-last-artifact-cache
-        if: inputs.last_artifact == true # Only run if cross-run cache is enabled
-        continue-on-error: true # Allow fallback to current run dependency
-        with:
-          name: ${{ steps.artifact-name.outputs.name }} # Use dynamic name (either *-build or *-test-build)
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.set-artifact-run-id.outputs.artifact_run_id }} # Use the ID from the last run
-
-      - name: Restore current run dependency artifact
-        # If last artifact restore failed/skipped, AND this job type needs an artifact from a previous job in this run
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        id: restore-current-run-dependency-artifact
-        if: >
-          steps.restore-last-artifact-cache.outcome != 'success' && 
-          (contains(inputs.type, 'asset') || contains(inputs.type, 'test'))
+        id: restore-artifact-cache
         continue-on-error: true
         with:
-          # Asset and Test jobs depend on the non-test artifact from the previous stage
-          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build 
+          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.run_id }} # Use current run ID
+          run-id: ${{ steps.set-artifact-run-id.outputs.artifact_run_id || github.run_id }}
 
       - name: Extract artifact
-        # Extract the tar file from the artifact (either from last run or current run dependency)
+        # Extract the tar file from the artifact
         id: extract-artifact
+        if: ${{ steps.restore-artifact-cache.outcome == 'success' }}
         continue-on-error: true
-        # Run if either restore step was successful
-        if: steps.restore-last-artifact-cache.outcome == 'success' || steps.restore-current-run-dependency-artifact.outcome == 'success'
         run: |        
           if (Test-Path ${{ github.workspace }}\cache.tar) {
-            # Existing extraction logic based on clean_artifacts
             if ("${{ inputs.clean_artifacts }}" -eq "assets") {
+              # Skip AutomatedTesting folders
               tar -xvpf ${{ github.workspace }}\cache.tar --exclude="AutomatedTesting/*"
             } elseif ("${{ inputs.clean_artifacts }}" -eq "all") {
+              # Only extract python and 3rdParty folders
               tar -xvpf ${{ github.workspace }}\cache.tar python 3rdParty/*
             } else {
+              # Extract everything (default behavior)
               tar -xvpf ${{ github.workspace }}\cache.tar
             }
             rm ${{ github.workspace }}\cache.tar
           }
+      
       
       - name: Setup cmake
         # Pin the version of cmake
@@ -228,10 +168,9 @@ jobs:
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }}
       
       - name: Compress artifacts
-        # Compress with posix format
+        # Compress with posix format to preserve permissions and timestamps at nanosecond precision
         id: compress-artifacts
-        # Run if not cancelled
-        if: ${{ !cancelled() }}
+        if: ${{ (steps.extract-artifact.outcome == 'success' || steps.extract-artifact.outcome == 'skipped') && !cancelled() }}
         continue-on-error: true
         run: |
           try {
@@ -244,13 +183,13 @@ jobs:
           } catch {
             echo "Warning: Error during tar compression"
           }
-  
+
       - name: Save artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: ${{ steps.compress-artifacts.conclusion == 'success' && !cancelled() }}
         continue-on-error: true
         with:
-          name: ${{ steps.artifact-name.outputs.name }} # Use dynamic name
+          name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           compression-level: 1
           overwrite: true
           path: |

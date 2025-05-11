@@ -39,8 +39,8 @@ run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 env:          
   O3DE_ENABLE_COMPILER_CACHE: true
   O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\Chocolatey\bin\ccache.exe'
-  TEMP: '${{ github.workspace }}:\temp' # Set temp folders to the workspace drive as the boot drive is slow
-  TMP: '${{ github.workspace }}:\temp'
+  TEMP: '${{ github.workspace }}\temp' # Set temp folders to the workspace drive as the boot drive is slow
+  TMP: '${{ github.workspace }}\temp'
 
 # Note: All 3P Github Actions use the commit hash for security reasons 
 # Avoid using the tag version, which is vulnerable to supply chain attacks

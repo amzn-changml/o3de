@@ -11,12 +11,19 @@ name: AR
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+        CLEAN_ARTIFACTS:
+            type: boolean
+            description: Utilize clean artifacts for next build
+            required: false
+            default: false
   push:
     branches:
       - main
       - development
       - stabilization/**
       - hotfix/**
+      - AR-*
 
 jobs:
 
@@ -39,7 +46,7 @@ jobs:
             image: windows-2022
             platform: Windows
             type: profile
-            last_artifact: true
+            last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }} # If CLEAN_ARTIFACTS is false, then this returns true
     
     Windows-Asset:
         needs: Windows-Profile
@@ -69,7 +76,7 @@ jobs:
             image: windows-2022
             platform: Windows
             type: release
-            last_artifact: true
+            last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }} # If CLEAN_ARTIFACTS is false, then this returns true
 
 #### Linux Build ####
     Linux-Profile:
@@ -80,7 +87,7 @@ jobs:
             image: ubuntu-22.04
             platform: Linux
             type: profile
-            last_artifact: true
+            last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }} # If CLEAN_ARTIFACTS is false, then this returns true
 
     Linux-Asset:
         needs: Linux-Profile
@@ -112,7 +119,7 @@ jobs:
             image: windows-2022
             platform: Android
             type: profile
-            last_artifact: true
+            last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }} # If CLEAN_ARTIFACTS is false, then this returns true
 
     Android-Asset:
         uses: ./.github/workflows/android-build.yml
@@ -122,7 +129,7 @@ jobs:
             image: windows-2022
             platform: Android
             type: asset_profile
-            last_artifact: true
+            last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }} # If CLEAN_ARTIFACTS is false, then this returns true
             
     Android-Gradle:
         uses: ./.github/workflows/android-build.yml
@@ -132,4 +139,4 @@ jobs:
             image: windows-2022
             platform: Android
             type: gradle
-            last_artifact: true
+            last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }} # If CLEAN_ARTIFACTS is false, then this returns true

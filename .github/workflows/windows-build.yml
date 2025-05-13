@@ -39,8 +39,8 @@ run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 env:          
   O3DE_ENABLE_COMPILER_CACHE: true
   O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\Chocolatey\bin\ccache.exe'
-  TEMP: '${{ github.workspace }}\temp' # Set temp folders to the workspace drive as the boot drive is slow
-  TMP: '${{ github.workspace }}\temp'
+  TEMP: '${{ runner.temp }}' # Set temp folders to the workspace drive as the boot drive is slow
+  TMP: '${{ runner.temp }}'
 
 # Note: All 3P Github Actions use the commit hash for security reasons 
 # Avoid using the tag version, which is vulnerable to supply chain attacks
@@ -67,7 +67,7 @@ jobs:
       - name: Setup 3p, user, and build folders
         # Symlink the .o3de folder to the github workspace to avoid permission issues
         run: |
-          "3rdParty", "build", ".o3de", "temp"| % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
+          "3rdParty", "build", ".o3de" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
           ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
           "AutomatedTesting\Cache", "AutomatedTesting\user" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
 
@@ -75,8 +75,8 @@ jobs:
         # Configure the page file to the workspace drive for the duration of the run
         run: |
           Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" `
-            -Name "PagingFiles" -Value "${{ github.workspace }}\pagefile.sys 8192 8192"
-          echo "Page file moved to ${{ github.workspace }}\pagefile.sys"
+            -Name "PagingFiles" -Value "${{ runner.temp }}\pagefile.sys 8192 8192"
+          echo "Page file moved to ${{ runner.temp }}\pagefile.sys"
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@f84f86840109403e0fe0ded8b0766c9633affa16 # v1.4.7

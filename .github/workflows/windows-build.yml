@@ -39,9 +39,7 @@ run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 env:          
   O3DE_ENABLE_COMPILER_CACHE: true
   O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\Chocolatey\bin\ccache.exe'
-  TEMP: ${{ runner.temp }} # Set temp folders to the workspace drive as the boot drive is slow
-  TMP: ${{ runner.temp }}
-
+  
 # Note: All 3P Github Actions use the commit hash for security reasons 
 # Avoid using the tag version, which is vulnerable to supply chain attacks
 
@@ -157,6 +155,8 @@ jobs:
         # Builds with presets in ../scripts/build/Platform/Windows/build_config.json
         env:
           LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
+          TEMP: ${{ runner.temp }} # Set temp folders to the workspace drive as the boot drive is slow
+          TMP: ${{ runner.temp }}
         run: |
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }}
       

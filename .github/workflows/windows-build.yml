@@ -156,6 +156,8 @@ jobs:
 
       - name: Start trace
         uses: chad-golden/setup-wpr/start@main
+        with:
+          start-options: -start GeneralProfile -recordtempto ${{ runner.temp }} -filemode
   
       - name: Build ${{ inputs.type }}
         # Builds with presets in ../scripts/build/Platform/Windows/build_config.json
@@ -170,7 +172,7 @@ jobs:
         if: always()
         uses: chad-golden/setup-wpr/stop@main
         with:
-          trace-file-name: D:\O3DE-${{ inputs.platform }}-${{ inputs.config }}-build.etl
+          trace-file-name: ${{ runner.temp }}\O3DE-${{ inputs.platform }}-${{ inputs.type }}-build.etl
 
       - name: Save trace
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -180,7 +182,7 @@ jobs:
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build-etl
           overwrite: true
           path: |
-            D:\O3DE-${{ inputs.platform }}-${{ inputs.config }}-build.etl
+            ${{ runner.temp }}\O3DE-${{ inputs.platform }}-${{ inputs.type }}-build.etl
       
       - name: Compress artifacts
         # Compress with posix format to preserve permissions and timestamps at nanosecond precision

@@ -88,7 +88,10 @@ jobs:
           ccache_options: |
             max_size=5G
             recompress=5
+            stats=true
+            temporary_dir=${{ runner.temp }}
             cache_dir=${{ github.workspace }}\.ccache
+            
       
       - name: Get last run
         # Get the last runid of the target branch of a PR or the current branch

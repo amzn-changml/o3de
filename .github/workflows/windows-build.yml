@@ -91,7 +91,6 @@ jobs:
             temporary_dir=${{ runner.temp }}
             cache_dir=${{ github.workspace }}\.ccache
             
-      
       - name: Get last run
         # Get the last runid of the target branch of a PR or the current branch
         uses: dawidd6/action-download-artifact@07ab29fd4a977ae4d2b275087cf67563dfdf0295 # v9
@@ -196,11 +195,10 @@ jobs:
         run: |
           try {
             tar --format=posix -cvpf ${{ github.workspace }}\cache.tar `
+              .ccache `
               .o3de\python `
               3rdParty\packages `
-              AutomatedTesting\Cache `
-              # AutomatedTesting\user `
-              .ccache
+              AutomatedTesting\Cache
           } catch {
             echo "Warning: Error during tar compression"
           }

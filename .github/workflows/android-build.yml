@@ -80,7 +80,11 @@ jobs:
           store_cache: false
           restore_cache: false
           ccache_options: |
-            max_size=15G
+            max_size=5G
+            stats=true
+            compression_level=3
+            inode_cache=true
+            temporary_dir=${{ runner.temp }}
             cache_dir=${{ github.workspace }}\.ccache
       
       - name: Get last run
@@ -160,7 +164,8 @@ jobs:
           NDK_CCACHE: ${{ env.O3DE_COMPILER_CACHE_PATH }}
           CMAKE_C_COMPILER_LAUNCHER: ${{ env.O3DE_COMPILER_CACHE_PATH }}
           CMAKE_CXX_COMPILER_LAUNCHER: ${{ env.O3DE_COMPILER_CACHE_PATH }}
-
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
         run: |
           scripts\o3de.bat register --this-engine # Resolves registration issue with gradle build
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }} 

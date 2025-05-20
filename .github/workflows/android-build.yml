@@ -82,7 +82,6 @@ jobs:
           ccache_options: |
             max_size=5G
             stats=true
-            compression_level=3
             inode_cache=true
             temporary_dir=${{ runner.temp }}
             cache_dir=${{ github.workspace }}\.ccache

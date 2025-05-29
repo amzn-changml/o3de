@@ -84,11 +84,9 @@ jobs:
           store_cache: false
           restore_cache: false
           ccache_options: |
-            max_size=10G
+            max_size=5G
             compression_level=1
             stats=true
-            inode_cache=true
-            temporary_dir=${{ runner.temp }}
             cache_dir=${{ github.workspace }}\.ccache
             
       - name: Get last run

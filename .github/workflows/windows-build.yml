@@ -154,15 +154,7 @@ jobs:
           python\get_python.bat
           echo "Installing additional python dependencies..."
           python\pip.sh install tempfile2 PyGithub
-       
-      # - name: Setup WPR
-      #   uses: chad-golden/setup-wpr@main
 
-      # - name: Start trace
-      #   uses: chad-golden/setup-wpr/start@main
-      #   with:
-      #     start-options: -start GeneralProfile -recordtempto ${{ runner.temp }} -filemode
-  
       - name: Build ${{ inputs.type }}
         # Builds with presets in ../scripts/build/Platform/Windows/build_config.json
         env:
@@ -172,22 +164,6 @@ jobs:
         run: |
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }}
 
-      # - name: Stop trace
-      #   if: always()
-      #   uses: chad-golden/setup-wpr/stop@main
-      #   with:
-      #     trace-file-name: ${{ runner.temp }}\O3DE-${{ inputs.platform }}-${{ inputs.type }}-build.etl
-
-      # - name: Save trace
-      #   uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-      #   if: always()
-      #   continue-on-error: true
-      #   with:
-      #     name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build-etl
-      #     overwrite: true
-      #     path: |
-      #       ${{ runner.temp }}\O3DE-${{ inputs.platform }}-${{ inputs.type }}-build.etl
-      
       - name: Compress artifacts
         # Compress with posix format to preserve permissions and timestamps at nanosecond precision
         # Skip compression and upload if the type is a test to reduce dirty build artifacts from previous runs

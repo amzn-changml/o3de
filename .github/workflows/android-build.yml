@@ -69,6 +69,13 @@ jobs:
           "3rdParty", "build", ".o3de" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
           ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
           "AutomatedTesting\Cache", "AutomatedTesting\user" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
+     
+      - name: Move Page File to Workspace drive
+        # Configure the page file to the workspace drive for the duration of the run
+        run: |
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" `
+            -Name "PagingFiles" -Value "${{ runner.temp }}\pagefile.sys 8192 8192"
+          echo "Page file moved to ${{ runner.temp }}\pagefile.sys"
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@f84f86840109403e0fe0ded8b0766c9633affa16 # v1.4.7
@@ -178,11 +185,10 @@ jobs:
         run: |
           try {
             tar --format=posix -cvpf ${{ github.workspace }}\cache.tar `
-              python `
+              .ccache `
+              .o3de\python `
               3rdParty\packages `
-              AutomatedTesting\Cache `
-              AutomatedTesting\user `
-              .ccache
+              AutomatedTesting\Cache            
           } catch {
             echo "Warning: Error during tar compression"
           }

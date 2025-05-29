@@ -84,9 +84,13 @@ jobs:
           store_cache: false
           restore_cache: false
           ccache_options: |
-            max_size=15G
-            cache_dir=${{ github.workspace }}/.ccache
-
+            max_size=5G
+            compression_level=5
+            stats=true
+            inode_cache=true
+            temporary_dir=${{ runner.temp }}
+            cache_dir=${{ github.workspace }}\.ccache
+            
       - name: Get last run
         # Get the last runid of the target branch of a PR or the current branch
         uses: dawidd6/action-download-artifact@07ab29fd4a977ae4d2b275087cf67563dfdf0295 # v9
@@ -183,11 +187,10 @@ jobs:
         continue-on-error: true
         run: |
           tar --format=posix -cvpf ${{ github.workspace }}/cache.tar --ignore-failed-read \
-            python \
+            .ccache \
+            .o3de/python \
             3rdParty/packages \
-            AutomatedTesting/Cache \
-            AutomatedTesting/user \
-            .ccache
+            AutomatedTesting/Cache
   
       - name: Save artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

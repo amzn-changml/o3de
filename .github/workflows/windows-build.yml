@@ -51,6 +51,10 @@ jobs:
     runs-on: ${{ inputs.image }}
 
     steps:
+      - name: Get drive info
+        run: |
+          Get-PSDrive
+          
       - name: Checkout repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -75,6 +79,10 @@ jobs:
           Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" `
             -Name "PagingFiles" -Value "${{ runner.temp }}\pagefile.sys 8192 8192"
           echo "Page file moved to ${{ runner.temp }}\pagefile.sys"
+
+      - name: Get drive info
+        run: |
+          Get-PSDrive
 
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@f84f86840109403e0fe0ded8b0766c9633affa16 # v1.4.7

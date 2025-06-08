@@ -85,7 +85,6 @@ jobs:
           restore_cache: false
           ccache_options: |
             max_size=5G
-            compression=5
             cache_dir=${{ github.workspace }}\.ccache
             
       - name: Get last run

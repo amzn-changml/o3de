@@ -43,7 +43,7 @@ jobs:
         with:
             compiler: msvc
             config: profile
-            image: windows-2022
+            image: windows-2025
             platform: Windows
             type: profile
             last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }} # If CLEAN_ARTIFACTS is false, then this returns true
@@ -54,7 +54,7 @@ jobs:
         with:
             compiler: msvc
             config: profile
-            image: windows-2022
+            image: windows-2025
             platform: Windows
             type: asset_profile
 
@@ -64,7 +64,7 @@ jobs:
         with:
             compiler: msvc
             config: profile
-            image: windows-2022
+            image: windows-2025
             platform: Windows
             type: test_cpu_profile
 
@@ -73,7 +73,7 @@ jobs:
         with:
             compiler: msvc
             config: release
-            image: windows-2022
+            image: windows-2025
             platform: Windows
             type: release
             last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }}
@@ -116,7 +116,7 @@ jobs:
         with:
             compiler: clang
             config: profile
-            image: windows-2022
+            image: windows-2025
             platform: Android
             type: profile
             last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }}
@@ -126,7 +126,7 @@ jobs:
         with:
             compiler: msvc
             config: asset_profile
-            image: windows-2022
+            image: windows-2025
             platform: Android
             type: asset_profile
             last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }}
@@ -136,7 +136,7 @@ jobs:
         with:
             compiler: clang
             config: gradle
-            image: windows-2022
+            image: windows-2025
             platform: Android
             type: gradle
             last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }}

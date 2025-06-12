@@ -65,6 +65,7 @@ jobs:
       - name: Setup DevDrive
         uses: samypr100/setup-dev-drive@b9079d2711b01ed39de859c79c96484bfd80e078 # v3.4.1
         with:
+          drive-size: 130GB
           drive-path: "D:/dev_drive.vhdx"
           workspace-copy: true
           trusted-dev-drive: true

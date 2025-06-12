@@ -51,16 +51,6 @@ jobs:
     runs-on: ${{ inputs.image }}
 
     steps:
-      - name: Symlink if workspace is on C drive to D drive
-        run: |
-          if ("${{ github.workspace }}" -like "C:\*") {
-            Move-Item "C:\a" -Destination "D:\" -Force
-            New-Item -Path "C:\a" -ItemType SymbolicLink -Target "D:\a" -Force
-            Write-Host "Created symlink: C:\a -> D:\a"
-          } else {
-            Write-Host "Workspace is on ${{ github.workspace }}. Skipping symlink creation."
-          }
-
       - name: Checkout repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -71,20 +61,28 @@ jobs:
         run: |
             git lfs install
             if ("${{ inputs.type }}" -eq "profile") { git lfs pull --include "*.ico,*.bmp" } else { git lfs pull }
+
+      - name: Setup DevDrive
+        uses: samypr100/setup-dev-drive@b9079d2711b01ed39de859c79c96484bfd80e078 # v3.4.1
+        with:
+          drive-path: "D:/dev_drive.vhdx"
+          workspace-copy: true
+          trusted-dev-drive: true
           
       - name: Setup 3p, user, and build folders
         # Symlink the .o3de folder to the github workspace to avoid permission issues
         run: |
-          "3rdParty", "build", ".o3de" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
-          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
-          "AutomatedTesting\Cache", "AutomatedTesting\user" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
+          "3rdParty", "build", ".o3de" | % {New-Item "${{ env.DEV_DRIVE_WORKSPACE }}\$_" -ItemType 'Directory' -Force}
+          "temp" | % {New-Item "${{ env.DEV_DRIVE }}\$_" -ItemType 'Directory' -Force}
+          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE_WORKSPACE }}\$_ -Force}
+          "AutomatedTesting\Cache", "AutomatedTesting\user" | % {New-Item "${{ env.DEV_DRIVE_WORKSPACE }}\$_" -ItemType 'Directory' -Force}
 
       - name: Move Page File to Workspace drive
         # Configure the page file to the workspace drive for the duration of the run
         run: |
           Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" `
-            -Name "PagingFiles" -Value "${{ runner.temp }}\pagefile.sys 8192 8192"
-          echo "Page file moved to ${{ runner.temp }}\pagefile.sys"
+            -Name "PagingFiles" -Value "${{ env.DEV_DRIVE }}\temp\pagefile.sys 8192 8192"
+          echo "Page file moved to ${{ env.DEV_DRIVE }}\temp\pagefile.sys"
 
       - name: Get drive info
         run: |
@@ -103,8 +101,8 @@ jobs:
             max_size=10G
             compression_level=5
             inode_cache=true
-            temporary_dir=${{ runner.temp }}
-            cache_dir=${{ github.workspace }}\.ccache
+            temporary_dir=${{ env.DEV_DRIVE }}\temp
+            cache_dir=${{ env.DEV_DRIVE_WORKSPACE }}\.ccache
       
       - name: Get last run
         # Get the last runid of the target branch of a PR or the current branch
@@ -145,9 +143,9 @@ jobs:
         continue-on-error: true
         if: ${{ steps.restore-artifact-cache.outcome == 'success' }}
         run: |        
-          if (Test-Path ${{ github.workspace }}\cache.tar) {          
-            tar -xvpf ${{ github.workspace }}\cache.tar
-            rm ${{ github.workspace }}\cache.tar
+          if (Test-Path ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar) {          
+            tar -xvpf ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar
+            rm ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar
           }
       
       - name: Setup cmake
@@ -171,9 +169,9 @@ jobs:
       - name: Build ${{ inputs.type }}
         # Builds with presets in ../scripts/build/Platform/Windows/build_config.json
         env:
-          LY_3RDPARTY_PATH: ${{ github.workspace }}\3rdParty
-          TEMP: ${{ runner.temp }} # Set temp folders to the workspace drive as the boot drive is slow
-          TMP: ${{ runner.temp }}
+          LY_3RDPARTY_PATH: ${{ env.DEV_DRIVE_WORKSPACE }}\3rdParty
+          TEMP: ${{ env.DEV_DRIVE }}\temp # Set temp folders to the workspace drive as the boot drive is slow
+          TMP: ${{ env.DEV_DRIVE }}\temp
         run: |
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }}
       
@@ -185,7 +183,7 @@ jobs:
         continue-on-error: true
         run: |
           try {
-            tar --format=posix -cvpf ${{ github.workspace }}\cache.tar `
+            tar --format=posix -cvpf ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar `
               .ccache `
               .o3de\python `
               3rdParty\packages `
@@ -203,4 +201,4 @@ jobs:
           compression-level: 1
           overwrite: true
           path: |
-            ${{ github.workspace }}\cache.tar
+            ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar

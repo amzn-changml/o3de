@@ -67,6 +67,7 @@ jobs:
         with:
           drive-size: 130GB
           drive-path: "D:/dev_drive.vhdx"
+          drive-type: Fixed
           workspace-copy: true
           trusted-dev-drive: true
           

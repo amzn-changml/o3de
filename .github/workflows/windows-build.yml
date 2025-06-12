@@ -136,6 +136,7 @@ jobs:
         with:
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ env.DEV_DRIVE_WORKSPACE }}
           run-id: ${{ steps.set-artifact-run-id.outputs.artifact_run_id || github.run_id }}
 
       - name: Extract artifact
@@ -160,6 +161,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
 
       - name: Configure environment
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: |
           echo "Installing dependencies"
           echo "Getting python..."
@@ -169,6 +171,7 @@ jobs:
           
       - name: Build ${{ inputs.type }}
         # Builds with presets in ../scripts/build/Platform/Windows/build_config.json
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         env:
           LY_3RDPARTY_PATH: ${{ env.DEV_DRIVE_WORKSPACE }}\3rdParty
           TEMP: ${{ env.DEV_DRIVE }}\temp # Set temp folders to the workspace drive as the boot drive is slow
@@ -182,6 +185,7 @@ jobs:
         id: compress-artifacts
         if: ${{ (steps.extract-artifact.outcome == 'success' || steps.extract-artifact.outcome == 'skipped') && !cancelled() && !contains(inputs.type, 'test') }}
         continue-on-error: true
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: |
           try {
             tar --format=posix -cvpf ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar `

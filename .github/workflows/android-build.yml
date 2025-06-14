@@ -75,11 +75,9 @@ jobs:
       - name: Setup 3p, user, and build folders
         # Symlink the .o3de folder to the github workspace to avoid permission issues
         run: |
-          "3rdParty", "build", ".o3de", "build\windows\_deps" | % {New-Item "${{ env.DEV_DRIVE_WORKSPACE }}\$_" -ItemType 'Directory' -Force}
-          "build\windows\_deps" | % {New-Item "${{ github.workspace }}\$_" -ItemType 'Directory' -Force}
+          "3rdParty", "build", ".o3de" | % {New-Item "${{ env.DEV_DRIVE_WORKSPACE }}\$_" -ItemType 'Directory' -Force}
           "temp" | % {New-Item "${{ env.DEV_DRIVE }}\$_" -ItemType 'Directory' -Force}
           ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE_WORKSPACE }}\$_ -Force}
-          "build\windows\_deps" | % {New-Item -Path ${{ env.DEV_DRIVE_WORKSPACE }}\$_ -ItemType SymbolicLink -Target ${{ github.workspace }}\$_ -Force}
           "AutomatedTesting\Cache", "AutomatedTesting\user" | % {New-Item "${{ env.DEV_DRIVE_WORKSPACE }}\$_" -ItemType 'Directory' -Force}
 
       - name: Move Page File to Workspace drive
@@ -104,7 +102,6 @@ jobs:
           restore_cache: false
           ccache_options: |
             max_size=10G
-            compression_level=5
             inode_cache=true
             temporary_dir=${{ env.DEV_DRIVE }}\temp
             cache_dir=${{ env.DEV_DRIVE_WORKSPACE }}\.ccache

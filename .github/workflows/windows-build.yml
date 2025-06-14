@@ -148,6 +148,7 @@ jobs:
         id: extract-artifact
         continue-on-error: true
         if: ${{ steps.restore-artifact-cache.outcome == 'success' }}
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: |        
           if (Test-Path ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar) {          
             tar -xvpf ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar

@@ -198,3 +198,15 @@ jobs:
           overwrite: true
           path: |
             ${{ github.workspace }}/cache.tar
+
+  Retry:
+    # This step will retry the build for unstable steps like Asset or Test
+    needs: Build
+    if: failure() && fromJSON(github.run_attempt) < 3
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          GH_DEBUG: api
+        run: gh workflow run retry-build.yml -F run_id=${{ github.run_id }}

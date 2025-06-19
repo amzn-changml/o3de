@@ -39,6 +39,8 @@ run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 env:          
   O3DE_ENABLE_COMPILER_CACHE: true
   O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\Chocolatey\bin\ccache.exe'
+  MSVC_TOOLSET_VERSION: '14.29' # MSVC 2019 Toolset
+  MSVC_PLATFORM_TOOLSET: 'v142'
 
 # Note: All 3P Github Actions use the commit hash for security reasons 
 # Avoid using the tag version, which is vulnerable to supply chain attacks
@@ -157,9 +159,19 @@ jobs:
         with:
           cmakeVersion: "~3.30.0" 
 
+      - name: Install specific MSVC toolset
+        # Install and pin the MSVC toolset to support minimum required versions
+        run: |
+          & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" modify `
+          --installPath "${env:ProgramFiles}\Microsoft Visual Studio\2022\Enterprise" `
+          --add "Microsoft.VisualStudio.Component.VC.${{ env.MSVC_TOOLSET_VERSION }}.x86.x64" --quiet
+          echo "CMAKE_GENERATOR_TOOLSET=${{ env.MSVC_PLATFORM_TOOLSET }},version=${{ env.MSVC_TOOLSET_VERSION }}" >> $env:GITHUB_ENV
+
       - name: Set MSBuild options
         # Configuire VS environment variables through the developer command prompt for MSVC
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+            toolset: ${{ env.MSVC_TOOLSET_VERSION }}
 
       - name: Configure environment
         working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}

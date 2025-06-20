@@ -102,6 +102,7 @@ jobs:
           ccache_options: |
             max_size=10G
             inode_cache=true
+            depend_mode=true
             temporary_dir=${{ env.DEV_DRIVE }}\temp
             cache_dir=${{ env.DEV_DRIVE_WORKSPACE }}\.ccache
       
@@ -179,32 +180,17 @@ jobs:
           $env:TEMP = "${{ env.DEV_DRIVE }}\temp"
           $env:TMP = "${{ env.DEV_DRIVE }}\temp"
           python\python.cmd -u scripts\build\ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }}
-      
-      - name: Compress artifacts
-        # Compress with posix format to preserve permissions and timestamps at nanosecond precision
-        # Skip compression and upload if the type is a test to reduce dirty build artifacts from previous runs
-        id: compress-artifacts
-        if: ${{ (steps.extract-artifact.outcome == 'success' || steps.extract-artifact.outcome == 'skipped') && !cancelled() && !contains(inputs.type, 'test') }}
-        continue-on-error: true
-        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
-        run: |
-          try {
-            tar --format=posix -cvpf ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar `
-              .ccache `
-              .o3de\python `
-              3rdParty\packages `
-              AutomatedTesting\Cache
-          } catch {
-            echo "Warning: Error during tar compression"
-          }
   
       - name: Save artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: ${{ steps.compress-artifacts.conclusion == 'success' && !cancelled() && !contains(inputs.type, 'test') }}
+        if: ${{ !cancelled() && !contains(inputs.type, 'test') }}
         continue-on-error: true
         with:
           name: O3DE-${{ inputs.platform }}-${{ inputs.config }}-build
           compression-level: 1
           overwrite: true
           path: |
-            ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar
+              ${{ env.DEV_DRIVE_WORKSPACE }}\.ccache `
+              ${{ env.DEV_DRIVE_WORKSPACE }}\.o3de\python `
+              ${{ env.DEV_DRIVE_WORKSPACE }}\3rdParty\packages `
+              ${{ env.DEV_DRIVE_WORKSPACE }}\AutomatedTesting\Cache

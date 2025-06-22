@@ -38,7 +38,7 @@ run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 # Activate compiler cache
 env:          
   O3DE_ENABLE_COMPILER_CACHE: true
-  O3DE_COMPILER_CACHE_PATH: 'C:\ProgramData\Chocolatey\bin\ccache.exe'
+  O3DE_COMPILER_CACHE_PATH: "$env:USERPROFILE/.cargo/bin"
 
 # Note: All 3P Github Actions use the commit hash for security reasons 
 # Avoid using the tag version, which is vulnerable to supply chain attacks
@@ -86,24 +86,35 @@ jobs:
             -Name "PagingFiles" -Value "${{ env.DEV_DRIVE }}\temp\pagefile.sys 8192 8192"
           echo "Page file moved to ${{ env.DEV_DRIVE }}\temp\pagefile.sys"
 
-      - name: Get drive info
+      - name: Get drive info and set sccache variables
         run: |
           Get-PSDrive
+          echo "SCCACHE_DIR=${{ env.DEV_DRIVE_WORKSPACE }}\.sccache" >> $env:GITHUB_OUTPUT
 
-      - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@f84f86840109403e0fe0ded8b0766c9633affa16 # v1.4.7
+      # - name: Setup ccache
+      #   uses: Chocobo1/setup-ccache-action@f84f86840109403e0fe0ded8b0766c9633affa16 # v1.4.7
+      #   continue-on-error: true
+      #   if: always()
+      #   with:
+      #     windows_compile_environment: msvc
+      #     prepend_symlinks_to_path: false
+      #     store_cache: false
+      #     restore_cache: false
+      #     ccache_options: |
+      #       max_size=10G
+      #       inode_cache=true
+      #       temporary_dir=${{ env.DEV_DRIVE }}\temp
+      #       cache_dir=${{ env.DEV_DRIVE_WORKSPACE }}\.ccache
+      
+      - name: Setup sccache
+        uses: hendrikmuhs/ccache-action@63069e3931dedbf3b63792097479563182fe70d1 # v1.2.18
         continue-on-error: true
         if: always()
         with:
-          windows_compile_environment: msvc
-          prepend_symlinks_to_path: false
-          store_cache: false
-          restore_cache: false
-          ccache_options: |
-            max_size=10G
-            inode_cache=true
-            temporary_dir=${{ env.DEV_DRIVE }}\temp
-            cache_dir=${{ env.DEV_DRIVE_WORKSPACE }}\.ccache
+          variant: sccache
+          restore: false
+          save: false
+          max-size: 10G
       
       - name: Get last run
         # Get the last runid of the target branch of a PR or the current branch
@@ -190,7 +201,7 @@ jobs:
         run: |
           try {
             tar --format=posix -cvpf ${{ env.DEV_DRIVE_WORKSPACE }}\cache.tar `
-              .ccache `
+              .sccache `
               .o3de\python `
               3rdParty\packages `
               AutomatedTesting\Cache

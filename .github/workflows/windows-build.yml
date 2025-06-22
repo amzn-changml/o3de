@@ -38,7 +38,7 @@ run-name: ${{ inputs.platform }} - ${{ inputs.type }}
 # Activate compiler cache
 env:          
   O3DE_ENABLE_COMPILER_CACHE: true
-  O3DE_COMPILER_CACHE_PATH: "$env:USERPROFILE/.cargo/bin"
+  O3DE_COMPILER_CACHE_PATH: "C:/Users/runneradmin/.cargo/bin"
 
 # Note: All 3P Github Actions use the commit hash for security reasons 
 # Avoid using the tag version, which is vulnerable to supply chain attacks

@@ -100,8 +100,8 @@ jobs:
           store_cache: false
           restore_cache: false
           ccache_options: |
-            max_size=5G
-            compression_level=2
+            max_size=10G
+            compression_level=4
             inode_cache=true
             temporary_dir=${{ env.DEV_DRIVE }}\temp
             cache_dir=${{ env.DEV_DRIVE_WORKSPACE }}\.ccache

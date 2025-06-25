@@ -159,9 +159,9 @@
     "PARAMETERS": {
       "CONFIGURATION": "profile",
       "OUTPUT_DIRECTORY": "build\\windows",
-      "CMAKE_OPTIONS": "-DCMAKE_SYSTEM_VERSION=10.0 -DO3DE_TEST_IMPACT_INSTRUMENTATION_BIN=%TEST_IMPACT_WIN_BINARY%",
+      "CMAKE_OPTIONS": "-DCMAKE_SYSTEM_VERSION=10.0",
       "CMAKE_LY_PROJECTS": "AutomatedTesting",
-      "CMAKE_TARGET": "ALL_BUILD",
+      "CMAKE_TARGET": "all",
       "CMAKE_NATIVE_BUILD_ARGS": "/m /nologo"
     }
   },

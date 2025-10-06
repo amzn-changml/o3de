@@ -196,7 +196,7 @@ jobs:
             echo "CMAKE_GENERATOR_TOOLSET=${{ inputs.msvc_platform_toolset }},version=${{ inputs.msvc_toolset_version }}" >> $env:GITHUB_ENV
           } else {
             # CMake 3.24: omit 'version='; MSBuild line is selected by msvc-dev-cmd
-            echo "CMAKE_GENERATOR_TOOLSET=${{ inputs.msvc_platform_toolset }} >> $env:GITHUB_ENV
+            echo "CMAKE_GENERATOR_TOOLSET=${{ inputs.msvc_platform_toolset }}" >> $env:GITHUB_ENV
           }
 
       - name: Install specific MSVC toolset

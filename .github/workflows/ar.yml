@@ -116,6 +116,21 @@ jobs:
             msvc_platform_toolset: 'v142'
             cmake_version: '~3.24'
 
+
+    Windows-Release-Latest:
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.windows_build }}
+        uses: ./.github/workflows/windows-build.yml
+        with:
+            compiler: msvc
+            config: release
+            image: windows-2022
+            platform: Windows
+            type: release
+            last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }}
+            msvc_toolset_version: '14.29'
+            msvc_platform_toolset: 'v142'
+            cmake_version: '~4.1.2'
+
 #### Linux Build ####
     Linux-Profile:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.linux_build }}
@@ -187,6 +202,22 @@ jobs:
             ndk_version: '25.1.8937393'
             gradle_version: '8.12'
             cmake_version: '~3.24'
+
+    Android-Asset-Latest:
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.android_build }}
+        uses: ./.github/workflows/android-build.yml
+        with:
+            compiler: msvc
+            config: asset_profile
+            image: windows-2022
+            platform: Android
+            type: asset_profile
+            last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }}
+            msvc_toolset_version: '14.29'
+            msvc_platform_toolset: 'v142'
+            ndk_version: '25.1.8937393'
+            gradle_version: '8.12'
+            cmake_version: '~4.1.2'
             
     Android-Gradle:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.android_build }}

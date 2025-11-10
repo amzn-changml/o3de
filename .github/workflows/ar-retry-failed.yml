@@ -1,0 +1,56 @@
+#
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+#
+
+name: AR Retry Failed Jobs
+
+on:
+  workflow_run:
+    workflows: ["AR"]
+    types: [completed]
+
+jobs:
+  retry-failed:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - name: Display workflow run information
+        run: |
+          echo "Workflow: ${{ github.event.workflow_run.name }}"
+          echo "Run ID: ${{ github.event.workflow_run.id }}"
+          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "Attempt: ${{ github.event.workflow_run.run_attempt }}"
+          echo "Branch: ${{ github.event.workflow_run.head_branch }}"
+
+      - name: Check if retry limit reached
+        id: check-retry
+        run: |
+          # Set a maximum number of retry attempts to prevent infinite loops
+          MAX_ATTEMPTS=3
+          CURRENT_ATTEMPT=${{ github.event.workflow_run.run_attempt }}
+          
+          if [ $CURRENT_ATTEMPT -ge $MAX_ATTEMPTS ]; then
+            echo "should_retry=false" >> $GITHUB_OUTPUT
+            echo "Maximum retry attempts ($MAX_ATTEMPTS) reached. Skipping retry."
+          else
+            echo "should_retry=true" >> $GITHUB_OUTPUT
+            echo "Current attempt: $CURRENT_ATTEMPT. Will retry failed jobs."
+          fi
+
+      - name: Retry failed jobs
+        if: steps.check-retry.outputs.should_retry == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Retrying failed jobs for workflow run ID: ${{ github.event.workflow_run.id }}"
+          gh run rerun ${{ github.event.workflow_run.id }} --failed -R ${{ github.repository }}
+
+      - name: Retry limit reached notification
+        if: steps.check-retry.outputs.should_retry == 'false'
+        run: |
+          echo "::warning::Maximum retry attempts reached for workflow run ${{ github.event.workflow_run.id }}. Manual intervention may be required."
+

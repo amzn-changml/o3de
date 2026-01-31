@@ -68,6 +68,11 @@ jobs:
         run: |
           mkdir -p .o3de build 3rdParty && ln -sf "$(pwd)/.o3de" ~/.o3de
 
+      - name: Install GNU tar
+        # BSD tar on macOS doesn't support --ignore-failed-read, install GNU tar
+        run: |
+          brew install gnu-tar
+
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@f84f86840109403e0fe0ded8b0766c9633affa16 # v1.4.7
         continue-on-error: true
@@ -135,7 +140,7 @@ jobs:
         if: ${{ steps.restore-artifact-cache.outcome == 'success' }}
         run: |
           if [ -f ${{ github.workspace }}/cache.tar ]; then
-            tar -xvpf ${{ github.workspace }}/cache.tar --ignore-failed-read
+            gtar -xvpf ${{ github.workspace }}/cache.tar --ignore-failed-read
             rm ${{ github.workspace }}/cache.tar
             ccache --zero-stats --cleanup
           fi
@@ -172,7 +177,7 @@ jobs:
         if: ${{ (steps.extract-artifact.outcome == 'success' || steps.extract-artifact.outcome == 'skipped') && !cancelled() && !contains(inputs.type, 'test') }}
         continue-on-error: true
         run: |
-          tar --format=posix -cvpf ${{ github.workspace }}/cache.tar --ignore-failed-read \
+          gtar --format=posix -cvpf ${{ github.workspace }}/cache.tar --ignore-failed-read \
             .ccache \
             .o3de/python/downloaded_packages \
             3rdParty/downloaded_packages \

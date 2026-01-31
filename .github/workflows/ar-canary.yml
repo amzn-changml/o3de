@@ -8,7 +8,7 @@
 
 name: AR Canary
 
-run-name: AR Canary - Latest Compilers
+run-name: AR Canary
 
 on:
   workflow_dispatch:
@@ -19,34 +19,25 @@ on:
             required: false
             default: false
         windows_build:
-            description: 'Build Windows (MSVC v143 latest)'
+            description: 'Build Windows'
             required: false
             default: true
             type: boolean
         linux_build:
-            description: 'Build Linux (clang-18 on ubuntu-24.04)'
+            description: 'Build Linux'
             required: false
             default: true
             type: boolean
         mac_build:
-            description: 'Build Mac (macos-14 M1)'
+            description: 'Build Mac'
             required: false
             default: true
             type: boolean
 
 jobs:
 
-# AR Canary tests builds with the latest available compilers on each platform.
-# This serves as an early warning system to catch compatibility issues before
-# they affect the main AR workflow.
-#
-# Platform configurations:
-# - Windows: MSVC v143 (latest toolset, no version pinning)
-# - Linux: clang-18 on ubuntu-24.04
-# - Mac: Apple Clang via Xcode on macos-14 (M1 arm64)
-
-#### Windows Canary Build - MSVC v143 Latest ####
-    Windows-Canary-Profile:
+#### Windows Build ####
+    Windows-Profile:
         if: ${{ inputs.windows_build }}
         uses: ./.github/workflows/windows-build.yml
         with:
@@ -59,9 +50,9 @@ jobs:
             msvc_platform_toolset: 'v143'
             cmake_version: '~3.24'
 
-    Windows-Canary-Asset:
+    Windows-Asset:
         if: ${{ inputs.windows_build }}
-        needs: Windows-Canary-Profile
+        needs: Windows-Profile
         uses: ./.github/workflows/windows-build.yml
         with:
             compiler: msvc
@@ -72,9 +63,9 @@ jobs:
             msvc_platform_toolset: 'v143'
             cmake_version: '~3.24'
 
-    Windows-Canary-Test:
+    Windows-Test:
         if: ${{ inputs.windows_build }}
-        needs: Windows-Canary-Asset
+        needs: Windows-Asset
         uses: ./.github/workflows/windows-build.yml
         with:
             compiler: msvc
@@ -85,8 +76,8 @@ jobs:
             msvc_platform_toolset: 'v143'
             cmake_version: '~3.24'
 
-#### Linux Canary Build - clang-18 on ubuntu-24.04 ####
-    Linux-Canary-Profile:
+#### Linux Build ####
+    Linux-Profile:
         if: ${{ inputs.linux_build }}
         uses: ./.github/workflows/linux-build.yml
         with:
@@ -99,9 +90,9 @@ jobs:
             clang_version: '18'
             cmake_version: '~3.24'
 
-    Linux-Canary-Asset:
+    Linux-Asset:
         if: ${{ inputs.linux_build }}
-        needs: Linux-Canary-Profile
+        needs: Linux-Profile
         uses: ./.github/workflows/linux-build.yml
         with:
             compiler: clang
@@ -112,9 +103,9 @@ jobs:
             clang_version: '18'
             cmake_version: '~3.24'
 
-    Linux-Canary-Test:
+    Linux-Test:
         if: ${{ inputs.linux_build }}
-        needs: Linux-Canary-Asset
+        needs: Linux-Asset
         uses: ./.github/workflows/linux-build.yml
         with:
             compiler: clang
@@ -126,8 +117,8 @@ jobs:
             clang_version: '18'
             cmake_version: '~3.24'
 
-#### Mac Canary Build - macos-14 (M1 arm64) ####
-    Mac-Canary-Profile:
+#### Mac Build ####
+    Mac-Profile:
         if: ${{ inputs.mac_build }}
         uses: ./.github/workflows/mac-build.yml
         with:
@@ -139,9 +130,9 @@ jobs:
             last_artifact: ${{ inputs.CLEAN_ARTIFACTS == false }}
             cmake_version: '~3.24'
 
-    Mac-Canary-Asset:
+    Mac-Asset:
         if: ${{ inputs.mac_build }}
-        needs: Mac-Canary-Profile
+        needs: Mac-Profile
         uses: ./.github/workflows/mac-build.yml
         with:
             compiler: clang
@@ -151,9 +142,9 @@ jobs:
             type: asset_profile
             cmake_version: '~3.24'
 
-    Mac-Canary-Test:
+    Mac-Test:
         if: ${{ inputs.mac_build }}
-        needs: Mac-Canary-Asset
+        needs: Mac-Asset
         uses: ./.github/workflows/mac-build.yml
         with:
             compiler: clang

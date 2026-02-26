@@ -39,10 +39,10 @@ function(ly_upload_to_url in_url in_local_path in_file_regex)
     file(TO_NATIVE_PATH "${LY_ROOT_FOLDER}/scripts/build/tools/upload_to_s3.py" _upload_script)
 
     set(_upload_command
-        ${CPACK_LY_PYTHON_CMD} -s
+        ${CPACK_LY_PYTHON_CMD}
         -u ${_upload_script}
         --base_dir ${in_local_path}
-        --file_regex="${in_file_regex}"
+        --file_regex ${in_file_regex}
         --bucket ${_bucket}
         --key_prefix ${_prefix}
         --extra_args ${_extra_args}
@@ -51,6 +51,8 @@ function(ly_upload_to_url in_url in_local_path in_file_regex)
     if(CPACK_AWS_PROFILE)
         list(APPEND _upload_command --profile ${CPACK_AWS_PROFILE})
     endif()
+
+    message(STATUS "Upload command: ${_upload_command}")
 
     execute_process(
         COMMAND ${_upload_command}

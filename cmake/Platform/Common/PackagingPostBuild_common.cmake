@@ -6,14 +6,6 @@
 #
 #
 
-# CMake 3.28 introduced CMP0153 which changes how execute_process invokes
-# .cmd/.bat files on Windows. The NEW behavior passes arguments through
-# cmd.exe /c which misinterprets special characters (pipes in --file_regex,
-# colons in Windows paths). Use the OLD behavior to invoke .cmd files directly.
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.28")
-    cmake_policy(SET CMP0153 OLD)
-endif()
-
 message(STATUS "Executing packaging postbuild...")
 
 # ly_is_s3_url

@@ -146,7 +146,11 @@ set(CPACK_PACKAGE_CHECKSUM SHA256) # Generate checksum file
 set(CPACK_PRE_BUILD_SCRIPTS ${pal_dir}/PackagingPreBuild_${PAL_HOST_PLATFORM_NAME_LOWERCASE}.cmake)
 set(CPACK_POST_BUILD_SCRIPTS ${pal_dir}/PackagingPostBuild_${PAL_HOST_PLATFORM_NAME_LOWERCASE}.cmake)
 set(CPACK_CODESIGN_SCRIPT ${pal_dir}/PackagingCodeSign_${PAL_HOST_PLATFORM_NAME_LOWERCASE}.cmake)
-set(CPACK_LY_PYTHON_CMD ${LY_PYTHON_CMD})
+# Use the venv Python executable directly instead of python.cmd/python.sh wrapper.
+# CMake 3.28+ (CMP0153) changed how execute_process invokes .cmd/.bat files on Windows,
+# passing arguments through cmd.exe /c which misinterprets special characters (pipes,
+# colons in paths). Calling the venv python.exe directly bypasses cmd.exe entirely.
+set(CPACK_LY_PYTHON_CMD "${PYTHON_VENV_PATH}/${LY_PYTHON_VENV_PYTHON}" "-s")
 
 # IMPORTANT: required to be included AFTER setting all property overrides
 include(CPack REQUIRED)

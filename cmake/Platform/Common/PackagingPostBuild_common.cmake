@@ -36,7 +36,11 @@ function(ly_upload_to_url in_url in_local_path in_file_regex)
 
     set(_extra_args [[{"ACL":"bucket-owner-full-control"}]])
 
-    file(TO_NATIVE_PATH "${LY_ROOT_FOLDER}/scripts/build/tools/upload_to_s3.py" _upload_script)
+    # Use forward slashes for the script path. file(TO_NATIVE_PATH) converts to
+    # backslashes on Windows which causes issues with cmd.exe argument parsing
+    # in CMake 3.28+ (CMP0153) where execute_process changed how it invokes
+    # .cmd/.bat files. Python handles forward slashes on Windows correctly.
+    set(_upload_script "${LY_ROOT_FOLDER}/scripts/build/tools/upload_to_s3.py")
 
     set(_upload_command
         ${CPACK_LY_PYTHON_CMD}

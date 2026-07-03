@@ -1,0 +1,378 @@
+#
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+#
+
+name: Windows Package
+
+# Reusable workflow that builds, signs, and uploads the O3DE Windows installer SDK,
+# then runs the installer smoke test (installer_test) as a separate downstream job.
+#
+# The actual build/sign/package logic lives in scripts/build/ci_build.py driven by the
+# presets in scripts/build/Platform/Windows/build_config.json. This workflow only sets
+# up the build environment (mirroring windows-build.yml) and injects the installer,
+# version, signing, and upload parameters as environment variables that ci_build.py
+# forwards to CMake/CPack.
+#
+# Signing is handled inside CPack via cmake/Platform/Windows/PackagingCodeSign_windows.cmake
+# -> scripts/signer/Platform/Windows/signer.ps1, which auto-engages MS Trusted Signing when
+# O3DE_MS_DLIB_PATH and O3DE_MS_METADATA_PATH point at a valid CodeSigning.Dlib.dll + metadata.
+#
+# This file is intended to be pulled into a separate CD repo, so it does NOT assume any
+# same-repo co-location: the engine source is checked out from engine_repo/engine_ref.
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: GitHub-hosted runner image (e.g. windows-2022).
+        required: false
+        type: string
+        default: windows-2022
+      engine_repo:
+        description: O3DE engine repository (owner/name) to check out and package.
+        required: false
+        type: string
+        default: o3de/o3de
+      engine_ref:
+        description: Branch/tag/SHA of the engine to package.
+        required: false
+        type: string
+        default: development
+      cmake_version:
+        description: CMake version constraint to install.
+        required: false
+        type: string
+        default: "4.2.3"
+      msvc_toolset_version:
+        description: MSVC toolset version to install (e.g. 14.29).
+        required: false
+        type: string
+        default: ""
+      msvc_platform_toolset:
+        description: MSVC platform toolset name (e.g. v142).
+        required: false
+        type: string
+        default: ""
+      # ── Installer / versioning parameters (forwarded to ci_build.py -> CMake/CPack) ──
+      o3de_install_version:
+        description: The O3DE version in the installer filename and engine version.
+        required: false
+        type: string
+        default: ""
+      o3de_install_display_version:
+        description: The O3DE display version in the installer filename and engine display version.
+        required: false
+        type: string
+        default: ""
+      o3de_install_build_version:
+        description: The O3DE version shown in the splash screens.
+        required: false
+        type: string
+        default: ""
+      installer_download_url:
+        description: Base URL embedded into the installer for downloading additional artifacts.
+        required: false
+        type: string
+        default: ""
+      # ── installer_test parameters ──
+      run_installer_test:
+        description: Run the installer smoke test (installer_test) after the build.
+        required: false
+        type: boolean
+        default: true
+      installer_s3_path:
+        description: "Path to the built installer in S3 (object key, leading slash), e.g. /development/Latest/Windows/o3de_installer.exe"
+        required: false
+        type: string
+        default: /development/Latest/Windows/o3de_installer.exe
+
+run-name: Windows Package - ${{ inputs.engine_ref }}
+
+# Note: All 3P Github Actions use the commit hash for security reasons
+# Avoid using the tag version, which is vulnerable to supply chain attacks
+
+jobs:
+  # ── Build + sign + upload the installer SDK ────────────────────────────────
+  Build-Installer:
+    runs-on: ${{ inputs.image }}
+    # Surface whether signing/upload were configured so the test job can react.
+    outputs:
+      signing_configured: ${{ steps.signing-env.outputs.signing_configured }}
+      installer_s3_uri: ${{ steps.upload-env.outputs.installer_s3_uri }}
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: C:\ProgramData\Chocolatey\bin\ccache.exe
+      CMAKE_CXX_COMPILER_LAUNCHER: C:\ProgramData\Chocolatey\bin\ccache.exe
+    steps:
+      - name: Checkout engine
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ${{ inputs.engine_repo }}
+          ref: ${{ inputs.engine_ref }}
+          show-progress: false
+
+      - name: Git LFS pull
+        run: |
+          git lfs install
+          git lfs pull
+
+      - name: Setup DevDrive
+        uses: samypr100/setup-dev-drive@b9079d2711b01ed39de859c79c96484bfd80e078 # v3.4.1
+        with:
+          drive-size: 130GB
+          drive-format: NTFS
+          drive-path: "D:/dev_drive.vhdx"
+          workspace-copy: true
+          trusted-dev-drive: true
+
+      - name: Setup 3p, user, and build folders
+        # Symlink the .o3de folder to the github workspace to avoid permission issues
+        run: |
+          "3rdParty", "build", ".o3de" | % {New-Item "${{ env.DEV_DRIVE_WORKSPACE }}\$_" -ItemType 'Directory' -Force}
+          "temp" | % {New-Item "${{ env.DEV_DRIVE }}\$_" -ItemType 'Directory' -Force}
+          ".o3de" | % {New-Item -Path $env:USERPROFILE\$_ -ItemType SymbolicLink -Target ${{ env.DEV_DRIVE_WORKSPACE }}\$_ -Force}
+
+      - name: Move Page File to Workspace drive
+        run: |
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" `
+            -Name "PagingFiles" -Value "${{ env.DEV_DRIVE }}\temp\pagefile.sys 8192 8192"
+          echo "Page file moved to ${{ env.DEV_DRIVE }}\temp\pagefile.sys"
+
+      - name: Setup ccache
+        uses: chocobo1/setup-ccache-action@37c3347f8a7738e82aab7a06f276f7a12e3008fb # v1.5.3
+        continue-on-error: true
+        if: always()
+        with:
+          windows_compile_environment: msvc
+          prepend_symlinks_to_path: false
+          store_cache: false
+          restore_cache: false
+          ccache_options: |
+            cache_dir=${{ env.DEV_DRIVE_WORKSPACE }}\.ccache
+            hash_dir=false
+            inode_cache=true
+            max_size=10G
+            temporary_dir=${{ env.DEV_DRIVE }}\temp
+
+      - name: Setup cmake
+        if: ${{ inputs.cmake_version }}
+        uses: lukka/get-cmake@f176ccd3f28bda569c43aae4894f06b2435a3375 # v4.2.3
+        with:
+          cmakeVersion: "${{ inputs.cmake_version }}"
+
+      - name: Configure generator/toolset env for CMake
+        run: |
+          $cap = cmake -E capabilities | ConvertFrom-Json
+          $maj = [int]$cap.version.major
+          $min = [int]$cap.version.minor
+
+          echo "CMAKE_GENERATOR=Visual Studio 17 2022" >> $env:GITHUB_ENV
+
+          $platformToolset = "${{ inputs.msvc_platform_toolset }}"
+          $toolsetVersion  = "${{ inputs.msvc_toolset_version }}"
+
+          if (![string]::IsNullOrWhiteSpace($platformToolset)) {
+            if (($maj -gt 3 -or ($maj -eq 3 -and $min -ge 25)) -and ![string]::IsNullOrWhiteSpace($toolsetVersion)) {
+              echo "CMAKE_GENERATOR_TOOLSET=$platformToolset,version=$toolsetVersion" >> $env:GITHUB_ENV
+            } else {
+              echo "CMAKE_GENERATOR_TOOLSET=$platformToolset" >> $env:GITHUB_ENV
+            }
+          }
+
+      - name: Install specific MSVC toolset
+        if: ${{ inputs.msvc_toolset_version && inputs.msvc_platform_toolset }}
+        run: |
+          & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" modify `
+            --installPath "${env:ProgramFiles}\Microsoft Visual Studio\2022\Enterprise" `
+            --add "Microsoft.VisualStudio.Component.VC.${{ inputs.msvc_toolset_version }}.x86.x64" --quiet --wait
+
+      - name: Set MSBuild options (default toolset)
+        if: ${{ !inputs.msvc_toolset_version }}
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+
+      - name: Set MSBuild options (pinned toolset)
+        if: ${{ inputs.msvc_toolset_version }}
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+        with:
+          toolset: ${{ inputs.msvc_toolset_version }}
+
+      - name: Configure environment
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
+        run: |
+          echo "Installing dependencies"
+          echo "Getting python..."
+          python\get_python.bat
+          echo "Installing additional python dependencies..."
+          python\pip.sh install tempfile2 PyGithub
+
+      - name: Configure signing
+        # MS Trusted Signing in scripts/signer/Platform/Windows/signer.ps1 auto-engages when
+        # O3DE_MS_DLIB_PATH (a CodeSigning.Dlib.dll) and O3DE_MS_METADATA_PATH are present and valid.
+        # The dlib + metadata JSON are written from secrets; absent secrets => unsigned build.
+        id: signing-env
+        env:
+          O3DE_MS_DLIB_B64: ${{ secrets.O3DE_MS_DLIB_B64 }}
+          O3DE_MS_METADATA_JSON: ${{ secrets.O3DE_MS_METADATA_JSON }}
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:O3DE_MS_DLIB_B64) -or [string]::IsNullOrWhiteSpace($env:O3DE_MS_METADATA_JSON)) {
+            echo "Signing secrets not configured; producing an unsigned installer."
+            echo "signing_configured=false" >> $env:GITHUB_OUTPUT
+          } else {
+            $signDir = "${{ env.DEV_DRIVE_WORKSPACE }}\signing"
+            New-Item -Path $signDir -ItemType 'Directory' -Force | Out-Null
+            $dlibPath = "$signDir\CodeSigning.Dlib.dll"
+            $metaPath = "$signDir\metadata.json"
+            [IO.File]::WriteAllBytes($dlibPath, [Convert]::FromBase64String($env:O3DE_MS_DLIB_B64))
+            [IO.File]::WriteAllText($metaPath, $env:O3DE_MS_METADATA_JSON)
+            # Persist for the build step (ci_build.py forwards os.environ to CMake/CPack -> signer.ps1)
+            echo "O3DE_MS_DLIB_PATH=$dlibPath" >> $env:GITHUB_ENV
+            echo "O3DE_MS_METADATA_PATH=$metaPath" >> $env:GITHUB_ENV
+            echo "signing_configured=true" >> $env:GITHUB_OUTPUT
+            echo "Signing configured (MS Trusted Signing)."
+          }
+
+      - name: Compute upload/installer URI
+        # CPACK_UPLOAD_URL is the S3 prefix CPack uploads the installer to (when AWS creds are present).
+        # installer_s3_uri is the full s3:// URI the installer_test job will pull from, built from the
+        # bucket secret + installer_s3_path input. Empty bucket => no S3 upload, test falls back to artifact.
+        id: upload-env
+        env:
+          INSTALLER_S3_BUCKET: ${{ secrets.INSTALLER_S3_BUCKET }}
+        run: |
+          $bucket = "$env:INSTALLER_S3_BUCKET"
+          $s3path = "${{ inputs.installer_s3_path }}"
+          if (![string]::IsNullOrWhiteSpace($bucket)) {
+            # CPACK_UPLOAD_URL takes an s3://<bucket>/<prefix>; <version>/<host> is appended by CPack.
+            $uploadPrefix = ($bucket.TrimEnd('/')) + (Split-Path $s3path -Parent).Replace('\','/')
+            echo "CPACK_UPLOAD_URL=$uploadPrefix" >> $env:GITHUB_ENV
+            $installerUri = ($bucket.TrimEnd('/')) + $s3path
+            echo "installer_s3_uri=$installerUri" >> $env:GITHUB_OUTPUT
+            echo "Installer will be uploaded under: $uploadPrefix"
+          } else {
+            echo "installer_s3_uri=" >> $env:GITHUB_OUTPUT
+            echo "INSTALLER_S3_BUCKET not configured; skipping S3 upload."
+          }
+
+      - name: Build installer
+        # Runs the Windows installer pipe presets from scripts/build/Platform/Windows/build_config.json:
+        #   install_mono_release -> install_mono_android_api_24_release -> installer
+        # CPack signs (via signer.ps1) and uploads to CPACK_UPLOAD_URL when the relevant env is set.
+        working-directory: "${{ env.DEV_DRIVE_WORKSPACE }}"
+        timeout-minutes: 600
+        env:
+          O3DE_INSTALL_VERSION: ${{ inputs.o3de_install_version }}
+          O3DE_INSTALL_DISPLAY_VERSION: ${{ inputs.o3de_install_display_version }}
+          O3DE_INSTALL_BUILD_VERSION: ${{ inputs.o3de_install_build_version }}
+          INSTALLER_DOWNLOAD_URL: ${{ inputs.installer_download_url }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+        run: |
+          $env:LY_3RDPARTY_PATH = "${{ env.DEV_DRIVE_WORKSPACE }}\3rdParty"
+          $env:LY_PACKAGE_SERVER_URLS = "https://d1gg6ket0m44ly.cloudfront.net;https://d3t6xeg4fgfoum.cloudfront.net"
+          $env:TEMP = "${{ env.DEV_DRIVE }}\temp"
+          $env:TMP = "${{ env.DEV_DRIVE }}\temp"
+          python\python.cmd -u scripts\build\ci_build.py --platform Windows --type install_mono_release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python\python.cmd -u scripts\build\ci_build.py --platform Windows --type install_mono_android_api_24_release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python\python.cmd -u scripts\build\ci_build.py --platform Windows --type installer
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Save installer artifact
+        # Upload the locally generated installer so the test job (and consumers) can fetch it
+        # without depending on S3. CPack writes uploads under build\windows\CPackUploads.
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        with:
+          name: O3DE-Windows-installer
+          compression-level: 1
+          overwrite: true
+          if-no-files-found: warn
+          path: |
+            ${{ env.DEV_DRIVE_WORKSPACE }}\build\windows\CPackUploads\*.exe
+            ${{ env.DEV_DRIVE_WORKSPACE }}\build\windows\CPackUploads\*.msi
+            ${{ env.DEV_DRIVE_WORKSPACE }}\build\windows\CPackUploads\*.sha256
+
+  # ── Installer smoke test ───────────────────────────────────────────────────
+  # Separate job that runs after the installer build completes. It pulls down the
+  # built installer and runs the installer_test preset (pytest under
+  # cmake\Platform\Windows\Packaging\Tests), which installs the engine, creates and
+  # builds a project against it, then uninstalls.
+  Installer-Test:
+    needs: Build-Installer
+    if: ${{ inputs.run_installer_test && !cancelled() && needs.Build-Installer.result == 'success' }}
+    runs-on: ${{ inputs.image }}
+    steps:
+      - name: Checkout engine
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ${{ inputs.engine_repo }}
+          ref: ${{ inputs.engine_ref }}
+          show-progress: false
+
+      - name: Setup cmake
+        if: ${{ inputs.cmake_version }}
+        uses: lukka/get-cmake@f176ccd3f28bda569c43aae4894f06b2435a3375 # v4.2.3
+        with:
+          cmakeVersion: "${{ inputs.cmake_version }}"
+
+      - name: Set MSBuild options
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+
+      - name: Configure environment
+        run: |
+          python\get_python.bat
+          python\pip.sh install tempfile2 PyGithub boto3 pytest
+
+      - name: Download installer artifact
+        # Fallback source when no S3 bucket is configured: the installer built by Build-Installer.
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        continue-on-error: true
+        with:
+          name: O3DE-Windows-installer
+          path: ${{ github.workspace }}\installer_download
+
+      - name: Resolve installer URI
+        # Prefer the S3 URI surfaced by the build job; otherwise use the locally downloaded artifact.
+        id: resolve-uri
+        run: |
+          $s3Uri = "${{ needs.Build-Installer.outputs.installer_s3_uri }}"
+          if (![string]::IsNullOrWhiteSpace($s3Uri)) {
+            echo "installer_uri=$s3Uri" >> $env:GITHUB_OUTPUT
+            echo "Using S3 installer: $s3Uri"
+          } else {
+            $local = Get-ChildItem "${{ github.workspace }}\installer_download" -Recurse -Filter *.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($null -eq $local) {
+              echo "::error::No installer found in S3 or artifact; cannot run installer_test."
+              exit 1
+            }
+            # conftest.py treats file URIs by stripping the scheme/leading slash, so pass a plain path.
+            echo "installer_uri=$($local.FullName)" >> $env:GITHUB_OUTPUT
+            echo "Using local installer: $($local.FullName)"
+          }
+
+      - name: Run installer_test
+        # Drives the installer_test preset. INSTALLER_S3_BUCKET/INSTALLER_S3_PATH feed the default
+        # pytest --installer-uri in build_config.json; we override it via the resolved URI when needed.
+        timeout-minutes: 120
+        env:
+          INSTALLER_S3_BUCKET: ${{ secrets.INSTALLER_S3_BUCKET }}
+          INSTALLER_S3_PATH: ${{ inputs.installer_s3_path }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          RESOLVED_INSTALLER_URI: ${{ steps.resolve-uri.outputs.installer_uri }}
+        run: |
+          # When S3 is not configured, point the build_config default at the resolved local installer.
+          if ([string]::IsNullOrWhiteSpace($env:INSTALLER_S3_BUCKET)) {
+            $env:INSTALLER_S3_BUCKET = ""
+            $env:INSTALLER_S3_PATH = "$env:RESOLVED_INSTALLER_URI"
+          }
+          python\python.cmd -u scripts\build\ci_build.py --platform Windows --type installer_test
+

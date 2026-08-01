@@ -8,24 +8,9 @@
 
 name: Linux Package
 
-# Reusable workflow that builds, signs, and uploads the O3DE Linux installer SDK (.deb).
-#
-# The build/sign/package logic lives in scripts/build/ci_build.py driven by the presets in
-# scripts/build/Platform/Linux/build_config.json. This workflow sets up the build environment
-# (mirroring linux-build.yml) and injects the installer, version, signing, and upload
-# parameters as environment variables that ci_build.py forwards to CMake/CPack.
-#
-# Signing: cmake/Platform/Linux/PackagingPostBuild_linux.cmake calls
-# scripts/signer/Platform/Linux/signer.sh (GPG + dpkg-sig) on the .deb, but ONLY when
-# CPACK_UPLOAD_URL is set. signer.sh signs with the last private key in the GPG keyring, so a
-# private key must be imported (from secrets) before the build for signing to succeed.
-#
-# installer_test is not yet implemented for Linux (tracked as a future addition; the Windows
-# installer_test pytest harness has no Linux counterpart yet). The job below is stubbed so the
-# shape matches Windows and can be filled in later.
-#
-# This file is intended to be pulled into a separate CD repo, so it does NOT assume same-repo
-# co-location: the engine source is checked out from engine_repo/engine_ref.
+# Builds, signs, and uploads the O3DE Linux installer SDK (.deb). Build/sign/package
+# presets live in scripts/build/Platform/Linux/build_config.json, driven by
+# scripts/build/ci_build.py.
 
 on:
   workflow_call:
@@ -60,7 +45,6 @@ on:
         required: false
         type: string
         default: "13"
-      # ── Installer / versioning parameters (forwarded to ci_build.py -> CMake/CPack) ──
       o3de_install_version:
         description: The O3DE version in the installer filename and engine version.
         required: false
@@ -81,7 +65,6 @@ on:
         required: false
         type: string
         default: ""
-      # ── installer_test parameters (Linux test harness is a future addition) ──
       run_installer_test:
         description: Run the installer smoke test after the build (Linux harness not yet implemented).
         required: false
@@ -99,7 +82,6 @@ run-name: Linux Package - ${{ inputs.engine_ref }}
 # Avoid using the tag version, which is vulnerable to supply chain attacks
 
 jobs:
-  # ── Build + sign + upload the installer SDK (.deb) ─────────────────────────
   Build-Installer:
     runs-on: ${{ inputs.image }}
     outputs:
@@ -202,51 +184,40 @@ jobs:
           df -h
 
       - name: Configure signing
-        # signer.sh signs the .deb with the last private key in the GPG keyring (via dpkg-sig).
-        # Import the private key from a secret when present; otherwise the .deb is left unsigned.
-        # NOTE: the engine only invokes signing when CPACK_UPLOAD_URL is set (see PackagingPostBuild_linux.cmake).
+        # Import the GPG private key secret into the keyring; absent secrets produce an
+        # unsigned package. Signing only engages when CPACK_UPLOAD_URL is set.
         id: signing-env
         env:
           O3DE_GPG_PRIVATE_KEY: ${{ secrets.O3DE_GPG_PRIVATE_KEY }}
           O3DE_GPG_PASSPHRASE: ${{ secrets.O3DE_GPG_PASSPHRASE }}
         run: |
-          if [ -z "$O3DE_GPG_PRIVATE_KEY" ]; then
-            echo "Signing secrets not configured; producing an unsigned package."
-            echo "signing_configured=false" >> $GITHUB_OUTPUT
-          else
-            export GPG_TTY=$(tty || true)
-            echo "$O3DE_GPG_PRIVATE_KEY" | gpg --batch --import
-            # Cache the passphrase in gpg-agent so dpkg-sig can sign non-interactively
-            if [ -n "$O3DE_GPG_PASSPHRASE" ]; then
-              FPR=$(gpg --list-keys --with-colons | awk -F: '/fpr:/ {print $10}' | tail -n1)
-              echo "test" | gpg --batch --pinentry-mode loopback --passphrase "$O3DE_GPG_PASSPHRASE" \
-                --local-user "$FPR" --sign --armor >/dev/null 2>&1 || true
-            fi
-            echo "signing_configured=true" >> $GITHUB_OUTPUT
-            echo "Signing configured (GPG / dpkg-sig)."
-          fi
+          export GPG_TTY=$(tty || true)
+          set -o pipefail
+          python/python.sh -u scripts/build/prepare_signing.py --platform Linux | while IFS= read -r line; do
+            case "$line" in
+              "ENV "*) echo "${line#ENV }" >> "$GITHUB_ENV" ;;
+              "OUTPUT "*) echo "${line#OUTPUT }" >> "$GITHUB_OUTPUT" ;;
+              *) echo "$line" ;;
+            esac
+          done
 
       - name: Compute upload/installer URI
+        # Empty bucket secret means no S3 upload (and no signing, which requires upload)
         id: upload-env
         env:
           INSTALLER_S3_BUCKET: ${{ secrets.INSTALLER_S3_BUCKET }}
         run: |
-          BUCKET="${INSTALLER_S3_BUCKET}"
-          S3PATH="${{ inputs.installer_s3_path }}"
-          if [ -n "$BUCKET" ]; then
-            BUCKET="${BUCKET%/}"
-            UPLOAD_PREFIX="${BUCKET}$(dirname "$S3PATH")"
-            echo "CPACK_UPLOAD_URL=${UPLOAD_PREFIX}" >> $GITHUB_ENV
-            echo "installer_s3_uri=${BUCKET}${S3PATH}" >> $GITHUB_OUTPUT
-            echo "Installer will be uploaded under: ${UPLOAD_PREFIX}"
-          else
-            echo "installer_s3_uri=" >> $GITHUB_OUTPUT
-            echo "INSTALLER_S3_BUCKET not configured; skipping S3 upload (and signing, which requires upload)."
-          fi
+          set -o pipefail
+          python/python.sh -u scripts/build/compute_upload_uri.py --s3-path "${{ inputs.installer_s3_path }}" | while IFS= read -r line; do
+            case "$line" in
+              "ENV "*) echo "${line#ENV }" >> "$GITHUB_ENV" ;;
+              "OUTPUT "*) echo "${line#OUTPUT }" >> "$GITHUB_OUTPUT" ;;
+              *) echo "$line" ;;
+            esac
+          done
 
       - name: Build installer
-        # Runs the Linux installer pipe presets from scripts/build/Platform/Linux/build_config.json:
-        #   install_mono_22_release -> install_mono_android_api_24_release -> installer (DEB)
+        # Builds with presets in ../scripts/build/Platform/Linux/build_config.json
         timeout-minutes: 600
         env:
           CMAKE_C_COMPILER_LAUNCHER: ccache
@@ -263,9 +234,7 @@ jobs:
         run: |
           export EXTRA_CMAKE_OPTIONS="-DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX"
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          python/python.sh -u scripts/build/ci_build.py --platform Linux --type install_mono_22_release
-          python/python.sh -u scripts/build/ci_build.py --platform Linux --type install_mono_android_api_24_release
-          python/python.sh -u scripts/build/ci_build.py --platform Linux --type installer
+          python/python.sh -u scripts/build/ci_build.py --platform Linux --type installer_pipe
 
       - name: Save installer artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -280,11 +249,7 @@ jobs:
             ${{ github.workspace }}/build/linux/CPackUploads/*.deb
             ${{ github.workspace }}/build/linux/CPackUploads/*.sha256
 
-  # ── Installer smoke test (future: Linux harness not yet implemented) ───────
-  # Stubbed to match the Windows shape. The Windows installer_test pytest under
-  # cmake/Platform/Windows/Packaging/Tests has no Linux counterpart yet; when one is
-  # added (e.g. cmake/Platform/Linux/Packaging/Tests + a Linux installer_test preset),
-  # fill this job in to mirror windows-package.yml's Installer-Test.
+  # Linux installer_test harness is not yet implemented; stub matches the Windows job shape
   Installer-Test:
     needs: Build-Installer
     if: ${{ inputs.run_installer_test && !cancelled() && needs.Build-Installer.result == 'success' }}

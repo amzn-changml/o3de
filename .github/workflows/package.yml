@@ -8,21 +8,8 @@
 
 name: Package
 
-# Entry point for producing the shippable, signed O3DE engine installer SDK.
-# Fans out to the per-OS reusable workflows (windows-package.yml / linux-package.yml)
-# based on the `platforms` input. Each reusable workflow builds the installer via
-# scripts/build/ci_build.py (build_config.json installer presets), signs it through the
-# engine's CPack signing hooks, uploads it, then runs the installer smoke test
-# (installer_test) as a separate downstream job (Windows now; Linux to follow).
-#
-# Designed to live in a standalone CD repo: the engine source is fetched from
-# engine_repo/engine_ref, so nothing here assumes same-repo co-location.
-#
-# Secrets consumed (via `secrets: inherit`):
-#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_DEFAULT_REGION  - S3 upload + installer_test pull
-#   INSTALLER_S3_BUCKET                                            - S3 bucket (e.g. s3://my-bucket)
-#   O3DE_MS_DLIB_B64 / O3DE_MS_METADATA_JSON                       - Windows MS Trusted Signing
-#   O3DE_GPG_PRIVATE_KEY / O3DE_GPG_PASSPHRASE                     - Linux .deb GPG signing
+# Entry point for producing the signed O3DE engine installer SDK. Fans out to the
+# per-OS reusable workflows (windows-package.yml / linux-package.yml).
 
 run-name: Package - ${{ inputs.platforms }} (${{ inputs.engine_ref }})
 

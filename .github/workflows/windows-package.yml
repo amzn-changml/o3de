@@ -254,6 +254,7 @@ jobs:
           path: |
             ${{ env.DEV_DRIVE_WORKSPACE }}\build\windows\CPackUploads\*.exe
             ${{ env.DEV_DRIVE_WORKSPACE }}\build\windows\CPackUploads\*.msi
+            ${{ env.DEV_DRIVE_WORKSPACE }}\build\windows\CPackUploads\*.cab
             ${{ env.DEV_DRIVE_WORKSPACE }}\build\windows\CPackUploads\*.sha256
 
   # Installs the built installer, creates and builds a project against it, then uninstalls

@@ -77,8 +77,8 @@ jobs:
       image: ${{ inputs.windows_image }}
       engine_repo: ${{ inputs.engine_repo }}
       engine_ref: ${{ inputs.engine_ref }}
-      msvc_toolset_version: "14.29"
-      msvc_platform_toolset: "v142"
+      msvc_toolset_version: "14.44"
+      msvc_platform_toolset: "v143"
       o3de_install_version: ${{ inputs.o3de_install_version }}
       o3de_install_display_version: ${{ inputs.o3de_install_display_version }}
       o3de_install_build_version: ${{ inputs.o3de_install_build_version }}

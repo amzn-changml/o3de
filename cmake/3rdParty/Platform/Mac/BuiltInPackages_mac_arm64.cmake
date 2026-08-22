@@ -14,15 +14,14 @@ ly_associate_package(PACKAGE_NAME RapidXML-1.13-rev1-multiplatform              
 ly_associate_package(PACKAGE_NAME pybind11-2.10.0-rev1-multiplatform                TARGETS pybind11                    PACKAGE_HASH 6690acc531d4b8cd453c19b448e2fb8066b2362cbdd2af1ad5df6e0019e6c6c4)
 ly_associate_package(PACKAGE_NAME cityhash-1.1-rev1-mac-arm64                       TARGETS cityhash                    PACKAGE_HASH c5844582b4fe819e74ca923dbb58405dd687a4b9acb82d7de04e3e766addb4ed)
 ly_associate_package(PACKAGE_NAME zstd-1.35-rev1-mac-arm64                          TARGETS zstd                        PACKAGE_HASH bb401d198d9fd2be2669acb6fe8dbe59fd7d33a66b5f2fd7d3e0221e5b72d1f4)
-ly_associate_package(PACKAGE_NAME glad-2.0.0-beta-rev2-multiplatform                TARGETS glad                        PACKAGE_HASH ff97ee9664e97d0854b52a3734c2289329d9f2b4cd69478df6d0ca1f1c9392ee)
 ly_associate_package(PACKAGE_NAME xxhash-0.7.4-rev1-multiplatform                   TARGETS xxhash                      PACKAGE_HASH e81f3e6c4065975833996dd1fcffe46c3cf0f9e3a4207ec5f4a1b564ba75861e)
 
 # platform-specific:
 ly_associate_package(PACKAGE_NAME expat-2.7.3-rev2-mac-arm64                        TARGETS expat                       PACKAGE_HASH 2b3a0c2cd041dcb2709681589cbd5b349d82aed80f41fef0379f0f1329735011)
-ly_associate_package(PACKAGE_NAME DirectXShaderCompilerDxc-1.8.2505.1-o3de-rev4-mac-arm64 TARGETS DirectXShaderCompilerDxc    PACKAGE_HASH 75a9c9c9bad393f6571737def7b8d8a09c00e02e415680e8c0d1652459740676)
+ly_associate_package(PACKAGE_NAME DirectXShaderCompilerDxc-1.8.2505.1-o3de-rev5-mac-arm64 TARGETS DirectXShaderCompilerDxc    PACKAGE_HASH 87895fb0cb802cc784b2b9c42c96c12cc1e7b02d221b5c70e74c5b365ccc18eb)
 ly_associate_package(PACKAGE_NAME SPIRVCross-1.3.275.0-rev2-mac-arm64               TARGETS SPIRVCross                  PACKAGE_HASH a7068d9759888eeb81d4cfc6b3d6331ecaeea90bd37fb0f014fa9935a33b034a)
 ly_associate_package(PACKAGE_NAME tiff-4.2.0.15-rev3-mac-arm64                      TARGETS TIFF                        PACKAGE_HASH bffbf8bf099ae5d3d49967536a8fcd7fcf747fd6fa92ba945a0e64eead9636d9)
-ly_associate_package(PACKAGE_NAME freetype-2.11.1-rev1-mac-arm64                    TARGETS Freetype                    PACKAGE_HASH eae257c78c2da47ca02ca17e949c665c28a59215d756c137c87220c85a7f8488)
+ly_associate_package(PACKAGE_NAME freetype-2.11.1-rev2-mac-arm64                    TARGETS Freetype                    PACKAGE_HASH a3843ecb997a675dabb37da0073a1170463f0e883c0c9d3083f42c09d52add8a)
 ly_associate_package(PACKAGE_NAME AWSNativeSDK-1.11.361-rev1-mac-arm64              TARGETS AWSNativeSDK                PACKAGE_HASH 88fb6ac72314b5993e2c24d90bd409016657658711996f416875ea3a0118a521)
 ly_associate_package(PACKAGE_NAME Lua-5.4.4-rev2-mac-arm64                          TARGETS Lua                         PACKAGE_HASH f2089b3d513e614242be6dc4169ed7cb64d502668f0edae72f10815e494b1dbf)
 ly_associate_package(PACKAGE_NAME mcpp-2.7.2_az.2-rev3-mac-arm64                    TARGETS mcpp                        PACKAGE_HASH 2c1e7d4154ebf26a35dea1cf9f9cc001aa68f82cbcba8f02f0cb877a07757d36)

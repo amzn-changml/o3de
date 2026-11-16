@@ -366,9 +366,8 @@ function(ly_setup_subdirectories)
 endfunction()
 
 #! ly_setup_3p_target: Export enough data such that the script-only mode knows about the runtime dependencies
-#! for the given target.  This function returns a string which is a setup function that can be called
-#! in script only mode to create a fake target for the 3p library that just includes its copy dependencies.
-function(ly_setup_3p_target OUTVAR_GENERATED_DATA_FILENAME OUTVAR_FILE_NAME_TO_GENERATE ALIAS_TARGET_NAME)
+#! for the given target. Return a postprocessor call and the lowercase mapping filename.
+function(ly_setup_3p_target OUTVAR_GENERATED_DATA OUTVAR_FILE_NAME_TO_GENERATE ALIAS_TARGET_NAME)
     ly_de_alias_target(${ALIAS_TARGET_NAME} TARGET_NAME)
     o3de_get_dependencies_for_target(
             TARGET "${TARGET_NAME}"
@@ -380,12 +379,10 @@ function(ly_setup_3p_target OUTVAR_GENERATED_DATA_FILENAME OUTVAR_FILE_NAME_TO_G
     # but get the data from the de-aliased target.  So except for the call above
     # we use the aliased target name.
     string(REPLACE "::" "__" CLEAN_TARGET_NAME "${ALIAS_TARGET_NAME}")  
+    string(TOLOWER "${CLEAN_TARGET_NAME}" CLEAN_TARGET_NAME)
 
     unset(copy_dependencies_target_rel_path)
     unset(copy_dependencies_source_file_path)
-    foreach(conf IN LISTS CMAKE_CONFIGURATION_TYPES)
-        unset(copy_dependencies_${conf})
-    endforeach()
 
     foreach(dependency_for_target IN LISTS target_target_dependencies)
         if (NOT TARGET ${dependency_for_target})
@@ -421,23 +418,9 @@ function(ly_setup_3p_target OUTVAR_GENERATED_DATA_FILENAME OUTVAR_FILE_NAME_TO_G
         endif()
     endif()
 
-    unset(${OUTVAR_GENERATED_DATA_FILENAME} PARENT_SCOPE)
-
-    # the absolute source paths of files to copy can have generator expressions that are per-config.
-    # use file(GENERATE ...) to evaluate the genexes, by writing it as a build file
-    # since GENERATE only happens during generate step, this is as far as we can go during
-    # configure.  It will be up to a build step to read these generated files back and
-    # do a final transform that removes things like absolute paths.
-    # note that we generate a file for every 3p target, as they must exist.
-    set(generate_content "set(target_name ${ALIAS_TARGET_NAME})\n")
-    if (copy_dependencies_source_file_path)
-        string(APPEND generate_content "set(copy_dependencies_source_file_path \"${copy_dependencies_source_file_path}\")\n")
-        string(APPEND generate_content "set(copy_dependencies_target_rel_path \"${copy_dependencies_target_rel_path}\")\n")
-    endif()
-
-    file(GENERATE OUTPUT  "${CMAKE_BINARY_DIR}/install/$<CONFIG>/${PAL_PLATFORM_NAME}/${CLEAN_TARGET_NAME}.cmake" 
-                  CONTENT "${generate_content}")
-    set(${OUTVAR_GENERATED_DATA_FILENAME} "${CMAKE_BINARY_DIR}/install/$<CONFIG>/${PAL_PLATFORM_NAME}/${CLEAN_TARGET_NAME}.cmake" PARENT_SCOPE)
+    set(${OUTVAR_GENERATED_DATA}
+        "o3de_process_script_only_target(${ALIAS_TARGET_NAME}\n    \"${copy_dependencies_source_file_path}\"\n    \"${copy_dependencies_target_rel_path}\")\n"
+        PARENT_SCOPE)
     set(${OUTVAR_FILE_NAME_TO_GENERATE} ${CLEAN_TARGET_NAME} PARENT_SCOPE)
 
 endfunction()
@@ -461,14 +444,23 @@ function(ly_setup_3p_dependencies)
     set(final_3p_output_dir "${CMAKE_BINARY_DIR}/cmake/3rdParty/Platform/${PAL_PLATFORM_NAME}/${LY_BUILD_PERMUTATION}")
     get_property(o3de_all_3rdparty_targets GLOBAL PROPERTY O3DE_ALL_3RDPARTY_TARGETS)
 
-    # call the ly_setup_3p_target for each 3p target.  It will create a GENERATE step
-    # that will output a file, and also return the file name of the generated file.
+    # Keep each spelling's dependencies, but generate each lowercase mapping only once.
+    unset(mapping_filenames)
     foreach(target_3p IN LISTS o3de_all_3rdparty_targets)
-        ly_setup_3p_target(file_to_process output_filename ${target_3p})
-        if (file_to_process)
-            list(APPEND list_of_files_to_process ${file_to_process})
-            list(APPEND expected_output_files ${final_3p_output_dir}/${output_filename}.cmake)
+        ly_setup_3p_target(generated_content output_filename ${target_3p})
+        if(NOT output_filename IN_LIST mapping_filenames)
+            list(APPEND mapping_filenames "${output_filename}")
+            set(mapping_content_${output_filename} "")
         endif()
+        string(APPEND mapping_content_${output_filename} "${generated_content}")
+    endforeach()
+
+    foreach(output_filename IN LISTS mapping_filenames)
+        set(file_to_process "${CMAKE_BINARY_DIR}/install/$<CONFIG>/${PAL_PLATFORM_NAME}/${output_filename}.cmake")
+        # Evaluate configuration expressions before the postprocessor strips build paths.
+        file(GENERATE OUTPUT "${file_to_process}" CONTENT "${mapping_content_${output_filename}}")
+        list(APPEND list_of_files_to_process "${file_to_process}")
+        list(APPEND expected_output_files "${final_3p_output_dir}/${output_filename}.cmake")
     endforeach()
     
     # note that generate only occurs during the generate step.  The above file will not be available until the build step
@@ -584,6 +576,34 @@ endif()
 endfunction()
 
 #! ly_setup_cmake_install: install the "cmake" folder
+# Keep the first module at each legacy flat destination.
+# Registered roots also retain their own modules at their logical SDK paths.
+function(o3de_install_3rdparty_module source destination)
+    cmake_path(GET source FILENAME filename)
+    set(key "O3DE_INSTALLED_3RDPARTY_MODULE_${destination}/${filename}")
+    get_property(previous GLOBAL PROPERTY "${key}")
+    if(previous)
+        return()
+    endif()
+    set_property(GLOBAL PROPERTY "${key}" "${source}")
+    ly_install(
+        FILES "${source}"
+        DESTINATION "${destination}"
+        COMPONENT ${CMAKE_INSTALL_DEFAULT_COMPONENT_NAME}
+    )
+endfunction()
+
+function(o3de_get_3rdparty_root_install_path root output)
+    get_property(owner GLOBAL PROPERTY "O3DE_3RDPARTY_ROOT_${root}")
+    cmake_path(RELATIVE_PATH root BASE_DIRECTORY "${owner}" OUTPUT_VARIABLE relative_root)
+    cmake_path(IS_PREFIX LY_ROOT_FOLDER "${root}" NORMALIZE in_engine)
+    if(NOT in_engine)
+        cmake_path(GET owner FILENAME owner_name)
+        set(relative_root "External/${owner_name}/${relative_root}")
+    endif()
+    set(${output} "${relative_root}" PARENT_SCOPE)
+endfunction()
+
 function(ly_setup_cmake_install)
     cmake_path(SET current_folder_normalized NORMALIZE ".")
     ly_install(DIRECTORY "${LY_ROOT_FOLDER}/cmake"
@@ -690,31 +710,47 @@ function(ly_setup_cmake_install)
         COMPONENT ${CMAKE_INSTALL_DEFAULT_COMPONENT_NAME}
     )
 
-    # Collect all Find files that were added with ly_add_external_target_path
-    unset(additional_find_files)
-    unset(additional_platform_files)
+    # Collect both legacy explicit paths and automatically registered roots.
     get_property(additional_module_paths GLOBAL PROPERTY LY_ADDITIONAL_MODULE_PATH)
-    foreach(additional_module_path ${additional_module_paths})
-        unset(find_files)
+    get_property(registered_roots GLOBAL PROPERTY O3DE_REGISTERED_3RDPARTY_ROOTS)
+    list(APPEND additional_module_paths ${registered_roots})
+    list(REMOVE_DUPLICATES additional_module_paths)
+    foreach(additional_module_path IN LISTS additional_module_paths)
+        set(destinations cmake/3rdParty)
+        if(additional_module_path IN_LIST registered_roots)
+            o3de_get_3rdparty_root_install_path("${additional_module_path}" installed_root)
+            list(APPEND destinations "${installed_root}")
+        endif()
         file(GLOB find_files "${additional_module_path}/Find*.cmake")
-        list(APPEND additional_find_files "${find_files}")
-        foreach(find_file ${find_files})
-            # also copy the Platform/<current_platform> to the destination
-            cmake_path(GET find_file PARENT_PATH find_file_parent)
-            unset(plat_files)
-            file(GLOB plat_files "${find_file_parent}/Platform/${PAL_PLATFORM_NAME}/*.cmake")
-            list(APPEND additional_platform_files "${plat_files}")
+        file(GLOB installer_find_files "${additional_module_path}/Installer/Find*.cmake")
+        foreach(find_file IN LISTS find_files)
+            cmake_path(GET find_file FILENAME filename)
+            string(TOLOWER "${filename}" lowercase_filename)
+            # Some existing SDK replacements use different casing (FindOgg versus Findogg).
+            # Keep the replacements actual spelling on Linux.
+            foreach(installer_file IN LISTS installer_find_files)
+                cmake_path(GET installer_file FILENAME installer_filename)
+                string(TOLOWER "${installer_filename}" lowercase_installer_filename)
+                if(lowercase_filename STREQUAL lowercase_installer_filename)
+                    set(find_file "${installer_file}")
+                    break()
+                endif()
+            endforeach()
+            foreach(destination IN LISTS destinations)
+                o3de_install_3rdparty_module("${find_file}" "${destination}")
+            endforeach()
+        endforeach()
+        file(GLOB platform_files "${additional_module_path}/Platform/${PAL_PLATFORM_NAME}/*.cmake")
+        foreach(platform_file IN LISTS platform_files)
+            cmake_path(GET platform_file FILENAME filename)
+            if(EXISTS "${additional_module_path}/Installer/Platform/${PAL_PLATFORM_NAME}/${filename}")
+                set(platform_file "${additional_module_path}/Installer/Platform/${PAL_PLATFORM_NAME}/${filename}")
+            endif()
+            foreach(destination IN LISTS destinations)
+                o3de_install_3rdparty_module("${platform_file}" "${destination}/Platform/${PAL_PLATFORM_NAME}")
+            endforeach()
         endforeach()
     endforeach()
-
-    ly_install(FILES ${additional_find_files}
-        DESTINATION cmake/3rdParty
-        COMPONENT ${CMAKE_INSTALL_DEFAULT_COMPONENT_NAME}
-    )
-    ly_install(FILES ${additional_platform_files}
-        DESTINATION cmake/3rdParty/Platform/${PAL_PLATFORM_NAME}
-        COMPONENT ${CMAKE_INSTALL_DEFAULT_COMPONENT_NAME}
-    )
 
     # Findo3de.cmake file: we generate a different Findo3de.cmake file than the one we have in the source dir.
     configure_file(${LY_ROOT_FOLDER}/cmake/install/Findo3de.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/cmake/Findo3de.cmake @ONLY)
@@ -724,6 +760,14 @@ function(ly_setup_cmake_install)
     )
 
     unset(find_subdirectories)
+    foreach(root IN LISTS registered_roots)
+        o3de_get_3rdparty_root_install_path("${root}" installed_root)
+        string(APPEND find_subdirectories
+            "if(IS_DIRECTORY \"\${LY_ROOT_FOLDER}/${installed_root}\")\n"
+            "    o3de_register_3rdparty_root(\"\${LY_ROOT_FOLDER}/${installed_root}\")\n"
+            "endif()\n"
+        )
+    endforeach()
     # Add to find_subdirectories all directories in which ly_add_target were called in
     get_property(all_subdirectories GLOBAL PROPERTY LY_ALL_TARGET_DIRECTORIES)
     foreach(target_subdirectory IN LISTS all_subdirectories)
@@ -745,7 +789,12 @@ function(ly_setup_cmake_install)
             cmake_path(APPEND relative_target_subdirectory "External" ${root_subdir_dirname} ${relative_subdir})
         endif()
 
-        string(APPEND find_subdirectories "add_subdirectory(${relative_target_subdirectory})\n")
+        get_property(provider_owner GLOBAL PROPERTY "O3DE_3RDPARTY_DIRECTORY_OWNER_${target_subdirectory}")
+        if(provider_owner)
+            string(APPEND find_subdirectories "o3de_add_3rdparty_subdirectory(\"\${LY_ROOT_FOLDER}/${relative_target_subdirectory}\")\n")
+        else()
+            string(APPEND find_subdirectories "add_subdirectory(\"${relative_target_subdirectory}\")\n")
+        endif()
     endforeach()
     set(permutation_find_subdirectories ${CMAKE_CURRENT_BINARY_DIR}/cmake/Platform/${PAL_PLATFORM_NAME}/${LY_BUILD_PERMUTATION}/o3de_subdirectories_${PAL_PLATFORM_NAME_LOWERCASE}.cmake)
     file(GENERATE OUTPUT ${permutation_find_subdirectories}
@@ -881,14 +930,18 @@ function(ly_setup_runtime_dependencies)
             LINK_DEPENDENCIES_VAR target_link_dependencies
             IMPORTED_DEPENDENCIES_VAR target_imported_dependencies
         )
+        # Repeated list(APPEND) reparses the growing aggregate.
+        # Build a small list per target and append it once, preserving order and duplicates.
+        unset(target_runtime_commands)
         foreach(dependency_for_target IN LISTS target_copy_dependencies target_target_dependencies
             target_link_dependencies target_imported_dependencies)
             unset(runtime_command)
             o3de_get_command_for_dependency(COMMAND_VAR runtime_command
                 DEPENDENCY ${dependency_for_target})
             string(CONFIGURE "${runtime_command}" runtime_command @ONLY)
-            list(APPEND runtime_commands ${runtime_command})
+            list(APPEND target_runtime_commands ${runtime_command})
         endforeach()
+        list(APPEND runtime_commands ${target_runtime_commands})
 
     endforeach()
 

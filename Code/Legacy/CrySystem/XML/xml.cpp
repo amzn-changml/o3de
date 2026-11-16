@@ -31,7 +31,7 @@
 size_t CSimpleStringPool::g_nTotalAllocInXmlStringPools = 0;
 
 //////////////////////////////////////////////////////////////////////////
-static int __cdecl ascii_stricmp(const char* dst, const char* src)
+static int AZ_CDECL ascii_stricmp(const char* dst, const char* src)
 {
     int f, l;
     do
@@ -1129,7 +1129,7 @@ void    XmlParserImp::onStartElement(const char* tagName, const char** atts)
         node->AddRef(); // Childs need to be add refed.
     }
 
-    node->setLine(static_cast<int>(XML_GetCurrentLineNumber((XML_Parser)m_parser)));
+    node->setLine(static_cast<int>(XML_GetCurrentLineNumber64((XML_Parser)m_parser)));
 
     // Call start element callback.
     int i = 0;
@@ -1314,7 +1314,7 @@ XmlNodeRef XmlParserImp::ParseBuffer(const char* buffer, size_t bufLen, XmlStrin
         else
         {
             char str[1024];
-            azsprintf(str, "%s%s at line %d", errorPrefix, XML_ErrorString(XML_GetErrorCode(m_parser)), (int)XML_GetCurrentLineNumber(m_parser));
+            azsprintf(str, "%s%s at line %d", errorPrefix, XML_ErrorString(XML_GetErrorCode(m_parser)), (int)XML_GetCurrentLineNumber64(m_parser));
             errorString = str;
             if (!bSuppressWarnings)
             {
@@ -1422,9 +1422,9 @@ XmlNodeRef XmlParserImp::ParseFile(const char* filename, XmlString& errorString,
         constexpr AZStd::fixed_string<32> strScripts{"Scripts/"};
         // exclude files and PAKs from Mods folder
         constexpr AZStd::fixed_string<8> modsStr{"Mods/"};
-        if (_strnicmp(filename, strScripts.c_str(), strScripts.length()) == 0 &&
-            _strnicmp(adjustedFilename.c_str(), modsStr.c_str(), modsStr.length()) != 0 &&
-            _strnicmp(pakPath.c_str(), modsStr.c_str(), modsStr.length()) != 0)
+        if (azstrnicmp(filename, strScripts.c_str(), strScripts.length()) == 0 &&
+            azstrnicmp(adjustedFilename.c_str(), modsStr.c_str(), modsStr.length()) != 0 &&
+            azstrnicmp(pakPath.c_str(), modsStr.c_str(), modsStr.length()) != 0)
         {
 #ifdef _RELEASE
                 CryWarning(VALIDATOR_MODULE_SYSTEM, VALIDATOR_WARNING, "Non binary XML found in scripts dir (%s)", filename);
@@ -1442,7 +1442,7 @@ XmlNodeRef XmlParserImp::ParseFile(const char* filename, XmlString& errorString,
         }
         else
         {
-            azsprintf(str, "%s%s at line %d (%s)", errorPrefix, XML_ErrorString(XML_GetErrorCode(m_parser)), (int)XML_GetCurrentLineNumber(m_parser), filename);
+            azsprintf(str, "%s%s at line %d (%s)", errorPrefix, XML_ErrorString(XML_GetErrorCode(m_parser)), (int)XML_GetCurrentLineNumber64(m_parser), filename);
             errorString = str;
             CryWarning(VALIDATOR_MODULE_SYSTEM, VALIDATOR_WARNING, "%s", str);
         }

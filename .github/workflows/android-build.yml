@@ -243,12 +243,13 @@ jobs:
 
       - name: Build ${{ inputs.type }}
         # Builds with presets in ../scripts/build/Platform/Android/build_config.json
+        id: build
         timeout-minutes: 330
         env:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
           LY_3RDPARTY_PATH: ${{ github.workspace }}/3rdParty
-          LY_PACKAGE_SERVER_URLS: "https://d1gg6ket0m44ly.cloudfront.net;https://d3t6xeg4fgfoum.cloudfront.net"
+          LY_PACKAGE_SERVER_URLS: "https://dev.packages.o3debinaries.org;https://prod.packages.o3debinaries.org"
         run: |
           scripts/o3de.sh register --this-engine
           python/python.sh -u scripts/build/ci_build.py --platform ${{ inputs.platform }} --type ${{ inputs.type }}
@@ -260,6 +261,10 @@ jobs:
         if: ${{ (steps.extract-artifact.outcome == 'success' || steps.extract-artifact.outcome == 'skipped') && !cancelled() && !contains(inputs.type, 'test') }}
         continue-on-error: true
         run: |
+          if [[ "${{ steps.build.outcome }}" != "success" ]]; then
+            echo "::warning::Build step did not succeed. Clearing AutomatedTesting/Cache"
+            rm -rf AutomatedTesting/Cache
+          fi
           mkdir -p .ccache .o3de/python/downloaded_packages 3rdParty/downloaded_packages AutomatedTesting/Cache
           tar --format=posix -cvpf ${{ github.workspace }}/cache.tar \
             .ccache \

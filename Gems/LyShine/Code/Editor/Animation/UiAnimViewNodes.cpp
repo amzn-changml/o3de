@@ -1190,8 +1190,8 @@ void CUiAnimViewNodesCtrl::SetPopupMenuLock(QMenu* menu)
         return;
     }
 
-    UINT count = static_cast<int>(menu->actions().size());
-    for (UINT i = 0; i < count; ++i)
+    unsigned int count = static_cast<int>(menu->actions().size());
+    for (unsigned int i = 0; i < count; ++i)
     {
         QAction* a = menu->actions().at(i);
         QString menuString = a->text();
@@ -1291,7 +1291,7 @@ int CUiAnimViewNodesCtrl::GetMatNameAndSubMtlIndexFromName(QString& matName, con
 {
     if (const char* pCh = strstr(nodeName, ".["))
     {
-        char matPath[MAX_PATH];
+        char matPath[AZ_TRAIT_OS_MAX_PATH_LEN];
         azstrncpy(matPath, AZ_ARRAY_SIZE(matPath), nodeName, (size_t)(pCh - nodeName));
         matName = matPath;
         pCh += 2;
